@@ -1,17 +1,8 @@
 #include "../include/qgpu.h"
-
-    QGPU_Vertex triangles[] = {
-        {{ 0, 50}, {1.0f, 0.0f, 0.0f}},
-        {{ 50,  -50}, {0.0f, 1.0f, 0.0f}},
-        {{-50,  -50}, {0.0f, 0.0f, 1.0f}}
-    };
-    uint32_t indices[] = {0, 1, 2};
 void Update() {
-
-    drawGeometry(100, 0, triangles, 3, indices, 3);
-    drawGeometry(-100, 0, triangles, 3, indices, 3);
-    drawGeometry(100, 100, triangles, 3, indices, 3);
-    drawGeometry(-100, 100, triangles, 3, indices, 3);
+    drawRect(-120, 50, 200, 100, 0, 0.5f, 0);
+    drawRect(0, 0, 200, 100, 1, 0.5f, 0);
+    drawRect(120, 50, 200, 100, 0.5f, 0.5f, 0);
 }
 
 int main() {
