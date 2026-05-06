@@ -12,5 +12,5 @@ layout(location = 0) out vec3 fragColor;
 void main() {
     vec2 finalPos = (inPos + push.offset) / (push.screenRes * 0.5);
     gl_Position = vec4(finalPos.x, -finalPos.y, 0.0, 1.0);
-    fragColor = inColor; // Używamy koloru z wierzchołka
+    fragColor = inColor;
 }

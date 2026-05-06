@@ -1,4 +1,5 @@
 #include "../include/qgpu.h"
+
 void Update() {
     drawRect(-120, 50, 200, 100, 0, 0.5f, 0);
     drawWireRect(-120, 50, 200, 100, 3, 0, 0.75f, 0);
