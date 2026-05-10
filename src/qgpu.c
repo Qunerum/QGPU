@@ -3,33 +3,50 @@
 #include "../include/qgpu.h"
 #include <math.h>
 #include <stdlib.h>
+#include <stdio.h>
+#include <stdarg.h>
 
 #define PI 3.14159265359f
 
-void qgpu_create(int width, int height, const char* title, void (*updateFunc)()) { if (qgpu_init(width, height, title)) { qgpu_run(updateFunc); } qgpu_cleanup(); cleanup_textures(); }
+
+void print(const char* format, ...) {
+    printf("[QGPU]: ");
+    va_list args;
+    va_start(args, format);
+    vprintf(format, args);
+    va_end(args);
+    printf("\n");
+}
+
+void qgpu_create(int width, int height, const char* title, void (*updateFunc)()) 
+{ 
+    load_texture("test.qgt", 0);
+    if (qgpu_init(width, height, title)) { qgpu_run(updateFunc); } 
+    qgpu_cleanup(); 
+    cleanup_textures(); }
 void drawGeometry(float posX, float posY, QGPU_Vertex* vertices, uint32_t vCount, uint32_t* indices, uint32_t iCount) { qgpu_draw_geo(vertices, vCount, indices, iCount, posX, -posY); }
 
-void drawRect(float posX, float posY, float sizeX, float sizeY, float r, float g, float b) {
+void drawRect(float posX, float posY, float sizeX, float sizeY, float r, float g, float b, float a) {
     float x = sizeX / 2, y = sizeY / 2;
     QGPU_Vertex v[] = {
-        {{ -x ,  y}, {r, g, b}},
-        {{  x ,  y}, {r, g, b}},
-        {{  x , -y}, {r, g, b}},
-        {{ -x , -y}, {r, g, b}}
+        {{ -x ,  y}, {r, g, b, a}},
+        {{  x ,  y}, {r, g, b, a}},
+        {{  x , -y}, {r, g, b, a}},
+        {{ -x , -y}, {r, g, b, a}}
     };
     uint32_t i[] = {0, 1, 2,  0, 2, 3};
     drawGeometry(posX, posY, v, 4, i, 6);
 }
-void drawTriangle(float posX, float posY, float p1X, float p1Y, float p2X, float p2Y, float p3X, float p3Y, float r, float g, float b) {
+void drawTriangle(float posX, float posY, float p1X, float p1Y, float p2X, float p2Y, float p3X, float p3Y, float r, float g, float b, float a) {
     QGPU_Vertex v[] = {
-        {{ p1X, p1Y }, {r, g, b}},
-        {{ p2X, p2Y }, {r, g, b}},
-        {{ p3X, p3Y }, {r, g, b}}
+        {{ p1X, p1Y }, {r, g, b, a}},
+        {{ p2X, p2Y }, {r, g, b, a}},
+        {{ p3X, p3Y }, {r, g, b, a}}
     };
     uint32_t i[] = {0, 1, 2};
     drawGeometry(posX, posY, v, 3, i, 3);
 }
-void drawCircle(float posX, float posY, float radius, int segments, float r, float g, float b) {
+void drawCircle(float posX, float posY, float radius, int segments, float r, float g, float b, float a) {
     int vertexCount = segments + 1;
     QGPU_Vertex* v = malloc(sizeof(QGPU_Vertex) * vertexCount);
     v[0].pos[0] = 0.0f;
@@ -37,6 +54,7 @@ void drawCircle(float posX, float posY, float radius, int segments, float r, flo
     v[0].color[0] = r;
     v[0].color[1] = g;
     v[0].color[2] = b;
+    v[0].color[3] = a;
 
     for (int i = 0; i < segments; i++) {
         float angle = (float)i / (float)segments * 2.0f * PI;
@@ -45,6 +63,7 @@ void drawCircle(float posX, float posY, float radius, int segments, float r, flo
         v[i + 1].color[0] = r;
         v[i + 1].color[1] = g;
         v[i + 1].color[2] = b;
+        v[i + 1].color[3] = a;
     }
     int indexCount = segments * 3;
     uint32_t* indices = malloc(sizeof(uint32_t) * indexCount);
@@ -59,7 +78,7 @@ void drawCircle(float posX, float posY, float radius, int segments, float r, flo
     free(indices);
 }
 
-void drawLine(float x1, float y1, float x2, float y2, float thickness, float r, float g, float b) {
+void drawLine(float x1, float y1, float x2, float y2, float thickness, float r, float g, float b, float a) {
     float dx = x2 - x1,
     dy = y2 - y1,
     length = sqrtf(dx * dx + dy * dy);
@@ -73,26 +92,26 @@ void drawLine(float x1, float y1, float x2, float y2, float thickness, float r, 
     hdx = dx / 2.0f,
     hdy = dy / 2.0f;
     QGPU_Vertex v[] = {
-        {{-hdx + nx, -hdy + ny}, {r, g, b}},
-        {{ hdx + nx,  hdy + ny}, {r, g, b}},
-        {{ hdx - nx,  hdy - ny}, {r, g, b}},
-        {{-hdx - nx, -hdy - ny}, {r, g, b}}
+        {{-hdx + nx, -hdy + ny}, {r, g, b, a}},
+        {{ hdx + nx,  hdy + ny}, {r, g, b, a}},
+        {{ hdx - nx,  hdy - ny}, {r, g, b, a}},
+        {{-hdx - nx, -hdy - ny}, {r, g, b, a}}
     };
     uint32_t i[] = {0, 1, 2, 0, 2, 3};
     drawGeometry(midX, midY, v, 4, i, 6);
 }
-void drawWireRect(float posX, float posY, float sizeX, float sizeY, float thickness, float r, float g, float b) {
+void drawWireRect(float posX, float posY, float sizeX, float sizeY, float thickness, float r, float g, float b, float a) {
     float x = sizeX / 2, y = sizeY / 2,
     x1 = posX - x, y1 = posY + y,
     x2 = posX + x, y2 = posY + y,
     x3 = posX + x, y3 = posY - y,
     x4 = posX - x, y4 = posY - y;
-    drawLine(x1, y1, x2, y2, thickness, r, g, b);
-    drawLine(x2, y2, x3, y3, thickness, r, g, b);
-    drawLine(x3, y3, x4, y4, thickness, r, g, b);
-    drawLine(x4, y4, x1, y1, thickness, r, g, b);
+    drawLine(x1, y1, x2, y2, thickness, r, g, b, a);
+    drawLine(x2, y2, x3, y3, thickness, r, g, b, a);
+    drawLine(x3, y3, x4, y4, thickness, r, g, b, a);
+    drawLine(x4, y4, x1, y1, thickness, r, g, b, a);
 }
-void drawWireTriangle(float posX, float posY, float p1X, float p1Y, float p2X, float p2Y, float p3X, float p3Y, float thickness, float r, float g, float b) {
+void drawWireTriangle(float posX, float posY, float p1X, float p1Y, float p2X, float p2Y, float p3X, float p3Y, float thickness, float r, float g, float b, float a) {
     QGPU_Vertex v[12];
     uint32_t indices[18];
     float pointsX[4] = {p1X, p2X, p3X, p1X};
@@ -105,16 +124,16 @@ void drawWireTriangle(float posX, float posY, float p1X, float p1Y, float p2X, f
         nx = -dy / len * (thickness / 2.0f),
         ny =  dx / len * (thickness / 2.0f);
         int vo = i * 4, io = i * 6;
-        v[vo + 0] = (QGPU_Vertex){{x1 + nx, y1 + ny}, {r, g, b}};
-        v[vo + 1] = (QGPU_Vertex){{x2 + nx, y2 + ny}, {r, g, b}};
-        v[vo + 2] = (QGPU_Vertex){{x2 - nx, y2 - ny}, {r, g, b}};
-        v[vo + 3] = (QGPU_Vertex){{x1 - nx, y1 - ny}, {r, g, b}};
+        v[vo + 0] = (QGPU_Vertex){{x1 + nx, y1 + ny}, {r, g, b, a}};
+        v[vo + 1] = (QGPU_Vertex){{x2 + nx, y2 + ny}, {r, g, b, a}};
+        v[vo + 2] = (QGPU_Vertex){{x2 - nx, y2 - ny}, {r, g, b, a}};
+        v[vo + 3] = (QGPU_Vertex){{x1 - nx, y1 - ny}, {r, g, b, a}};
         indices[io+0] = vo+0; indices[io+1] = vo+1; indices[io+2] = vo+2;
         indices[io+3] = vo+0; indices[io+4] = vo+2; indices[io+5] = vo+3;
     }
     drawGeometry(posX, posY, v, 12, indices, 18);
 }
-void drawWireCircle(float posX, float posY, float radius, int segments, float thickness, float r, float g, float b) {
+void drawWireCircle(float posX, float posY, float radius, int segments, float thickness, float r, float g, float b, float a) {
     if (segments < 3) segments = 3;
     int vCount = segments * 4,
     iCount = segments * 6;
@@ -133,16 +152,24 @@ void drawWireCircle(float posX, float posY, float radius, int segments, float th
         nx = -dy / len * (thickness / 2.0f),
         ny =  dx / len * (thickness / 2.0f);
         int vo = i * 4, io = i * 6;
-        v[vo + 0] = (QGPU_Vertex){{x1 + nx, y1 + ny}, {r, g, b}};
-        v[vo + 1] = (QGPU_Vertex){{x2 + nx, y2 + ny}, {r, g, b}};
-        v[vo + 2] = (QGPU_Vertex){{x2 - nx, y2 - ny}, {r, g, b}};
-        v[vo + 3] = (QGPU_Vertex){{x1 - nx, y1 - ny}, {r, g, b}};
+        v[vo + 0] = (QGPU_Vertex){{x1 + nx, y1 + ny}, {r, g, b, a}};
+        v[vo + 1] = (QGPU_Vertex){{x2 + nx, y2 + ny}, {r, g, b, a}};
+        v[vo + 2] = (QGPU_Vertex){{x2 - nx, y2 - ny}, {r, g, b, a}};
+        v[vo + 3] = (QGPU_Vertex){{x1 - nx, y1 - ny}, {r, g, b, a}};
         indices[io + 0] = vo + 0; indices[io + 1] = vo + 1; indices[io + 2] = vo + 2;
         indices[io + 3] = vo + 0; indices[io + 4] = vo + 2; indices[io + 5] = vo + 3;
     }
-
     drawGeometry(posX, posY, v, vCount, indices, iCount);
 
     free(v);
     free(indices);
 }
+
+void drawTextureScale(float posX, float posY, int textureID, float scale) { drawTextureScaling(textureID, scale, posX, posY); }
+
+int getKey(int key) { return isKeyDown(key); }
+int getMouse(int button) { return isMouseButtonDown(button); }
+void getMousePos(double* x, double* y) { getCursorPosition(x, y); }
+
+int getWidth() { return qgpu_get_width(); }
+int getHeight() { return qgpu_get_height(); }

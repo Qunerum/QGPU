@@ -89,6 +89,61 @@ static VkShaderModule createShaderModule(const char* filename) {
     return shaderModule;
 }
 
+static void recreate_swapchain() {
+    int w = 0, h = 0;
+    glfwGetFramebufferSize(g_ctx.window, &w, &h);
+    while (w == 0 || h == 0) { glfwGetFramebufferSize(g_ctx.window, &w, &h); glfwWaitEvents(); }
+
+    vkDeviceWaitIdle(g_ctx.device);
+    for (uint32_t i = 0; i < g_ctx.imageCount; i++) {
+        vkDestroyFramebuffer(g_ctx.device, g_ctx.swapchainFramebuffers[i], NULL);
+        vkDestroyImageView(g_ctx.device, g_ctx.swapchainImageViews[i], NULL);
+    }
+    VkSwapchainKHR oldSwapchain = g_ctx.swapchain;
+
+    VkSwapchainCreateInfoKHR swapchainInfo = {
+        .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
+        .surface = g_ctx.surface,
+        .minImageCount = 2,
+        .imageFormat = VK_FORMAT_B8G8R8A8_UNORM,
+        .imageColorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR,
+        .imageExtent = {(uint32_t)w, (uint32_t)h},
+        .imageArrayLayers = 1,
+        .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+        .preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR,
+        .compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
+        .presentMode = VK_PRESENT_MODE_FIFO_KHR,
+        .oldSwapchain = oldSwapchain
+    };
+    vkCreateSwapchainKHR(g_ctx.device, &swapchainInfo, NULL, &g_ctx.swapchain);
+    vkDestroySwapchainKHR(g_ctx.device, oldSwapchain, NULL);
+
+    vkGetSwapchainImagesKHR(g_ctx.device, g_ctx.swapchain, &g_ctx.imageCount, NULL);
+    vkGetSwapchainImagesKHR(g_ctx.device, g_ctx.swapchain, &g_ctx.imageCount, g_ctx.swapchainImages);
+
+    for (uint32_t i = 0; i < g_ctx.imageCount; i++) {
+        VkImageViewCreateInfo viewInfo = {
+            .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+            .image = g_ctx.swapchainImages[i],
+            .viewType = VK_IMAGE_VIEW_TYPE_2D,
+            .format = VK_FORMAT_B8G8R8A8_UNORM,
+            .subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1}
+        };
+        vkCreateImageView(g_ctx.device, &viewInfo, NULL, &g_ctx.swapchainImageViews[i]);
+
+        VkFramebufferCreateInfo fbInfo = {
+            .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+            .renderPass = g_ctx.renderPass,
+            .attachmentCount = 1,
+            .pAttachments = &g_ctx.swapchainImageViews[i],
+            .width = (uint32_t)w,
+            .height = (uint32_t)h,
+            .layers = 1
+        };
+        vkCreateFramebuffer(g_ctx.device, &fbInfo, NULL, &g_ctx.swapchainFramebuffers[i]);
+    }
+}
+
 // --- API ---
 
 int qgpu_init(int width, int height, const char* title) {
@@ -153,7 +208,7 @@ int qgpu_init(int width, int height, const char* title) {
     VkVertexInputBindingDescription bindingDesc = {.binding = 0, .stride = sizeof(QGPU_Vertex), .inputRate = VK_VERTEX_INPUT_RATE_VERTEX};
     VkVertexInputAttributeDescription attrDesc[2] = {
         {.binding = 0, .location = 0, .format = VK_FORMAT_R32G32_SFLOAT, .offset = offsetof(QGPU_Vertex, pos)},
-        {.binding = 0, .location = 1, .format = VK_FORMAT_R32G32B32_SFLOAT, .offset = offsetof(QGPU_Vertex, color)}
+        {.binding = 0, .location = 1, .format = VK_FORMAT_R32G32B32A32_SFLOAT, .offset = offsetof(QGPU_Vertex, color)}
     };
     VkPipelineVertexInputStateCreateInfo vertexInputInfo = {.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO, .vertexBindingDescriptionCount = 1, .pVertexBindingDescriptions = &bindingDesc, .vertexAttributeDescriptionCount = 2, .pVertexAttributeDescriptions = attrDesc};
     VkPipelineInputAssemblyStateCreateInfo inputAssembly = {.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO, .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST};
@@ -162,10 +217,41 @@ int qgpu_init(int width, int height, const char* title) {
     VkPipelineViewportStateCreateInfo viewportState = {.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO, .viewportCount = 1, .pViewports = &viewport, .scissorCount = 1, .pScissors = &scissor};
     VkPipelineRasterizationStateCreateInfo rasterizer = {.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO, .lineWidth = 1.0f, .cullMode = VK_CULL_MODE_NONE, .frontFace = VK_FRONT_FACE_CLOCKWISE};
     VkPipelineMultisampleStateCreateInfo multisampling = {.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO, .rasterizationSamples = VK_SAMPLE_COUNT_1_BIT};
-    VkPipelineColorBlendAttachmentState colorBlendAttachment = {.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT};
+    VkPipelineColorBlendAttachmentState colorBlendAttachment = {
+        .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
+        .blendEnable = VK_TRUE,
+        .srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,
+        .dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
+        .colorBlendOp = VK_BLEND_OP_ADD,
+        .srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE,
+        .dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
+        .alphaBlendOp = VK_BLEND_OP_ADD,
+    };
     VkPipelineColorBlendStateCreateInfo colorBlending = {.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO, .attachmentCount = 1, .pAttachments = &colorBlendAttachment};
 
-    VkGraphicsPipelineCreateInfo pipelineInfo = {.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO, .stageCount = 2, .pStages = shaderStages, .pVertexInputState = &vertexInputInfo, .pInputAssemblyState = &inputAssembly, .pViewportState = &viewportState, .pRasterizationState = &rasterizer, .pMultisampleState = &multisampling, .pColorBlendState = &colorBlending, .layout = g_ctx.pipelineLayout, .renderPass = g_ctx.renderPass, .subpass = 0};
+    VkDynamicState dynamicStates[] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
+    VkPipelineDynamicStateCreateInfo dynamicState = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
+        .dynamicStateCount = 2,
+        .pDynamicStates = dynamicStates
+    };
+    VkGraphicsPipelineCreateInfo pipelineInfo =
+    {
+        .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+        .stageCount = 2,
+        .pStages = shaderStages,
+        .pVertexInputState = &vertexInputInfo,
+        .pInputAssemblyState = &inputAssembly,
+        .pViewportState = &viewportState,
+        .pRasterizationState = &rasterizer,
+        .pMultisampleState = &multisampling,
+        .pColorBlendState = &colorBlending,
+        .pDynamicState = &dynamicState,
+        .layout = g_ctx.pipelineLayout,
+        .renderPass = g_ctx.renderPass,
+        .subpass = 0
+    };
+
     vkCreateGraphicsPipelines(g_ctx.device, VK_NULL_HANDLE, 1, &pipelineInfo, NULL, &g_ctx.graphicsPipeline);
 
     vkDestroyShaderModule(g_ctx.device, vertModule, NULL);
@@ -207,7 +293,7 @@ void qgpu_draw_geo(QGPU_Vertex* vertices, uint32_t vCount, uint32_t* indices, ui
 
     int w, h;
     glfwGetFramebufferSize(g_ctx.window, &w, &h);
-    float pushData[4] = { offsetX, offsetY, (float)w, (float)h };
+    float pushData[4] = { offsetX, -offsetY, (float)w, (float)h };
     vkCmdPushConstants(g_ctx.currentCmd, g_ctx.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(float) * 4, pushData);
 
     VkDeviceSize vOffsets[] = { g_ctx.currentVOffset };
@@ -220,26 +306,57 @@ void qgpu_draw_geo(QGPU_Vertex* vertices, uint32_t vCount, uint32_t* indices, ui
     g_ctx.currentIOffset += iSize;
 }
 
+static int lastW = 0, lastH = 0;
 void qgpu_run(void (*updateFunc)()) {
     while (!glfwWindowShouldClose(g_ctx.window)) {
         g_ctx.currentVOffset = 0;
         g_ctx.currentIOffset = 0;
         glfwPollEvents();
 
+        int w, h;
+        glfwGetFramebufferSize(g_ctx.window, &w, &h);
+        if (w == 0 || h == 0) continue;
+        if (w != lastW || h != lastH) {
+            recreate_swapchain();
+            lastW = w; lastH = h;
+            continue;
+        }
+
         uint32_t imageIndex;
-        vkAcquireNextImageKHR(g_ctx.device, g_ctx.swapchain, UINT64_MAX, g_ctx.imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
+        VkResult result = vkAcquireNextImageKHR(g_ctx.device, g_ctx.swapchain, UINT64_MAX, g_ctx.imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
+        if (result == VK_ERROR_OUT_OF_DATE_KHR) { recreate_swapchain(); continue; }
 
-        VkCommandBufferAllocateInfo allocInfo = {.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO, .commandPool = g_ctx.commandPool, .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY, .commandBufferCount = 1};
+        VkCommandBufferAllocateInfo allocInfo = {
+            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+            .commandPool = g_ctx.commandPool,
+            .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+            .commandBufferCount = 1
+        };
         vkAllocateCommandBuffers(g_ctx.device, &allocInfo, &g_ctx.currentCmd);
-
-        VkCommandBufferBeginInfo beginInfo = {.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT};
+        VkCommandBufferBeginInfo beginInfo = {
+            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+            .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT
+        };
         vkBeginCommandBuffer(g_ctx.currentCmd, &beginInfo);
 
         VkClearValue clearColor = {{{0.1f, 0.1f, 0.1f, 1.0f}}};
-        VkRenderPassBeginInfo rpBegin = {.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO, .renderPass = g_ctx.renderPass, .framebuffer = g_ctx.swapchainFramebuffers[imageIndex], .renderArea = {{0, 0}, {800, 600}}, .clearValueCount = 1, .pClearValues = &clearColor};
+        VkRenderPassBeginInfo rpBegin = {
+            .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+            .renderPass = g_ctx.renderPass,
+            .framebuffer = g_ctx.swapchainFramebuffers[imageIndex],
+            .renderArea = {{0, 0}, {(uint32_t)w, (uint32_t)h}},
+            .clearValueCount = 1,
+            .pClearValues = &clearColor
+        };
 
         vkCmdBeginRenderPass(g_ctx.currentCmd, &rpBegin, VK_SUBPASS_CONTENTS_INLINE);
         vkCmdBindPipeline(g_ctx.currentCmd, VK_PIPELINE_BIND_POINT_GRAPHICS, g_ctx.graphicsPipeline);
+
+        VkViewport viewport = {0.0f, 0.0f, (float)w, (float)h, 0.0f, 1.0f};
+        vkCmdSetViewport(g_ctx.currentCmd, 0, 1, &viewport);
+
+        VkRect2D scissor = {{0, 0}, {(uint32_t)w, (uint32_t)h}};
+        vkCmdSetScissor(g_ctx.currentCmd, 0, 1, &scissor);
 
         updateFunc();
 
@@ -247,11 +364,29 @@ void qgpu_run(void (*updateFunc)()) {
         vkEndCommandBuffer(g_ctx.currentCmd);
 
         VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
-        VkSubmitInfo submitInfo = {.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO, .waitSemaphoreCount = 1, .pWaitSemaphores = &g_ctx.imageAvailableSemaphore, .pWaitDstStageMask = waitStages, .commandBufferCount = 1, .pCommandBuffers = &g_ctx.currentCmd, .signalSemaphoreCount = 1, .pSignalSemaphores = &g_ctx.renderFinishedSemaphore};
+        VkSubmitInfo submitInfo = {
+            .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+            .waitSemaphoreCount = 1,
+            .pWaitSemaphores = &g_ctx.imageAvailableSemaphore,
+            .pWaitDstStageMask = waitStages,
+            .commandBufferCount = 1,
+            .pCommandBuffers = &g_ctx.currentCmd,
+            .signalSemaphoreCount = 1,
+            .pSignalSemaphores = &g_ctx.renderFinishedSemaphore
+        };
         vkQueueSubmit(g_ctx.graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
 
-        VkPresentInfoKHR presentInfo = {.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR, .waitSemaphoreCount = 1, .pWaitSemaphores = &g_ctx.renderFinishedSemaphore, .swapchainCount = 1, .pSwapchains = &g_ctx.swapchain, .pImageIndices = &imageIndex};
-        vkQueuePresentKHR(g_ctx.graphicsQueue, &presentInfo);
+        VkPresentInfoKHR presentInfo = {
+            .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+            .waitSemaphoreCount = 1,
+            .pWaitSemaphores = &g_ctx.renderFinishedSemaphore,
+            .swapchainCount = 1,
+            .pSwapchains = &g_ctx.swapchain,
+            .pImageIndices = &imageIndex
+        };
+        result = vkQueuePresentKHR(g_ctx.graphicsQueue, &presentInfo);
+
+        if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) { recreate_swapchain(); }
 
         vkQueueWaitIdle(g_ctx.graphicsQueue);
         vkFreeCommandBuffers(g_ctx.device, g_ctx.commandPool, 1, &g_ctx.currentCmd);
@@ -282,3 +417,19 @@ void qgpu_cleanup() {
     glfwDestroyWindow(g_ctx.window);
     glfwTerminate();
 }
+
+void qgpu_get_window_size(int* width, int* height) { if (!g_ctx.window) { return; } glfwGetWindowSize(g_ctx.window, width, height); }
+void qgpu_get_framebuffer_size(int* width, int* height) { if (!g_ctx.window) { return; } glfwGetFramebufferSize(g_ctx.window, width, height); }
+
+int isKeyDown(int key) { if (!g_ctx.window) { return 0; } return glfwGetKey(g_ctx.window, key) == GLFW_PRESS; }
+int isMouseButtonDown(int button) { if (!g_ctx.window) { return 0; } return glfwGetMouseButton(g_ctx.window, button) == GLFW_PRESS; }
+void getCursorPosition(double* x, double* y) {
+    if (!g_ctx.window || !x || !y) return;
+    int w, h; double rawX, rawY;
+    glfwGetFramebufferSize(g_ctx.window, &w, &h);
+    glfwGetCursorPos(g_ctx.window, &rawX, &rawY);
+    *x = rawX - (w / 2.0); *y = -(rawY - (h / 2.0));
+}
+int qgpu_get_width() { int w, h; glfwGetFramebufferSize(g_ctx.window, &w, &h); return w; }
+int qgpu_get_height() { int w, h; glfwGetFramebufferSize(g_ctx.window, &w, &h); return h; }
+

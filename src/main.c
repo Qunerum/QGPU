@@ -1,22 +1,21 @@
 #include "../include/qgpu.h"
-#include "../include/qgpu_texture.h"
 
 void Update() {
-    drawRect(-120, 50, 200, 100, 0, 0.5f, 0);
-    drawWireRect(-120, 50, 200, 100, 3, 0, 0.75f, 0);
+    drawTextureScale(100, 0, 0, 50);
     
-    drawCircle(100, 0, 50, 12, 0, 0, 0.2f);
-    drawWireCircle(100, 0, 50, 12, 3, 0, 0, 0.45f);
+    drawRect(-100, 0, 100, 100, 1, 0, 0, 0.5f);
+    drawRect(-150, 30, 100, 100, 0, 1, 0, 0.5f);
     
-    drawTriangle(50, 100, -50, -25, 0, 25,   50, -50, 0.3f, 0, 0);
-    drawWireTriangle(50, 100, -50, -25, 0, 25,   50, -50, 3, 0.55f, 0, 0);
+    double x = 0, y = 0;
+    if (getMouse(LMB)) {
+        getMousePos(&x, &y);
+        print("x: %.2f y: %.2f", x, y);
+    }
     
-    drawRect(100, 0, 128, 128, 1.0f, 1.0f, 1.0f);
+    drawCircle(x, y, 10, 16, 0.5f, 0.5f, 0, 1);
 }
 
 int main() {
-    load_texture("test.qgt", 0);
-    
     qgpu_create(600, 400, "QGPU Window", Update);
     return 0;
 }
