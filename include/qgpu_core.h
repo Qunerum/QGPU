@@ -11,8 +11,6 @@ typedef struct {
     float color[3];
 } QGPU_Vertex;
 
-typedef void (*QGPU_UpdateCallback)();
-
 int  qgpu_init(int width, int height, const char* title);
 void qgpu_run(void (*updateFunc)());
 void qgpu_draw_geo(QGPU_Vertex* vertices, uint32_t vCount, uint32_t* indices, uint32_t iCount, float offsetX, float offsetY);

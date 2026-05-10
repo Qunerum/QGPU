@@ -25,7 +25,6 @@ typedef struct {
     VkDeviceMemory vertexBufferMemory;
     VkBuffer indexBuffer;
     VkDeviceMemory indexBufferMemory;
-    uint32_t indexCount;
 
     VkFramebuffer* swapchainFramebuffers;
     VkSemaphore imageAvailableSemaphore;
@@ -73,21 +72,17 @@ static void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPr
 static VkShaderModule createShaderModule(const char* filename) {
     FILE* file = fopen(filename, "rb");
     if (!file) return VK_NULL_HANDLE;
-
     fseek(file, 0, SEEK_END);
     long length = ftell(file);
     fseek(file, 0, SEEK_SET);
-
     char* code = malloc(length);
     fread(code, 1, length, file);
     fclose(file);
-
     VkShaderModuleCreateInfo createInfo = {
         .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
         .codeSize = length,
         .pCode = (uint32_t*)code
     };
-
     VkShaderModule shaderModule;
     vkCreateShaderModule(g_ctx.device, &createInfo, NULL, &shaderModule);
     free(code);
@@ -95,55 +90,37 @@ static VkShaderModule createShaderModule(const char* filename) {
 }
 
 // --- API ---
+
 int qgpu_init(int width, int height, const char* title) {
     if (!glfwInit()) return 0;
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     g_ctx.window = glfwCreateWindow(width, height, title, NULL, NULL);
+
     uint32_t glfwExtensionCount = 0;
     const char** glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
-    VkInstanceCreateInfo createInfo = {
-        .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
-        .enabledExtensionCount = glfwExtensionCount,
-        .ppEnabledExtensionNames = glfwExtensions
-    };
+    VkInstanceCreateInfo createInfo = {.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO, .enabledExtensionCount = glfwExtensionCount, .ppEnabledExtensionNames = glfwExtensions};
     vkCreateInstance(&createInfo, NULL, &g_ctx.instance);
     glfwCreateWindowSurface(g_ctx.instance, g_ctx.window, NULL, &g_ctx.surface);
+
     uint32_t deviceCount = 0;
     vkEnumeratePhysicalDevices(g_ctx.instance, &deviceCount, NULL);
     VkPhysicalDevice* devices = malloc(sizeof(VkPhysicalDevice) * deviceCount);
     vkEnumeratePhysicalDevices(g_ctx.instance, &deviceCount, devices);
     g_ctx.physicalDevice = devices[0];
+
     float queuePriority = 1.0f;
-    VkDeviceQueueCreateInfo queueCreateInfo = {
-        .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-        .queueFamilyIndex = 0,
-        .queueCount = 1,
-        .pQueuePriorities = &queuePriority
-    };
+    VkDeviceQueueCreateInfo queueCreateInfo = {.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO, .queueFamilyIndex = 0, .queueCount = 1, .pQueuePriorities = &queuePriority};
     const char* deviceExtensions[] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
-    VkDeviceCreateInfo deviceCreateInfo = {
-        .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-        .queueCreateInfoCount = 1,
-        .pQueueCreateInfos = &queueCreateInfo,
-        .enabledExtensionCount = 1,
-        .ppEnabledExtensionNames = deviceExtensions
-    };
+    VkDeviceCreateInfo deviceCreateInfo = {.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO, .queueCreateInfoCount = 1, .pQueueCreateInfos = &queueCreateInfo, .enabledExtensionCount = 1, .ppEnabledExtensionNames = deviceExtensions};
     vkCreateDevice(g_ctx.physicalDevice, &deviceCreateInfo, NULL, &g_ctx.device);
     vkGetDeviceQueue(g_ctx.device, 0, 0, &g_ctx.graphicsQueue);
+
     VkSwapchainCreateInfoKHR swapchainInfo = {
-        .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
-        .surface = g_ctx.surface,
-        .minImageCount = 2,
-        .imageFormat = VK_FORMAT_B8G8R8A8_UNORM,
-        .imageColorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR,
-        .imageExtent = {width, height},
-        .imageArrayLayers = 1,
-        .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-        .imageSharingMode = VK_SHARING_MODE_EXCLUSIVE,
-        .preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR,
-        .compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
-        .presentMode = VK_PRESENT_MODE_FIFO_KHR,
-        .clipped = VK_TRUE
+        .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR, .surface = g_ctx.surface, .minImageCount = 2,
+        .imageFormat = VK_FORMAT_B8G8R8A8_UNORM, .imageColorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR,
+        .imageExtent = {width, height}, .imageArrayLayers = 1, .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+        .imageSharingMode = VK_SHARING_MODE_EXCLUSIVE, .preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR,
+        .compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR, .presentMode = VK_PRESENT_MODE_FIFO_KHR, .clipped = VK_TRUE
     };
     vkCreateSwapchainKHR(g_ctx.device, &swapchainInfo, NULL, &g_ctx.swapchain);
     vkGetSwapchainImagesKHR(g_ctx.device, g_ctx.swapchain, &g_ctx.imageCount, NULL);
@@ -151,45 +128,34 @@ int qgpu_init(int width, int height, const char* title) {
     vkGetSwapchainImagesKHR(g_ctx.device, g_ctx.swapchain, &g_ctx.imageCount, g_ctx.swapchainImages);
     g_ctx.swapchainImageViews = malloc(sizeof(VkImageView) * g_ctx.imageCount);
     for (uint32_t i = 0; i < g_ctx.imageCount; i++) {
-        VkImageViewCreateInfo viewInfo = {
-            .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-            .image = g_ctx.swapchainImages[i],
-            .viewType = VK_IMAGE_VIEW_TYPE_2D,
-            .format = VK_FORMAT_B8G8R8A8_UNORM,
-            .subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1}
-        };
+        VkImageViewCreateInfo viewInfo = {.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO, .image = g_ctx.swapchainImages[i], .viewType = VK_IMAGE_VIEW_TYPE_2D, .format = VK_FORMAT_B8G8R8A8_UNORM, .subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1}};
         vkCreateImageView(g_ctx.device, &viewInfo, NULL, &g_ctx.swapchainImageViews[i]);
     }
-    VkAttachmentDescription colorAttachment = {
-        .format = VK_FORMAT_B8G8R8A8_UNORM,
-        .samples = VK_SAMPLE_COUNT_1_BIT,
-        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-        .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-        .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
-    };
+
+    VkAttachmentDescription colorAttachment = {.format = VK_FORMAT_B8G8R8A8_UNORM, .samples = VK_SAMPLE_COUNT_1_BIT, .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR, .storeOp = VK_ATTACHMENT_STORE_OP_STORE, .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED, .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR};
     VkAttachmentReference colorRef = {0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL};
     VkSubpassDescription subpass = {.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS, .colorAttachmentCount = 1, .pColorAttachments = &colorRef};
     VkRenderPassCreateInfo rpInfo = {.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO, .attachmentCount = 1, .pAttachments = &colorAttachment, .subpassCount = 1, .pSubpasses = &subpass};
     vkCreateRenderPass(g_ctx.device, &rpInfo, NULL, &g_ctx.renderPass);
+
+    // --- PIPELINE ---
+    VkPushConstantRange pushConstantRange = {.stageFlags = VK_SHADER_STAGE_VERTEX_BIT, .offset = 0, .size = sizeof(float) * 4};
+    VkPipelineLayoutCreateInfo pipelineLayoutInfo = {.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO, .setLayoutCount = 0, .pSetLayouts = NULL, .pushConstantRangeCount = 1, .pPushConstantRanges = &pushConstantRange};
+    vkCreatePipelineLayout(g_ctx.device, &pipelineLayoutInfo, NULL, &g_ctx.pipelineLayout);
+
     VkShaderModule vertModule = createShaderModule("bin/vert.spv");
     VkShaderModule fragModule = createShaderModule("bin/frag.spv");
-
     VkPipelineShaderStageCreateInfo shaderStages[2] = {
         {.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .stage = VK_SHADER_STAGE_VERTEX_BIT, .module = vertModule, .pName = "main"},
         {.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .stage = VK_SHADER_STAGE_FRAGMENT_BIT, .module = fragModule, .pName = "main"}
     };
+
     VkVertexInputBindingDescription bindingDesc = {.binding = 0, .stride = sizeof(QGPU_Vertex), .inputRate = VK_VERTEX_INPUT_RATE_VERTEX};
     VkVertexInputAttributeDescription attrDesc[2] = {
         {.binding = 0, .location = 0, .format = VK_FORMAT_R32G32_SFLOAT, .offset = offsetof(QGPU_Vertex, pos)},
         {.binding = 0, .location = 1, .format = VK_FORMAT_R32G32B32_SFLOAT, .offset = offsetof(QGPU_Vertex, color)}
     };
-    VkPipelineVertexInputStateCreateInfo vertexInputInfo = {
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
-        .vertexBindingDescriptionCount = 1, .pVertexBindingDescriptions = &bindingDesc,
-        .vertexAttributeDescriptionCount = 2, .pVertexAttributeDescriptions = attrDesc
-    };
-
+    VkPipelineVertexInputStateCreateInfo vertexInputInfo = {.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO, .vertexBindingDescriptionCount = 1, .pVertexBindingDescriptions = &bindingDesc, .vertexAttributeDescriptionCount = 2, .pVertexAttributeDescriptions = attrDesc};
     VkPipelineInputAssemblyStateCreateInfo inputAssembly = {.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO, .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST};
     VkViewport viewport = {0.0f, 0.0f, (float)width, (float)height, 0.0f, 1.0f};
     VkRect2D scissor = {{0, 0}, {width, height}};
@@ -199,42 +165,28 @@ int qgpu_init(int width, int height, const char* title) {
     VkPipelineColorBlendAttachmentState colorBlendAttachment = {.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT};
     VkPipelineColorBlendStateCreateInfo colorBlending = {.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO, .attachmentCount = 1, .pAttachments = &colorBlendAttachment};
 
-    VkPushConstantRange pushConstantRange = {
-        .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
-        .offset = 0,
-        .size = sizeof(float) * 7
-    };
-    VkPipelineLayoutCreateInfo pipelineLayoutInfo = {
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-        .pushConstantRangeCount = 1,
-        .pPushConstantRanges = &pushConstantRange
-    };
-    vkCreatePipelineLayout(g_ctx.device, &pipelineLayoutInfo, NULL, &g_ctx.pipelineLayout);
-    VkGraphicsPipelineCreateInfo pipelineInfo = {
-        .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-        .stageCount = 2, .pStages = shaderStages,
-        .pVertexInputState = &vertexInputInfo, .pInputAssemblyState = &inputAssembly,
-        .pViewportState = &viewportState, .pRasterizationState = &rasterizer,
-        .pMultisampleState = &multisampling, .pColorBlendState = &colorBlending,
-        .layout = g_ctx.pipelineLayout, .renderPass = g_ctx.renderPass, .subpass = 0
-    };
+    VkGraphicsPipelineCreateInfo pipelineInfo = {.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO, .stageCount = 2, .pStages = shaderStages, .pVertexInputState = &vertexInputInfo, .pInputAssemblyState = &inputAssembly, .pViewportState = &viewportState, .pRasterizationState = &rasterizer, .pMultisampleState = &multisampling, .pColorBlendState = &colorBlending, .layout = g_ctx.pipelineLayout, .renderPass = g_ctx.renderPass, .subpass = 0};
     vkCreateGraphicsPipelines(g_ctx.device, VK_NULL_HANDLE, 1, &pipelineInfo, NULL, &g_ctx.graphicsPipeline);
 
     vkDestroyShaderModule(g_ctx.device, vertModule, NULL);
     vkDestroyShaderModule(g_ctx.device, fragModule, NULL);
+
     g_ctx.swapchainFramebuffers = malloc(sizeof(VkFramebuffer) * g_ctx.imageCount);
     for (uint32_t i = 0; i < g_ctx.imageCount; i++) {
         VkFramebufferCreateInfo fbInfo = {.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO, .renderPass = g_ctx.renderPass, .attachmentCount = 1, .pAttachments = &g_ctx.swapchainImageViews[i], .width = width, .height = height, .layers = 1};
         vkCreateFramebuffer(g_ctx.device, &fbInfo, NULL, &g_ctx.swapchainFramebuffers[i]);
     }
+
     VkCommandPoolCreateInfo poolInfo = {.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO, .queueFamilyIndex = 0, .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT};
     vkCreateCommandPool(g_ctx.device, &poolInfo, NULL, &g_ctx.commandPool);
+
     VkSemaphoreCreateInfo semInfo = {.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
     vkCreateSemaphore(g_ctx.device, &semInfo, NULL, &g_ctx.imageAvailableSemaphore);
     vkCreateSemaphore(g_ctx.device, &semInfo, NULL, &g_ctx.renderFinishedSemaphore);
 
     createBuffer(1024 * 1024, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &g_ctx.vertexBuffer, &g_ctx.vertexBufferMemory);
     createBuffer(1024 * 1024, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &g_ctx.indexBuffer, &g_ctx.indexBufferMemory);
+    
     return 1;
 }
 
@@ -273,6 +225,7 @@ void qgpu_run(void (*updateFunc)()) {
         g_ctx.currentVOffset = 0;
         g_ctx.currentIOffset = 0;
         glfwPollEvents();
+
         uint32_t imageIndex;
         vkAcquireNextImageKHR(g_ctx.device, g_ctx.swapchain, UINT64_MAX, g_ctx.imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
 
@@ -317,7 +270,10 @@ void qgpu_cleanup() {
     vkDestroySemaphore(g_ctx.device, g_ctx.imageAvailableSemaphore, NULL);
     vkDestroySemaphore(g_ctx.device, g_ctx.renderFinishedSemaphore, NULL);
     vkDestroyCommandPool(g_ctx.device, g_ctx.commandPool, NULL);
-    for (uint32_t i = 0; i < g_ctx.imageCount; i++) { vkDestroyFramebuffer(g_ctx.device, g_ctx.swapchainFramebuffers[i], NULL); vkDestroyImageView(g_ctx.device, g_ctx.swapchainImageViews[i], NULL); }
+    for (uint32_t i = 0; i < g_ctx.imageCount; i++) {
+        vkDestroyFramebuffer(g_ctx.device, g_ctx.swapchainFramebuffers[i], NULL);
+        vkDestroyImageView(g_ctx.device, g_ctx.swapchainImageViews[i], NULL);
+    }
     vkDestroyRenderPass(g_ctx.device, g_ctx.renderPass, NULL);
     vkDestroySwapchainKHR(g_ctx.device, g_ctx.swapchain, NULL);
     vkDestroyDevice(g_ctx.device, NULL);

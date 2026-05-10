@@ -6,42 +6,42 @@ LDFLAGS = -lglfw -lvulkan -ldl -lpthread -lX11 -lXxf86vm -lXrandr -lXi -lm
 
 SRC_DIR = src
 SHADERS_DIR = shaders
-BIN_DIR = bin
+BIN = bin
 
-SRC = $(SRC_DIR)/main.c $(SRC_DIR)/qgpu.c $(SRC_DIR)/qgpu_core.c
-OBJ = $(SRC:$(SRC_DIR)/%.c=$(BIN_DIR)/%.o)
-TARGET = $(BIN_DIR)/qgpu_app
+OBJ = $(BIN)/main.o \
+      $(BIN)/qgpu.o \
+      $(BIN)/qgpu_core.o \
+      $(BIN)/qgpu_texture.o
+
+TARGET = $(BIN)/qgpu_app
 
 VERT_SRC = $(SHADERS_DIR)/shader.vert
 FRAG_SRC = $(SHADERS_DIR)/shader.frag
-SHADERS_SPV = $(BIN_DIR)/vert.spv $(BIN_DIR)/frag.spv
+SHADERS_SPV = $(BIN)/vert.spv $(BIN)/frag.spv
 
-all: $(BIN_DIR) $(SHADERS_SPV) $(TARGET)
+all: prepare $(SHADERS_SPV) $(TARGET)
 
-$(BIN_DIR):
-	mkdir -p $(BIN_DIR)
+prepare:
+	@mkdir -p $(BIN)
+	@mkdir -p $(BIN)
 
-$(BIN_DIR)/vert.spv: $(VERT_SRC)
-	@echo "Kompilacja shadera vertex..."
-	$(GLSLC) $< -o $@
+$(BIN)/%.spv: $(SHADERS_DIR)/shader.%
+	@echo "Kompilacja shadera $*..."
+	@$(GLSLC) $< -o $@
 
-$(BIN_DIR)/frag.spv: $(FRAG_SRC)
-	@echo "Kompilacja shadera fragment..."
-	$(GLSLC) $< -o $@
-
-$(BIN_DIR)/%.o: $(SRC_DIR)/%.c
+$(BIN)/%.o: $(SRC_DIR)/%.c
 	@echo "Kompilacja $<..."
-	$(CC) $(CFLAGS) -c $< -o $@
+	@$(CC) $(CFLAGS) -c $< -o $@
 
 $(TARGET): $(OBJ)
 	@echo "Linkowanie projektu..."
-	$(CC) -o $@ $(OBJ) $(LDFLAGS)
+	@$(CC) -o $@ $(OBJ) $(LDFLAGS)
 
 run: all
 	@echo "--- Odpalam qgpu_app ---"
-	./$(TARGET)
+	@./$(TARGET)
 
 clean:
-	rm -rf $(BIN_DIR)
+	@rm -rf $(BIN)
 
-.PHONY: all run clean
+.PHONY: all prepare run clean
