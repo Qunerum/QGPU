@@ -1,11 +1,26 @@
 #include "../include/qgpu.h"
 
 void Update() {
-    drawTextureScale(100, 0, 0, 50);
+    drawTextureScale(400, 0, 0, 20);
     
-    drawRect(-100, 0, 100, 100, 1, 0, 0, 0.5f);
-    drawRect(-150, 30, 100, 100, 0, 1, 0, 0.5f);
-    
+    float t = 100, p = 70, i = 0.5;
+
+    drawLine(-50 + p, -50 + p, -50 + p, 50 + p, t, 0, i, 0, 1);
+    drawLine(-50 + p, 50 + p, 50 + p, 50 + p, t, i, 0, 0, 1);
+    drawLine(50 + p, 50 + p, 50 + p, -50 + p, t, 0, i, 0, 1);
+    drawLine(50 + p, -50 + p, -50 + p, -50 + p, t, i, 0, 0, 1);
+
+    drawLine(-50, -50, -50, 50, t, 0, i, 0, 1);
+    drawLine(-50, 50, 50, 50, t, i, 0, 0, 1);
+    drawLine(50, 50, 50, -50, t, 0, i, 0, 1);
+    drawLine(50, -50, -50, -50, t, i, 0, 0, 1);
+
+    drawLine(-50, -50, -50 + p, -50 + p, t, 0, 0, i, 1);
+    drawLine(-50, 50, -50 + p, 50 + p, t, 0, 0, i, 1);
+    drawLine(50, 50, 50 + p, 50 + p, t, 0, 0, i, 1);
+    drawLine(50, -50, 50 + p, -50 + p, t, 0, 0, i, 1);
+
+    /*
     double x = 0, y = 0;
     if (getMouse(LMB)) {
         getMousePos(&x, &y);
@@ -13,6 +28,7 @@ void Update() {
     }
     
     drawCircle(x, y, 10, 16, 0.5f, 0.5f, 0, 1);
+    */
 }
 
 int main() {
