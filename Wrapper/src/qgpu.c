@@ -12,19 +12,24 @@ float q_abs(float x) { return (x < 0) ? -x : x; }
 float q_sqrt(float x) {
     if (x <= 0) return 0;
     float xhalf = 0.5f * x;
-    int i = *(int*)&x;
-    i = 0x5f3759df - (i >> 1);
-    x = *(float*)&i;
+    union {
+        float f;
+        int i;
+    } conv;
+    conv.f = x;
+    conv.i = 0x5f3759df - (conv.i >> 1);
+    x = conv.f;
     x = x * (1.5f - xhalf * x * x);
     return 1.0f / x;
 }
 float q_sin(float x) {
     while (x > PI) x -= 2.0f * PI;
     while (x < -PI) x += 2.0f * PI;
-    float x2 = x * x, pi2 = PI * PI, sin_x = (16.0f * x * (PI - q_abs(x))) / (5.0f * pi2 - 4.0f * x * (PI - q_abs(x)));
+    float abs_x = q_abs(x);
+    float pi2 = PI * PI;
+    float sin_x = (16.0f * x * (PI - abs_x)) / (5.0f * pi2 - 4.0f * x * (PI - abs_x));
     return sin_x;
 }
-
 float q_cos(float x) { return q_sin(x + (PI / 2.0f)); }
 
 void print(const char* format, ...) {
@@ -38,7 +43,7 @@ void print(const char* format, ...) {
 
 void qgpuCreate(int width, int height, const char* title, void (*updateFunc)())
 { 
-    load_texture("test.qgt", 0);
+    // load_texture("test.qgt", 0);
     if (qgpu_init(width, height, title)) { qgpu_run(updateFunc); } 
     qgpu_cleanup(); 
     cleanup_textures(); }
