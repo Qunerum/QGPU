@@ -1,7 +1,7 @@
-#include "../include/qgpu_core.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "../include/qgpu_core.h"
 
 typedef struct {
     GLFWwindow* window;
@@ -33,6 +33,9 @@ typedef struct {
 
     uint32_t currentVOffset;
     uint32_t currentIOffset;
+
+    int lastKeyState[GLFW_KEY_LAST];
+    int lastMouseState[GLFW_MOUSE_BUTTON_LAST];
 } InternalContext;
 
 static InternalContext g_ctx;
@@ -306,6 +309,11 @@ void qgpu_draw_geo(QGPU_Vertex* vertices, uint32_t vCount, uint32_t* indices, ui
     g_ctx.currentIOffset += iSize;
 }
 
+void updateInputStates() {
+    for (int i = 0; i < GLFW_KEY_LAST; i++) { g_ctx.lastKeyState[i] = glfwGetKey(g_ctx.window, i); }
+    for (int i = 0; i < GLFW_MOUSE_BUTTON_LAST; i++) { g_ctx.lastMouseState[i] = glfwGetMouseButton(g_ctx.window, i); }
+}
+
 static int lastW = 0, lastH = 0;
 void qgpu_run(void (*updateFunc)()) {
     while (!glfwWindowShouldClose(g_ctx.window)) {
@@ -391,6 +399,8 @@ void qgpu_run(void (*updateFunc)()) {
         vkQueueWaitIdle(g_ctx.graphicsQueue);
         vkFreeCommandBuffers(g_ctx.device, g_ctx.commandPool, 1, &g_ctx.currentCmd);
         g_ctx.currentCmd = VK_NULL_HANDLE;
+
+        updateInputStates();
     }
 }
 
@@ -422,7 +432,20 @@ void qgpu_get_window_size(int* width, int* height) { if (!g_ctx.window) { return
 void qgpu_get_framebuffer_size(int* width, int* height) { if (!g_ctx.window) { return; } glfwGetFramebufferSize(g_ctx.window, width, height); }
 
 int isKeyDown(int key) { if (!g_ctx.window) { return 0; } return glfwGetKey(g_ctx.window, key) == GLFW_PRESS; }
+int isKeyPressed(int key) {
+    int current = glfwGetKey(g_ctx.window, key);
+    int last = g_ctx.lastKeyState[key];
+    if (current == GLFW_PRESS && last == GLFW_RELEASE) { return 1; }
+    return 0;
+}
+
 int isMouseButtonDown(int button) { if (!g_ctx.window) { return 0; } return glfwGetMouseButton(g_ctx.window, button) == GLFW_PRESS; }
+int isMouseButtonPressed(int button) {
+    int current = glfwGetMouseButton(g_ctx.window, button);
+    int last = g_ctx.lastMouseState[button];
+    if (current == GLFW_PRESS && last == GLFW_RELEASE) { return 1; }
+    return 0;
+}
 void getCursorPosition(double* x, double* y) {
     if (!g_ctx.window || !x || !y) return;
     int w, h; double rawX, rawY;

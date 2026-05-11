@@ -1,37 +1,18 @@
 #include "../include/qgpu.h"
+#include "../include/qgpu_ui.h"
 
+float x = 0.5f;
 void Update() {
-    drawTextureScale(400, 0, 0, 20);
-    
-    float t = 100, p = 70, i = 0.5;
+    QColor normal = {0.4f, 0.4f, 0.4f, 1.0f};
+    QColor hover  = {0.5f, 0.5f, 0.5f, 1.0f};
+    QColor press  = {0.3f, 0.3f, 0.3f, 1.0f};
+    if (drawButton(0, 0, 200, 60, normal, hover, press) == 1) { print("Click!"); }
 
-    drawLine(-50 + p, -50 + p, -50 + p, 50 + p, t, 0, i, 0, 1);
-    drawLine(-50 + p, 50 + p, 50 + p, 50 + p, t, i, 0, 0, 1);
-    drawLine(50 + p, 50 + p, 50 + p, -50 + p, t, 0, i, 0, 1);
-    drawLine(50 + p, -50 + p, -50 + p, -50 + p, t, i, 0, 0, 1);
-
-    drawLine(-50, -50, -50, 50, t, 0, i, 0, 1);
-    drawLine(-50, 50, 50, 50, t, i, 0, 0, 1);
-    drawLine(50, 50, 50, -50, t, 0, i, 0, 1);
-    drawLine(50, -50, -50, -50, t, i, 0, 0, 1);
-
-    drawLine(-50, -50, -50 + p, -50 + p, t, 0, 0, i, 1);
-    drawLine(-50, 50, -50 + p, 50 + p, t, 0, 0, i, 1);
-    drawLine(50, 50, 50 + p, 50 + p, t, 0, 0, i, 1);
-    drawLine(50, -50, 50 + p, -50 + p, t, 0, 0, i, 1);
-
-    /*
-    double x = 0, y = 0;
-    if (getMouse(LMB)) {
-        getMousePos(&x, &y);
-        print("x: %.2f y: %.2f", x, y);
-    }
-    
-    drawCircle(x, y, 10, 16, 0.5f, 0.5f, 0, 1);
-    */
+    drawSlider(&x, 0, 1, 0, 100, 200, 40, 10, 50, press, normal, hover);
+    print("%f", x);
 }
 
 int main() {
-    qgpu_create(600, 400, "QGPU Window", Update);
+    qgpuCreate(600, 400, "QGPU Window", Update);
     return 0;
 }

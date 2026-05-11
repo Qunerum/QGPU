@@ -20,8 +20,11 @@ void qgpu_get_window_size(int* width, int* height);
 void qgpu_get_framebuffer_size(int* width, int* height);
 
 int isKeyDown(int key);
-void getCursorPosition(double* x, double* y);
+int isKeyPressed(int key);
+
 int isMouseButtonDown(int button);
+int isMouseButtonPressed(int button);
+void getCursorPosition(double* x, double* y);
 
 int qgpu_get_width();
 int qgpu_get_height();

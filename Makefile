@@ -11,7 +11,8 @@ BIN = bin
 OBJ = $(BIN)/main.o \
       $(BIN)/qgpu.o \
       $(BIN)/qgpu_core.o \
-      $(BIN)/qgpu_texture.o
+      $(BIN)/qgpu_texture.o \
+      $(BIN)/qgpu_ui.o
 
 TARGET = $(BIN)/qgpu_app
 
