@@ -25,9 +25,17 @@ int drawSlider(float* value, float min, float max, float posX, float posY, float
     float t = (*value - min) / (max - min);
     drawRect(posX, posY, width, height, backgroundClr);
     drawRect(posX - width/2 + width * t / 2, posY, width * t, height, fillClr);
-
-    float handleX = posX - width / 2.0f + t * width;
-    drawRect(handleX, posY, 10, height + 10, handleClr);
+    drawRect(posX - width / 2.0f + t * width, posY, handleW, handleH, handleClr);
 
     return changed;
 }
+int drawToggle(int* value, float posX, float posY, float width, float height, QColor offClr, QColor onClr) {
+    double mx, my; getMousePos(&mx, &my);
+    int hovered = AABB((float)mx, (float)my, posX, posY, width, height);
+    int m = hovered && onMouse(LMB);
+    if (m) { *value = !*value; }
+    drawRect(posX, posY, width, height, *value == 0 ? offClr : onClr);
+    return m;
+}
+// input field
+// slider without handle
