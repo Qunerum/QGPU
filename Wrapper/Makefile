@@ -8,9 +8,7 @@ SHADERS_DIR = shaders
 BIN = bin
 BUILD = build
 
-# Znajduje automatycznie qgpu.c, main.c i ewentualne inne pliki .c w tym folderze
 SRCS = $(wildcard *.c)
-# Mapuje pliki .c na obiekty .o wewnątrz folderu bin/
 OBJS = $(patsubst %.c, $(BIN)/%.o, $(SRCS))
 
 APP_TARGET = $(BUILD)/qgpu_app
@@ -25,17 +23,14 @@ prepare:
 	@mkdir -p $(BIN)
 	@mkdir -p $(BUILD)
 
-# Reguła dla shaderów
 $(BIN)/%.spv: $(SHADERS_DIR)/shader.%
 	@echo "Shader compilation $*..."
 	@$(GLSLC) $< -o $@
 
-# Uniwersalna reguła kompilacji plików .c z głównego folderu do bin/%.o
 $(BIN)/%.o: %.c
 	@echo "Compilation $<..."
 	@$(CC) $(CFLAGS) -c $< -o $@
 
-# Linkowanie aplikacji bezpośrednio ze wszystkich obiektów .o (bez libqgpu.a)
 $(APP_TARGET): $(OBJS)
 	@echo "Linking app $(APP_TARGET)..."
 	@$(CC) -o $@ $(OBJS) $(LDFLAGS)
