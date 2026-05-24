@@ -1,9 +1,26 @@
 #ifndef QGPU_H
 #define QGPU_H
 
-#include "qgpu_core.h"
+#include <vulkan/vulkan.h>
+#define GLFW_INCLUDE_VULKAN
+#include <GLFW/glfw3.h>
+#include <stdint.h>
 
+typedef struct {
+    float pos[2];
+    float color[4];
+} QGPU_Vertex;
 typedef struct { float r, g, b, a; } QColor;
+typedef struct {
+    unsigned char* pixels;
+    int pixelCount;
+    int width;
+    int height;
+} RawTexture;
+
+#define TEXTURES 16
+extern RawTexture txts[TEXTURES];
+
 #define WHITE       (QColor){1.0f, 1.0f, 1.0f, 1.0f}
 #define GRAY        (QColor){0.5f, 0.5f, 0.5f, 1.0f}
 #define BLACK       (QColor){0.0f, 0.0f, 0.0f, 1.0f}
@@ -40,8 +57,12 @@ void getMousePos(double* x, double* y);
 int getWidth();
 int getHeight();
 
-int AABB(float x, float y, float posX, float posY, float width, float height);
+// UI
+int drawButton(float posX, float posY, float width, float height, QColor clr, QColor hoverClr, QColor pressClr);
+int drawSlider(float* value, float min, float max, float posX, float posY, float width, float height, float handleW, float handleH, QColor backgroundClr, QColor fillClr, QColor handleClr);
+int drawToggle(int* value, float posX, float posY, float width, float height, QColor offClr, QColor onClr);
 
+// KEYBOARD
 #define LMB GLFW_MOUSE_BUTTON_LEFT
 #define RMB GLFW_MOUSE_BUTTON_RIGHT
 

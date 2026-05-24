@@ -1,8 +1,8 @@
-#include "../include/qgpu.h"
-#include "../include/qgpu_ui.h"
+#include "qgpu.h"
 
 float x = 0.5f;
 int toggle = 0;
+int a = 0;
 void Update() {
     QColor normal = {0.4f, 0.4f, 0.4f, 1.0f};
     QColor hover  = {0.5f, 0.5f, 0.5f, 1.0f};
@@ -11,7 +11,8 @@ void Update() {
 
     if (drawSlider(&x, 0, 1, 0, 100, 200, 40, 10, 50, press, normal, hover)) print("%f", x);
 
-    if (drawToggle(&toggle, 0, -100, 20, 20, normal, hover)) print("Toggle!");
+    if (a && drawToggle(&toggle, 0, -100, 20, 20, normal, hover)) print("Toggle!");
+    a = 1;
 }
 
 int main() {
