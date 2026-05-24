@@ -7,7 +7,6 @@
 #include "qgpu.h"
 
 #define PI 3.14159265359f
-
 #define SHADERS "bin/"
 
 // ==========================================
@@ -50,22 +49,15 @@ float q_abs(float x) { return (x < 0) ? -x : x; }
 float q_sqrt(float x) {
     if (x <= 0) return 0;
     float xhalf = 0.5f * x;
-    union {
-        float f;
-        int i;
-    } conv;
-    conv.f = x;
-    conv.i = 0x5f3759df - (conv.i >> 1);
-    x = conv.f;
-    x = x * (1.5f - xhalf * x * x);
+    union { float f; int i; } conv;
+    conv.f = x; conv.i = 0x5f3759df - (conv.i >> 1);
+    x = conv.f; x = x * (1.5f - xhalf * x * x);
     return 1.0f / x;
 }
 float q_sin(float x) {
     while (x > PI) x -= 2.0f * PI;
     while (x < -PI) x += 2.0f * PI;
-    float abs_x = q_abs(x);
-    float pi2 = PI * PI;
-    float sin_x = (16.0f * x * (PI - abs_x)) / (5.0f * pi2 - 4.0f * x * (PI - abs_x));
+    float abs_x = q_abs(x), pi2 = PI * PI, sin_x = (16.0f * x * (PI - abs_x)) / (5.0f * pi2 - 4.0f * x * (PI - abs_x));
     return sin_x;
 }
 float q_cos(float x) { return q_sin(x + (PI / 2.0f)); }
@@ -79,7 +71,6 @@ void print(const char* format, ...) {
     va_end(args);
     printf("\n");
 }
-
 // ==========================================
 static uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
     VkPhysicalDeviceMemoryProperties memProperties;
@@ -126,56 +117,6 @@ static VkShaderModule createShaderModule(const char* filename) {
     free(code);
     return shaderModule;
 }
-static void recreate_swapchain() {
-    int w = 0, h = 0;
-    glfwGetFramebufferSize(g_ctx.window, &w, &h);
-    while (w == 0 || h == 0) { glfwGetFramebufferSize(g_ctx.window, &w, &h); glfwWaitEvents(); }
-    vkDeviceWaitIdle(g_ctx.device);
-    for (uint32_t i = 0; i < g_ctx.imageCount; i++) {
-        vkDestroyFramebuffer(g_ctx.device, g_ctx.swapchainFramebuffers[i], NULL);
-        vkDestroyImageView(g_ctx.device, g_ctx.swapchainImageViews[i], NULL);
-    }
-    VkSwapchainKHR oldSwapchain = g_ctx.swapchain;
-    VkSwapchainCreateInfoKHR swapchainInfo = {
-        .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
-        .surface = g_ctx.surface,
-        .minImageCount = 2,
-        .imageFormat = VK_FORMAT_B8G8R8A8_UNORM,
-        .imageColorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR,
-        .imageExtent = {(uint32_t)w, (uint32_t)h},
-        .imageArrayLayers = 1,
-        .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-        .preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR,
-        .compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
-        .presentMode = VK_PRESENT_MODE_FIFO_KHR,
-        .oldSwapchain = oldSwapchain
-    };
-    vkCreateSwapchainKHR(g_ctx.device, &swapchainInfo, NULL, &g_ctx.swapchain);
-    vkDestroySwapchainKHR(g_ctx.device, oldSwapchain, NULL);
-    vkGetSwapchainImagesKHR(g_ctx.device, g_ctx.swapchain, &g_ctx.imageCount, NULL);
-    vkGetSwapchainImagesKHR(g_ctx.device, g_ctx.swapchain, &g_ctx.imageCount, g_ctx.swapchainImages);
-    for (uint32_t i = 0; i < g_ctx.imageCount; i++) {
-        VkImageViewCreateInfo viewInfo = {
-            .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-            .image = g_ctx.swapchainImages[i],
-            .viewType = VK_IMAGE_VIEW_TYPE_2D,
-            .format = VK_FORMAT_B8G8R8A8_UNORM,
-            .subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1}
-        };
-        vkCreateImageView(g_ctx.device, &viewInfo, NULL, &g_ctx.swapchainImageViews[i]);
-        VkFramebufferCreateInfo fbInfo = {
-            .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
-            .renderPass = g_ctx.renderPass,
-            .attachmentCount = 1,
-            .pAttachments = &g_ctx.swapchainImageViews[i],
-            .width = (uint32_t)w,
-            .height = (uint32_t)h,
-            .layers = 1
-        };
-        vkCreateFramebuffer(g_ctx.device, &fbInfo, NULL, &g_ctx.swapchainFramebuffers[i]);
-    }
-}
-
 // ==========================================
 void cleanup_textures() { for (int i = 0; i < TEXTURES; i++) { if (txts[i].pixels != NULL) { free(txts[i].pixels); txts[i].pixels = NULL; } } }
 void qgpuCreate(int width, int height, const char* title, void (*updateFunc)()) {
@@ -328,31 +269,21 @@ void qgpuCreate(int width, int height, const char* title, void (*updateFunc)()) 
     g_ctx.swapchainFramebuffers = malloc(sizeof(VkFramebuffer) * g_ctx.imageCount);
     for (uint32_t i = 0; i < g_ctx.imageCount; i++) {
         VkFramebufferCreateInfo fbInfo = {
-            .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO, .renderPass = g_ctx.renderPass, .attachmentCount = 1,
-            .pAttachments = &g_ctx.swapchainImageViews[i], .width = (uint32_t)fbW, .height = (uint32_t)fbH, .layers = 1
+            .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO, .renderPass = g_ctx.renderPass,
+            .attachmentCount = 1, .pAttachments = &g_ctx.swapchainImageViews[i],
+            .width = (uint32_t)fbW, .height = (uint32_t)fbH, .layers = 1
         };
         vkCreateFramebuffer(g_ctx.device, &fbInfo, NULL, &g_ctx.swapchainFramebuffers[i]);
     }
-
-    // Tworzenie Command Pool
     VkCommandPoolCreateInfo poolInfo = { .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO, .queueFamilyIndex = 0, .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT };
     vkCreateCommandPool(g_ctx.device, &poolInfo, NULL, &g_ctx.commandPool);
-
-    // ====================================================================
-    // TUTAJ BYŁ BŁĄD – DODANO BRAKUJĄCĄ ALOKACJĘ COMMAND BUFFERA
-    // ====================================================================
     VkCommandBufferAllocateInfo allocInfo = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
         .commandPool = g_ctx.commandPool,
         .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
         .commandBufferCount = 1
     };
-    if (vkAllocateCommandBuffers(g_ctx.device, &allocInfo, &g_ctx.currentCmd) != VK_SUCCESS) {
-        printf("Błąd: Nie udało się zaalokować Command Buffera!\n");
-        exit(1);
-    }
-    // ====================================================================
-
+    vkAllocateCommandBuffers(g_ctx.device, &allocInfo, &g_ctx.currentCmd);
     createBuffer(sizeof(QGPU_Vertex) * 65536, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &g_ctx.vertexBuffer, &g_ctx.vertexBufferMemory);
     createBuffer(sizeof(uint32_t) * 65536, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &g_ctx.indexBuffer, &g_ctx.indexBufferMemory);
     vkMapMemory(g_ctx.device, g_ctx.vertexBufferMemory, 0, sizeof(QGPU_Vertex) * 65536, 0, &g_ctx.mappedVertexBuffer);
@@ -362,37 +293,17 @@ void qgpuCreate(int width, int height, const char* title, void (*updateFunc)()) 
     vkCreateSemaphore(g_ctx.device, &semaphoreInfo, NULL, &g_ctx.renderFinishedSemaphore);
     memset(g_ctx.lastKeyState, 0, sizeof(g_ctx.lastKeyState));
     memset(g_ctx.lastMouseState, 0, sizeof(g_ctx.lastMouseState));
-
-    // --- POCZĄTEK PĘTLI GŁÓWNEJ ---
     while (!glfwWindowShouldClose(g_ctx.window)) {
-        glfwPollEvents();
-
-        // Update stanów klawiatury/myszy
         for (int i = 0; i < GLFW_KEY_LAST; i++) g_ctx.lastKeyState[i] = glfwGetKey(g_ctx.window, i);
         for (int i = 0; i < GLFW_MOUSE_BUTTON_LAST; i++) g_ctx.lastMouseState[i] = glfwGetMouseButton(g_ctx.window, i);
-
-        // 1. Pobieramy kolejny obraz
+        glfwPollEvents();
         uint32_t imageIndex;
-        VkResult result = vkAcquireNextImageKHR(g_ctx.device, g_ctx.swapchain, 1000000000, g_ctx.imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
-
-        if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
-            continue;
-        } else if (result != VK_SUCCESS) {
-            continue;
-        }
-
-        // 2. Resetujemy offsety buforów i command buffer dla tej klatki
-        g_ctx.currentVOffset = 0;
-        g_ctx.currentIOffset = 0;
+        VkResult result = vkAcquireNextImageKHR(g_ctx.device, g_ctx.swapchain, UINT64_MAX, g_ctx.imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
+        if (result == VK_ERROR_OUT_OF_DATE_KHR) { continue; } else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) { continue; }
+        g_ctx.currentVOffset = 0; g_ctx.currentIOffset = 0;
         vkResetCommandBuffer(g_ctx.currentCmd, 0);
-
-        // 3. Nagrywanie komend
-        VkCommandBufferBeginInfo beginInfo = {
-            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-            .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT
-        };
+        VkCommandBufferBeginInfo beginInfo = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT };
         vkBeginCommandBuffer(g_ctx.currentCmd, &beginInfo);
-
         VkClearValue clearColor = {{{0.1f, 0.1f, 0.1f, 1.0f}}};
         VkRenderPassBeginInfo renderPassInfo = {
             .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
@@ -402,21 +313,18 @@ void qgpuCreate(int width, int height, const char* title, void (*updateFunc)()) 
             .clearValueCount = 1,
             .pClearValues = &clearColor
         };
-
         vkCmdBeginRenderPass(g_ctx.currentCmd, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
         vkCmdBindPipeline(g_ctx.currentCmd, VK_PIPELINE_BIND_POINT_GRAPHICS, g_ctx.graphicsPipeline);
-
+        VkViewport viewport = {0.0f, 0.0f, (float)width, (float)height, 0.0f, 1.0f};
+        VkRect2D scissor = {{0, 0}, {(uint32_t)width, (uint32_t)height}};
+        vkCmdSetViewport(g_ctx.currentCmd, 0, 1, &viewport);
+        vkCmdSetScissor(g_ctx.currentCmd, 0, 1, &scissor);
         VkDeviceSize offsets[] = {0};
         vkCmdBindVertexBuffers(g_ctx.currentCmd, 0, 1, &g_ctx.vertexBuffer, offsets);
         vkCmdBindIndexBuffer(g_ctx.currentCmd, g_ctx.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
-
-        // 4. Wywołanie logiki użytkownika (rysuje obiekty)
         updateFunc();
-
         vkCmdEndRenderPass(g_ctx.currentCmd);
         vkEndCommandBuffer(g_ctx.currentCmd);
-
-        // 5. Submit do kolejki grafiki
         VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
         VkSubmitInfo submitInfo = {
             .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
@@ -428,12 +336,7 @@ void qgpuCreate(int width, int height, const char* title, void (*updateFunc)()) 
             .signalSemaphoreCount = 1,
             .pSignalSemaphores = &g_ctx.renderFinishedSemaphore
         };
-
-        if (vkQueueSubmit(g_ctx.graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE) != VK_SUCCESS) {
-            printf("Błąd submitu kolejki!\n");
-        }
-
-        // 6. Prezentacja obrazu na ekranie
+        if (vkQueueSubmit(g_ctx.graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE) != VK_SUCCESS) { printf("Quene submit error!\n"); }
         VkPresentInfoKHR presentInfo = {
             .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
             .waitSemaphoreCount = 1,
@@ -442,14 +345,9 @@ void qgpuCreate(int width, int height, const char* title, void (*updateFunc)()) 
             .pSwapchains = &g_ctx.swapchain,
             .pImageIndices = &imageIndex
         };
-
         vkQueuePresentKHR(g_ctx.graphicsQueue, &presentInfo);
-
-        // Czekamy aż GPU skończy pracę, aby bezpiecznie zacząć kolejną klatkę
         vkDeviceWaitIdle(g_ctx.device);
     }
-    // --- KONIEC PĘTLI GŁÓWNEJ ---
-
     vkDeviceWaitIdle(g_ctx.device);
     cleanup_textures();
     vkUnmapMemory(g_ctx.device, g_ctx.vertexBufferMemory);
@@ -461,10 +359,7 @@ void qgpuCreate(int width, int height, const char* title, void (*updateFunc)()) 
     vkDestroyBuffer(g_ctx.device, g_ctx.vertexBuffer, NULL);
     vkFreeMemory(g_ctx.device, g_ctx.vertexBufferMemory, NULL);
     vkDestroyCommandPool(g_ctx.device, g_ctx.commandPool, NULL);
-    for (uint32_t i = 0; i < g_ctx.imageCount; i++) {
-        vkDestroyFramebuffer(g_ctx.device, g_ctx.swapchainFramebuffers[i], NULL);
-        vkDestroyImageView(g_ctx.device, g_ctx.swapchainImageViews[i], NULL);
-    }
+    for (uint32_t i = 0; i < g_ctx.imageCount; i++) { vkDestroyFramebuffer(g_ctx.device, g_ctx.swapchainFramebuffers[i], NULL); vkDestroyImageView(g_ctx.device, g_ctx.swapchainImageViews[i], NULL); }
     free(g_ctx.swapchainFramebuffers);
     free(g_ctx.swapchainImageViews);
     free(g_ctx.swapchainImages);
@@ -593,7 +488,6 @@ void drawWireCircle(float posX, float posY, float radius, int segments, float th
     free(v);
     free(indices);
 }
-
 // ==========================================
 int count_files_with_ext(const char *path, const char *ext) {
     int count = 0;
@@ -611,7 +505,7 @@ int count_files_with_ext(const char *path, const char *ext) {
     closedir(dir);
     return count;
 }
-void load_texture(const char* filename, int slot) {
+void loadTexture(const char* filename, int slot) {
     if (slot < 0 || slot >= TEXTURES) return;
     if (txts[slot].pixels != NULL) { free(txts[slot].pixels); txts[slot].pixels = NULL; }
     FILE* file = fopen(filename, "r");
@@ -694,10 +588,14 @@ int onMouse(int button) {
     int last = g_ctx.lastMouseState[button];
     return (current == GLFW_PRESS && last == GLFW_RELEASE);
 }
-void getMousePos(double* x, double* y) { if (!g_ctx.window || !x || !y) return; glfwGetCursorPos(g_ctx.window, x, y); }
+void getMousePos(double* x, double* y) {
+    if (!g_ctx.window || !x || !y) return;
+    double lx = 0, ly = 0; glfwGetCursorPos(g_ctx.window, &lx, &ly);
+    *x = lx - (double)getWidth() / 2;
+    *y = ly - (double)getHeight() / 2;
+}
 int getWidth() { int w, h; if (!g_ctx.window) return 0; glfwGetWindowSize(g_ctx.window, &w, &h); return w; }
 int getHeight() { int w, h; if (!g_ctx.window) return 0; glfwGetWindowSize(g_ctx.window, &w, &h); return h; }
-
 // ==========================================
 int drawButton(float posX, float posY, float width, float height, QColor clr, QColor hoverClr, QColor pressClr) {
     double mx, my; getMousePos(&mx, &my);

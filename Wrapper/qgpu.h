@@ -46,6 +46,7 @@ void drawWireRect(float posX, float posY, float sizeX, float sizeY, float thickn
 void drawWireTriangle(float posX, float posY, float p1X, float p1Y, float p2X, float p2Y, float p3X, float p3Y, float thickness, QColor clr);
 void drawWireCircle(float posX, float posY, float radius, int segments, float thickness, QColor clr);
 
+void loadTexture(const char* filename, int slot);
 void drawTextureScale(float posX, float posY, int textureID, float scale);
 
 int getKey(int key);
