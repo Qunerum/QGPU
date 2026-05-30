@@ -20,6 +20,7 @@ typedef struct {
 
 #define TEXTURES 16
 extern RawTexture txts[TEXTURES];
+#define FILES "Files/"
 
 #define WHITE       (QColor){1.0f, 1.0f, 1.0f, 1.0f}
 #define GRAY        (QColor){0.5f, 0.5f, 0.5f, 1.0f}
@@ -47,7 +48,7 @@ void drawWireTriangle(float posX, float posY, float p1X, float p1Y, float p2X, f
 void drawWireCircle(float posX, float posY, float radius, int segments, float thickness, QColor clr);
 
 void loadTexture(const char* filename, int slot);
-void drawTextureScale(float posX, float posY, int textureID, float scale);
+void drawTextureScale(float posX, float posY, int slot, float scale);
 
 int getKey(int key);
 int onKey(int key);

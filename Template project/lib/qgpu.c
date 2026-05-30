@@ -532,7 +532,7 @@ void loadTexture(const char* filename, int slot) {
     fclose(file);
     printf("Loaded texture '%s' to slot '%d' (%dx%d)\n", filename, slot, width, height);
 }
-void drawTextureScaling(int slot, float scale, float posX, float posY) {
+void drawTextureScale(float posX, float posY, int slot, float scale) {
     if (slot < 0 || slot >= TEXTURES || txts[slot].pixels == NULL) return;
     RawTexture* tex = &txts[slot];
     int vc = tex->pixelCount * 4, ic = tex->pixelCount * 6;
@@ -571,7 +571,6 @@ void drawTextureScaling(int slot, float scale, float posX, float posY) {
     free(v);
     free(i_ptr);
 }
-void drawTextureScale(float posX, float posY, int textureID, float scale) { drawTextureScaling(textureID, scale, posX, posY); }
 // ==========================================
 int getKey(int key) { if (!g_ctx.window || key < 0 || key >= GLFW_KEY_LAST) return 0; return glfwGetKey(g_ctx.window, key) == GLFW_PRESS; }
 int onKey(int key) {

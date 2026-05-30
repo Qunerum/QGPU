@@ -7,7 +7,6 @@
 #include "qgpu.h"
 
 #define PI 3.14159265359f
-#define SHADERS "bin/"
 
 // ==========================================
 typedef struct {
@@ -222,8 +221,8 @@ void qgpuCreate(int width, int height, const char* title, void (*updateFunc)()) 
         .pPushConstantRanges = &pushConstantRange
     };
     vkCreatePipelineLayout(g_ctx.device, &pipelineLayoutInfo, NULL, &g_ctx.pipelineLayout);
-    VkShaderModule vertModule = createShaderModule(SHADERS "vert.spv");
-    VkShaderModule fragModule = createShaderModule(SHADERS "frag.spv");
+    VkShaderModule vertModule = createShaderModule(FILES "vert.spv");
+    VkShaderModule fragModule = createShaderModule(FILES "frag.spv");
     VkPipelineShaderStageCreateInfo shaderStages[2] = {
         {.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .stage = VK_SHADER_STAGE_VERTEX_BIT, .module = vertModule, .pName = "main"},
         {.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .stage = VK_SHADER_STAGE_FRAGMENT_BIT, .module = fragModule, .pName = "main"}
@@ -533,7 +532,7 @@ void loadTexture(const char* filename, int slot) {
     fclose(file);
     printf("Loaded texture '%s' to slot '%d' (%dx%d)\n", filename, slot, width, height);
 }
-void drawTextureScaling(int slot, float scale, float posX, float posY) {
+void drawTextureScale(float posX, float posY, int slot, float scale) {
     if (slot < 0 || slot >= TEXTURES || txts[slot].pixels == NULL) return;
     RawTexture* tex = &txts[slot];
     int vc = tex->pixelCount * 4, ic = tex->pixelCount * 6;
@@ -572,7 +571,6 @@ void drawTextureScaling(int slot, float scale, float posX, float posY) {
     free(v);
     free(i_ptr);
 }
-void drawTextureScale(float posX, float posY, int textureID, float scale) { drawTextureScaling(textureID, scale, posX, posY); }
 // ==========================================
 int getKey(int key) { if (!g_ctx.window || key < 0 || key >= GLFW_KEY_LAST) return 0; return glfwGetKey(g_ctx.window, key) == GLFW_PRESS; }
 int onKey(int key) {
