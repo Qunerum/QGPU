@@ -378,7 +378,7 @@ void drawGeometry(float posX, float posY, QGPU_Vertex* vertices, uint32_t vCount
     if (g_ctx.currentVOffset + vCount >= 65536 || g_ctx.currentIOffset + iCount >= 65536) return;
     int w, h;
     glfwGetFramebufferSize(g_ctx.window, &w, &h);
-    float pushConstants[4] = { posX, -posY, (float)w, (float)h };
+    float pushConstants[4] = { posX, posY, (float)w, (float)h };
     vkCmdPushConstants(g_ctx.currentCmd, g_ctx.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(float) * 4, pushConstants);
     QGPU_Vertex* vDst = (QGPU_Vertex*)g_ctx.mappedVertexBuffer + g_ctx.currentVOffset;
     memcpy(vDst, vertices, vCount * sizeof(QGPU_Vertex));
@@ -590,7 +590,7 @@ void getMousePos(double* x, double* y) {
     if (!g_ctx.window || !x || !y) return;
     double lx = 0, ly = 0; glfwGetCursorPos(g_ctx.window, &lx, &ly);
     *x = lx - (double)getWidth() / 2;
-    *y = ly - (double)getHeight() / 2;
+    *y = -(ly - (double)getHeight() / 2);
 }
 int getWidth() { int w, h; if (!g_ctx.window) return 0; glfwGetWindowSize(g_ctx.window, &w, &h); return w; }
 int getHeight() { int w, h; if (!g_ctx.window) return 0; glfwGetWindowSize(g_ctx.window, &w, &h); return h; }
@@ -602,7 +602,7 @@ int drawButton(float posX, float posY, float width, float height, QColor clr, QC
     drawRect(posX, posY, width, height, hovered ? (o == 0 ? hoverClr : pressClr) : clr);
     return o;
 }
-int drawSlider(float* value, float min, float max, float posX, float posY, float width, float height, float handleW, float handleH, QColor backgroundClr, QColor fillClr, QColor handleClr) {
+int drawSlider(float posX, float posY, float width, float height, float handleW, float handleH, float* value, float min, float max, QColor backgroundClr, QColor fillClr, QColor handleClr) {
     double mx = 0, my = 0; getMousePos(&mx, &my);
     int hovered = AABB((float)mx, (float)my, posX, posY, width, height);
     int changed = 0;
@@ -621,7 +621,7 @@ int drawSlider(float* value, float min, float max, float posX, float posY, float
     drawRect(posX - width / 2.0f + t * width, posY, handleW, handleH, handleClr);
     return changed;
 }
-int drawToggle(int* value, float posX, float posY, float width, float height, QColor offClr, QColor onClr) {
+int drawToggle(float posX, float posY, float width, float height, int* value, QColor offClr, QColor onClr) {
     double mx, my; getMousePos(&mx, &my);
     int hovered = AABB((float)mx, (float)my, posX, posY, width, height);
     int m = hovered && onMouse(LMB);

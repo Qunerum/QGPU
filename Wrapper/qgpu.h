@@ -61,8 +61,8 @@ int getHeight();
 
 // UI
 int drawButton(float posX, float posY, float width, float height, QColor clr, QColor hoverClr, QColor pressClr);
-int drawSlider(float* value, float min, float max, float posX, float posY, float width, float height, float handleW, float handleH, QColor backgroundClr, QColor fillClr, QColor handleClr);
-int drawToggle(int* value, float posX, float posY, float width, float height, QColor offClr, QColor onClr);
+int drawSlider(float posX, float posY, float width, float height, float handleW, float handleH, float* value, float min, float max, QColor backgroundClr, QColor fillClr, QColor handleClr);
+int drawToggle(float posX, float posY, float width, float height, int* value, QColor offClr, QColor onClr);
 
 // KEYBOARD
 #define LMB GLFW_MOUSE_BUTTON_LEFT
