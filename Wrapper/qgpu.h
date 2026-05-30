@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #define FILES "Files/" // Use this in loadTexture: FILES "texturepath.qgt"
+#define TEXTURES 16 // Max textures ( Change if you want :P )
 
 // !===== Structs ==================================================!
 typedef struct {
@@ -16,6 +17,7 @@ typedef struct {
     int width;
     int height;
 } RawTexture;
+extern RawTexture txts[TEXTURES];
 // !===== Colors ==================================================!
 // ===== Grayscale ========================================
 #define WHITE       (QColor){1.0f, 1.0f, 1.0f, 1.0f}
@@ -45,8 +47,7 @@ void drawWireRect(float posX, float posY, float sizeX, float sizeY, float thickn
 void drawWireTriangle(float posX, float posY, float p1X, float p1Y, float p2X, float p2Y, float p3X, float p3Y, float thickness, QColor clr);
 void drawWireCircle(float posX, float posY, float radius, int segments, float thickness, QColor clr);
 // ===== Texture ========================================
-#define TEXTURES 16 // Max textures ( Change if you want :P )
-extern RawTexture txts[TEXTURES];
+
 void loadTexture(const char* filename, int slot);
 void drawTextureScale(float posX, float posY, int slot, float scale);
 // ===== UI ========================================
