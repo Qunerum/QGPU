@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 #define FILES "Files/" // Use this in loadTexture: FILES "texturepath.qgt"
+
+#define MAX_VERTICES 65536 // (2^16) Max vertices in one frame ( Change if objects disappear :P )
 #define TEXTURES 16 // Max textures ( Change if you want :P )
 
 // !===== Structs ==================================================!

@@ -10,7 +10,6 @@
 #include "qgpu.h"
 
 #define PI 3.14159265359f
-
 // ==========================================
 typedef struct {
     GLFWwindow* window;
@@ -42,10 +41,8 @@ typedef struct {
     void* mappedVertexBuffer;
     void* mappedIndexBuffer;
 } InternalContext;
-
 static InternalContext g_ctx;
 RawTexture txts[TEXTURES];
-
 // ==========================================
 float q_abs(float x) { return (x < 0) ? -x : x; }
 float q_sqrt(float x) {
@@ -286,10 +283,10 @@ void qgpuCreate(int width, int height, const char* title, void (*updateFunc)()) 
         .commandBufferCount = 1
     };
     vkAllocateCommandBuffers(g_ctx.device, &allocInfo, &g_ctx.currentCmd);
-    createBuffer(sizeof(QGPU_Vertex) * 65536, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &g_ctx.vertexBuffer, &g_ctx.vertexBufferMemory);
-    createBuffer(sizeof(uint32_t) * 65536, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &g_ctx.indexBuffer, &g_ctx.indexBufferMemory);
-    vkMapMemory(g_ctx.device, g_ctx.vertexBufferMemory, 0, sizeof(QGPU_Vertex) * 65536, 0, &g_ctx.mappedVertexBuffer);
-    vkMapMemory(g_ctx.device, g_ctx.indexBufferMemory, 0, sizeof(uint32_t) * 65536, 0, &g_ctx.mappedIndexBuffer);
+    createBuffer(sizeof(QGPU_Vertex) * MAX_VERTICES, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &g_ctx.vertexBuffer, &g_ctx.vertexBufferMemory);
+    createBuffer(sizeof(uint32_t) * MAX_VERTICES * 1.5f, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &g_ctx.indexBuffer, &g_ctx.indexBufferMemory);
+    vkMapMemory(g_ctx.device, g_ctx.vertexBufferMemory, 0, sizeof(QGPU_Vertex) * MAX_VERTICES, 0, &g_ctx.mappedVertexBuffer);
+    vkMapMemory(g_ctx.device, g_ctx.indexBufferMemory, 0, sizeof(uint32_t) * (uint32_t)(MAX_VERTICES * 1.5f), 0, &g_ctx.mappedIndexBuffer);
     VkSemaphoreCreateInfo semaphoreInfo = { .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
     vkCreateSemaphore(g_ctx.device, &semaphoreInfo, NULL, &g_ctx.imageAvailableSemaphore);
     vkCreateSemaphore(g_ctx.device, &semaphoreInfo, NULL, &g_ctx.renderFinishedSemaphore);
@@ -381,7 +378,7 @@ void qgpuCreate(int width, int height, const char* title, void (*updateFunc)()) 
 // ========================================================================================================================================================================
 void drawGeometry(float posX, float posY, QGPU_Vertex* vertices, uint32_t vCount, uint32_t* indices, uint32_t iCount) {
     if (vCount == 0 || iCount == 0) return;
-    if (g_ctx.currentVOffset + vCount >= 65536 || g_ctx.currentIOffset + iCount >= 65536) return;
+    if (g_ctx.currentVOffset + vCount >= MAX_VERTICES || g_ctx.currentIOffset + iCount >= MAX_VERTICES * 1.5f) return;
     int w, h;
     glfwGetFramebufferSize(g_ctx.window, &w, &h);
     float pushConstants[4] = { posX, posY, (float)w, (float)h };
@@ -493,27 +490,11 @@ void drawWireCircle(float posX, float posY, float radius, int segments, float th
     free(indices);
 }
 // ========================================================================================================================================================================
-int count_files_with_ext(const char *path, const char *ext) {
-    int count = 0;
-    struct dirent *entry;
-    struct stat statbuf;
-    DIR *dir = opendir(path);
-    if (!dir) return 0;
-    while ((entry = readdir(dir)) != NULL) {
-        char full_path[1024];
-        snprintf(full_path, sizeof(full_path), "%s/%s", path, entry->d_name);
-        if (stat(full_path, &statbuf) == -1) continue;
-        if (S_ISDIR(statbuf.st_mode)) { if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) continue; count += count_files_with_ext(full_path, ext); }
-        else { char *dot = strrchr(entry->d_name, '.'); if (dot && strcmp(dot, ext) == 0) { count++; } }
-    }
-    closedir(dir);
-    return count;
-}
 void loadTexture(const char* filename, int slot) {
     if (slot < 0 || slot >= TEXTURES) return;
     if (txts[slot].pixels != NULL) { free(txts[slot].pixels); txts[slot].pixels = NULL; }
     FILE* file = fopen(filename, "r");
-    if (!file) return;
+    if (!file) { print("Cannot find texture '%s'!", filename); return; }
     char line[16];
     int width = 0, height = 0;
     if (fgets(line, sizeof(line), file)) { sscanf(line, "%d %d", &width, &height); }
