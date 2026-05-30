@@ -21,7 +21,9 @@ VERT_SRC = $(SHADERS_DIR)/shader.vert
 FRAG_SRC = $(SHADERS_DIR)/shader.frag
 SHADERS_SPV = $(FILESB)/vert.spv $(FILESB)/frag.spv
 
-all: prepare $(SHADERS_SPV) $(APP)
+all: prepare
+	@$(MAKE) $(SHADERS_SPV)
+	@$(MAKE) $(APP)
 
 prepare:
 	@mkdir -p $(BIN) $(FILES) $(BUILD) $(FILESB)
@@ -39,10 +41,12 @@ $(APP): $(OBJS)
 
 run: all
 	@echo "--- Starting $(APP) ---"
-	@cp -r $(FILES)/ $(BUILD)/ && cd $(BUILD) && ./qengine
+	@cp -r $(FILES)/ $(BUILD)/
+	@cd $(BUILD) && ./qengine
 
 clean:
 	@echo "Cleaning..."
 	@rm -rf $(BIN) $(BUILD)
+	@echo "Cleaned!"
 
 .PHONY: all prepare run clean
