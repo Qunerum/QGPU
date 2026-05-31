@@ -616,3 +616,19 @@ int drawToggle(float posX, float posY, float width, float height, int* value, QC
     return m;
 }
 // ========================================================================================================================================================================
+QGPU_Char defaultFont[128] = {
+    ['A'] = {
+        .points = {
+            0, 0,
+            0.5f, 1,
+            1, 0,
+            0.25f, 0.5f,
+            0.75f, 0.5f
+        },
+        .draws = { 0, 1, 1, 0, 1 },
+        .pointCount = 5
+    }
+};
+void drawChar(float posX, float posY, char c, float scale, QColor color) {
+
+}
