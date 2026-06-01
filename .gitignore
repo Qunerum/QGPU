@@ -1,4 +1,5 @@
 Build/
+build/
 bin/
 *.sh
 *.bat
