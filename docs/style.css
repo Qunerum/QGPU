@@ -1,0 +1,235 @@
+* {
+box-sizing: border-box;
+margin: 0;
+padding: 0;
+font-family: system-ui, sans-serif;
+}
+
+body {
+    background: #0e0e11;
+    color: #d4d4d4;
+    line-height: 1.6;
+}
+
+.topbar {
+    height: 60px;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid #1f1f1f;
+    display: flex;
+    align-items: center;
+    padding: 0 30px;
+
+    position: fixed;
+    top: 0;
+    width: 100%;
+    z-index: 1000;
+}
+
+.logo {
+    font-size: 20px;
+    font-weight: bold;
+    color: #fff;
+}
+
+.content {
+    max-width: 80%;
+    margin: 0 auto;
+    padding: 40px 20px;
+    margin-top: 60px;
+}
+
+h1 { font-size: 32px; margin-bottom: 20px; color: #fff; }
+h2 { margin-top: 40px; margin-bottom: 15px; color: #4fc1ff; }
+p { margin-bottom: 20px; }
+
+.code-block {
+    background: #16161a !important;
+    padding: 20px;
+    border-radius: 8px;
+    border-left: 4px solid #4fc1ff;
+    margin: 20px 0;
+    font-family: 'Consolas', 'Monaco', monospace;
+}
+
+.code-block code {
+    background: transparent !important;
+    padding: 0 !important;
+    color: #d4d4d4;
+    border: none !important;
+}
+
+.code-keyword { color: #4fc1ff; font-weight: bold; }
+.code-cmd { color: #ce9178; }
+.code-com { color: #00ab11; }
+.code-err { color: #750002; font-weight: bold; }
+
+
+.cmd-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin: 20px 0;
+    background: #16161a;
+}
+.cmd-table th, .cmd-table td {
+    border: 1px solid #2d2d30;
+    padding: 12px 15px;
+    text-align: left;
+    font-size: 14px;
+}
+.cmd-table th {
+    background: #1f1f23;
+    color: #ccc;
+    position: sticky;
+    top: 60px;
+    z-index: 10;
+    border-bottom: 1px solid #666;
+}
+.cmd-table tr:nth-child(even) { background-color: #1d1d1e; }
+
+.cmd-table tr.def {
+    background: linear-gradient(to right, #8f4e04 -20%, transparent 10%);
+    border-right: 4px solid var(--color-keyword);
+}
+
+.cmd-table tr.defWhite {
+    background: linear-gradient(to right, #ffffff -10%, transparent 10%);
+    border-right: 4px solid var(--color-keyword);
+}
+.cmd-table tr.defGray {
+    background: linear-gradient(to right, #808080 -10%, transparent 10%);
+    border-right: 4px solid var(--color-keyword);
+}
+.cmd-table tr.defBlack {
+    background: linear-gradient(to right, #000000 -10%, transparent 10%);
+    border-right: 4px solid var(--color-keyword);
+}
+.cmd-table tr.defRed {
+    background: linear-gradient(to right, #ff0000 -10%, transparent 10%);
+    border-right: 4px solid var(--color-keyword);
+}
+.cmd-table tr.defGreen {
+    background: linear-gradient(to right, #00ff00 -10%, transparent 10%);
+    border-right: 4px solid var(--color-keyword);
+}
+.cmd-table tr.defBlue {
+    background: linear-gradient(to right, #0000ff -10%, transparent 10%);
+    border-right: 4px solid var(--color-keyword);
+}
+.cmd-table tr.defDRed {
+    background: linear-gradient(to right, #800000 -10%, transparent 10%);
+    border-right: 4px solid var(--color-keyword);
+}
+.cmd-table tr.defDGreen {
+    background: linear-gradient(to right, #008000 -10%, transparent 10%);
+    border-right: 4px solid var(--color-keyword);
+}
+.cmd-table tr.defDBlue {
+    background: linear-gradient(to right, #000080 -10%, transparent 10%);
+    border-right: 4px solid var(--color-keyword);
+}
+
+
+.cmd-table tr.void {
+    background: linear-gradient(to right, #03189e -20%, transparent 10%);
+    border-right: 4px solid var(--color-keyword);
+}
+.cmd-table tr.int {
+    background: linear-gradient(to right, #428df5 -20%, transparent 10%);
+    border-right: 4px solid var(--color-keyword);
+}
+
+.cmd-table th:nth-child(1) { width: 10%; }
+.cmd-table td:nth-child(1) { white-space: nowrap; }
+.cmd-table th:nth-child(2) { width: 20%; }
+.cmd-table td:nth-child(3) { white-space: nowrap; }
+.cmd-table th:nth-child(3) { width: 20%; }
+.cmd-table th:nth-child(4) { width: 40%; }
+
+.cmd-table tr:hover {
+    background-color: #232329;
+    color: #fff;
+    transition: 0.2s;
+}
+
+.cmd-table tr:hover code {
+    color: #3df52c;
+    background: #111;
+    border: 0.6px solid #3df52c;
+    transition: 0.2s;
+}
+code {
+    background: #2d2d30;
+    color: #219609;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: Consolas, monospace;
+}
+
+[data-tooltip] {
+    position: relative;
+    cursor: help;
+}
+[data-tooltip]::before {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 120%;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 8px 12px;
+    background: #1f1f23;
+    color: #4fc1ff;
+    border: 1px solid #4fc1ff;
+    border-radius: 6px;
+    font-size: 12px;
+    white-space: nowrap;
+    z-index: 2000;
+    opacity: 0;
+    visibility: hidden;
+    transition: 0.2s ease-in-out;
+    pointer-events: none;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+}
+
+[data-tooltip]::after {
+    content: '';
+    position: absolute;
+    bottom: 110%;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 6px;
+    border-style: solid;
+    border-color: #4fc1ff transparent transparent transparent;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: 0.2s ease-in-out;
+}
+
+[data-tooltip]:hover::before,
+[data-tooltip]:hover::after {
+    opacity: 1;
+    visibility: visible;
+    bottom: 125%;
+}
+
+.pre-list { list-style: none; }
+.pre-list li {
+    background: #1f1f1f;
+    margin-bottom: 10px;
+    padding: 15px;
+    border-left: 4px solid #4fc1ff;
+    border-radius: 8px;
+}
+.pre-list li:hover {
+    background: #282828;
+    color: #fff;
+    transition: 0.2s;
+}
+.pre-list li:hover code {
+    color: #3df52c;
+    background: #111;
+    border: 0.6px solid #3df52c;
+    transition: 0.2s;
+}

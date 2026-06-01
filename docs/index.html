@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>Dokumentacja QGPU</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header class="topbar">
+        <div class="logo">Dokumentacja QGPU</div>
+    </header>
+
+    <div class="layout">
+        <main class="content">
+            <h1>Dokumentacja QGPU</h1>
+            <p>Spis podstawowych komend i definicje</p>
+            <h2>1. Podstawowe Komendy</h2>
+            <table class="cmd-table">
+                <thead>
+                    <tr>
+                        <th>Nazwa</th>
+                        <th>Argumenty</th>
+                        <th>Przykład</th>
+                        <th>Opis</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="void">
+                        <td data-tooltip="void"><code>print</code></td>
+                        <td data-tooltip="[const char*] [...]">[format] [...]</td>
+                        <td><code>print("QGPU powstało w %d roku!", 2026);</code></td>
+                        <td>Funkcja podoba do funkcji <code>printf</code>, z dopiskiem "[QGPU] ".</td>
+                    </tr>
+                    <tr class="void">
+                        <td data-tooltip="void"><code>qgpuCreate</code></td>
+                        <td data-tooltip="[int] [int] [const char*] [void(* )()]">[width] [height] [title] [updateFunc]</td>
+                        <td><code>qgpuCreate(1280, 720, "QGPU Project", Update);</code></td>
+                        <td>Funkcja tworząca okno graficzne o danych wymiarach i tytule. (Funkcja Update jest wywoływana z każdą klatką)</td>
+                    </tr>
+                    <tr class="void">
+                        <td data-tooltip="void"><code>drawGeometry</code></td>
+                        <td data-tooltip="[float] [float] [QGPU_Vertex*] [uint32_t] [uint32_t*] [uint32_t]">[posX] [posY] [vertices] [vCount] [indices] [iCount]</td>
+                        <td><code>drawGeometry(0, 0, vertices, 4, indices, 6);</code></td>
+                        <td>Funkcja rysująca podaną geometrię.</td>
+                    </tr>
+                    <tr class="void">
+                        <td data-tooltip="void"><code>drawRect</code></td>
+                        <td data-tooltip="[float] [float] [float] [float] [QColor]">[posX] [posY] [sizeX] [sizeY] [color]</td>
+                        <td><code>drawRect(0, 0, 200, 100, RED);</code></td>
+                        <td>Rysuje wypełniony prostokąt o podanych wymiarach.</td>
+                    </tr>
+                    <tr class="void">
+                        <td data-tooltip="void"><code>drawTriangle</code></td>
+                        <td data-tooltip="[float] [float] [float] [float] [float] [float] [float] [float] [QColor]">[posX] [posY] [p1X] [p1Y] [p2X] [p2Y] [p3X] [p3Y] [color]</td>
+                        <td><code>drawTriangle(0, 0, -10, -10, 0, 10, 10, -10, GREEN);</code></td>
+                        <td>Rysuje wypełniony trójkąt o podanych wierzchołkach.</td>
+                    </tr>
+                    <tr class="void">
+                        <td data-tooltip="void"><code>drawCircle</code></td>
+                        <td data-tooltip="[float] [float] [float] [int] [QColor]">[posX] [posY] [radius] [segments] [color]</td>
+                        <td><code>drawCircle(0, 0, 5, 16, BLUE);</code></td>
+                        <td>Rysuje koło o podanym radiusie.</td>
+                    </tr>
+                    <tr class="void">
+                        <td data-tooltip="void"><code>drawLine</code></td>
+                        <td data-tooltip="[float] [float] [float] [float] [float] [QColor]">[x1] [y1] [x2] [y2] [thickness] [color]</td>
+                        <td><code>drawLine(-100, 0, 100, 25, 3, DARK_RED);</code></td>
+                        <td>Rysuje linie od jednego punktu do drugiego.</td>
+                    </tr>
+                    <tr class="void">
+                        <td data-tooltip="void"><code>drawWireRect</code></td>
+                        <td data-tooltip="[float] [float] [float] [float] [float] [QColor]">[posX] [posY] [sizeX] [sizeY] [thickness] [color]</td>
+                        <td><code>drawWireRect(0, 0, 200, 100, 3, DARK_GREEN);</code></td>
+                        <td>Rysuje prostokąt o podanych wymiarach.</td>
+                    </tr>
+                    <tr class="void">
+                        <td data-tooltip="void"><code>drawWireTriangle</code></td>
+                        <td data-tooltip="[float] [float] [float] [float] [float] [float] [float] [float] [float] [QColor]">[posX] [posY] [p1X] [p1Y] [p2X] [p2Y] [p3X] [p3Y] [thickness] [color]</td>
+                        <td><code>drawWireTriangle(0, 0, -10, -10, 0, 10, 10, -10, 3, DARK_BLUE);</code></td>
+                        <td>Rysuje trójkąt o podanych wierzchołkach.</td>
+                    </tr>
+                    <tr class="void">
+                        <td data-tooltip="void"><code>drawWireCircle</code></td>
+                        <td data-tooltip="[float] [float] [float] [int] [float] [QColor]">[posX] [posY] [radius] [segments] [thickness] [color]</td>
+                        <td><code>drawWireCircle(0, 0, 5, 16, 3, WHITE);</code></td>
+                        <td>Rysuje okrąg o podanym radiusie.</td>
+                    </tr>
+                    <tr class="void">
+                        <td data-tooltip="void"><code>loadTexture</code></td>
+                        <td data-tooltip="[const char*] [int]">[filename] [slot]</td>
+                        <td><code>loadTexture(FILES "texture.qgt", 0);</code></td>
+                        <td>Ładuje podaną teksturę na podany slot.</td>
+                    </tr>
+                    <tr class="void">
+                        <td data-tooltip="void"><code>drawTextureScale</code></td>
+                        <td data-tooltip="[float] [float] [int] [float]">[posX] [posY] [slot] [scale]</td>
+                        <td><code>drawTextureScale(0, 0, 0, 20);</code></td>
+                        <td>Rysuje teksturę wczytaną na dany slot.</td>
+                    </tr>
+                    <tr class="int - Zwraca 1 kiedy został kliknięty. Zwraca 2 kiedy jest trzymany. (Domyślnie zwraca 0)">
+                        <td data-tooltip="int"><code>drawButton</code></td>
+                        <td data-tooltip="[float] [float] [float] [float] [QColor] [QColor] [QColor]">[posX] [posY] [width] [height] [color] [hoverClr] [pressClr]</td>
+                        <td><code>drawButton(0, 0, 160, 60, WHITE, GRAY, BLACK);</code></td>
+                        <td>Rysuje przycisk o podanych wymiarach.</td>
+                    </tr>
+                    <tr class="int - Zwraca 1 kiedy wartość jest zmieniana. (Domyślnie zwraca 0)">
+                        <td data-tooltip="int"><code>drawSlider</code></td>
+                        <td data-tooltip="[float] [float] [float] [float] [float] [float] [float*] [float] [float] [QColor] [QColor] [QColor]">[posX] [posY] [width] [height] [handleW] [handleH] [value] [min] [max] [backgroundClr] [fillClr] [handleClr]</td>
+                        <td><code>drawSlider(0, 0, 160, 60, 10, 70, &sliderValue, 0, 1, GRAY, WHITE, DARK_BLUE);</code></td>
+                        <td>Rysuje suwak o podanych wymiarach.</td>
+                    </tr>
+                    <tr class="int">
+                        <td data-tooltip="int - Zwraca 1 kiedy został kliknięty. (Domyślnie zwraca 0)"><code>drawToggle</code></td>
+                        <td data-tooltip="[float] [float] [float] [float] [int*] [QColor] [QColor]">[posX] [posY] [width] [height] [value] [offClr] [onClr]</td>
+                        <td><code>drawToggle(0, 0, 100, 100, &toggleValue, DARK_GREEN, GREEN);</code></td>
+                        <td>Rysuje przełącznik o podanych wymiarach.</td>
+                    </tr>
+                    <tr class="int">
+                        <td data-tooltip="int"><code>getWidth</code></td>
+                        <td>Brak</td>
+                        <td><code>getWidth();</code></td>
+                        <td>Zwraca szerokość okna.</td>
+                    </tr>
+                    <tr class="int">
+                        <td data-tooltip="int"><code>getHeight</code></td>
+                        <td>Brak</td>
+                        <td><code>getHeight();</code></td>
+                        <td>Zwraca wysokość okna.</td>
+                    </tr>
+                    <tr class="void">
+                        <td data-tooltip="void"><code>drawChar</code></td>
+                        <td data-tooltip="[float] [float] [unsigned char] [float] [QColor]">[posX] [posY] [symbol] [scale] [color]</td>
+                        <td><code>drawChar(0, 0, 'A', 20, WHITE);</code></td>
+                        <td>Rysuje pojedyńczy znak.</td>
+                    </tr>
+                    <tr class="void">
+                        <td data-tooltip="void"><code>drawText</code></td>
+                        <td data-tooltip="[float] [float] [char*] [float] [QColor]">[posX] [posY] [text] [scale] [color]</td>
+                        <td><code>drawText(0, 0, "Hello, World!", 20, WHITE);</code></td>
+                        <td>Rysuje podany tekst.</td>
+                    </tr>
+                    <tr class="int">
+                        <td data-tooltip="int - Zwraca 1 kiedy przycisk jest trzymany. (Domyślnie zwraca 0)"><code>getKey</code></td>
+                        <td data-tooltip="[int]">[key]</td>
+                        <td><code>getKey(QKEY_W);</code></td>
+                        <td>Zwraca aktualny stan przycisku.</td>
+                    </tr>
+                    <tr class="int">
+                        <td data-tooltip="int - Domyślnie zwraca 0"><code>onKey</code></td>
+                        <td data-tooltip="[int]">[key]</td>
+                        <td><code>onKey(QKEY_S);</code></td>
+                        <td>Zwraca 1 w momencie kliknięcia przycisku.</td>
+                    </tr>
+                    <tr class="int">
+                        <td data-tooltip="int - Zwraca 1 kiedy przycisk myszy jest trzymany. (Domyślnie zwraca 0)"><code>getMouse</code></td>
+                        <td data-tooltip="[int]">[button]</td>
+                        <td><code>getMouse(LMB);</code></td>
+                        <td>Zwraca aktualny stan przycisku myszy.</td>
+                    </tr>
+                    <tr class="int">
+                        <td data-tooltip="int - Domyślnie zwraca 0"><code>onMouse</code></td>
+                        <td data-tooltip="[int]">[button]</td>
+                        <td><code>onMouse(RMB);</code></td>
+                        <td>Zwraca 1 w momencie kliknięcia przycisku myszy.</td>
+                    </tr>
+                    <tr class="void">
+                        <td data-tooltip="void"><code>getMousePos</code></td>
+                        <td data-tooltip="[double*] [double*]">[x] [y]</td>
+                        <td><code>getMousePos(&mouseX, &mouseY);</code></td>
+                        <td>Zwraca aktualną pozycję kursora.</td>
+                    </tr>
+                </tr>
+                </tbody>
+            </table>
+
+            <h2>2. Podstawowe definicje</h2>
+            <table class="cmd-table">
+                <thead>
+                    <tr>
+                        <th>Nazwa</th>
+                        <th>Domyślna wartość</th>
+                        <th>Opis</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="def">
+                        <td data-tooltip="char*"><code>FILES</code></td>
+                        <td data-tooltip="Lepiej nie zmieniaj."><code>"Files/"</code></td>
+                        <td>Przechowuje lokalizację plików programu. (Są w niej Shadery i tekstury użytkownika)</td>
+                    </tr>
+                    <tr class="def">
+                        <td data-tooltip="int"><code>MAX_VERTICES</code></td>
+                        <td data-tooltip="Zmień jak obiekty się nie wyświetlają, bądź znikają."><code>65536</code></td>
+                        <td>Maksymalna ilość wierzchołków do wyświetlenia w oknie.</td>
+                    </tr>
+                    <tr class="def">
+                        <td data-tooltip="int"><code>MAX_TEXTURES</code></td>
+                        <td data-tooltip="Zmień jak masz więcej tekstur do wgrania."><code>16</code></td>
+                        <td>Maksymalna ilość tekstur do wgrania przez użytkownika.</td>
+                    </tr>
+                    <tr class="def">
+                        <td data-tooltip="float"><code>CHAR_SIZE_X</code></td>
+                        <td data-tooltip="Zmień jak chcesz inną szerokość znaków."><code>1.0</code></td>
+                        <td>Domyślna szerokość znaku. (Nie przeskalowana)</td>
+                    </tr>
+                    <tr class="def">
+                        <td data-tooltip="float"><code>CHAR_SIZE_Y</code></td>
+                        <td data-tooltip="Zmień jak chcesz inną wysokość znaków."><code>1.8</code></td>
+                        <td>Domyślna wysokość znaku. (Nie przeskalowana)</td>
+                    </tr>
+                    <tr class="defWhite">
+                        <td data-tooltip="QColor"><code>WHITE</code></td>
+                        <td data-tooltip="Jak chcesz to zmień."><code>(QColor){1.0, 1.0, 1.0, 1.0}</code></td>
+                        <td>Kolor biały.</td>
+                    </tr>
+                    <tr class="defGray">
+                        <td data-tooltip="QColor"><code>GRAY</code></td>
+                        <td data-tooltip="Jak chcesz to zmień."><code>(QColor){0.5, 0.5, 0.5, 1.0}</code></td>
+                        <td>Kolor szary.</td>
+                    </tr>
+                    <tr class="defBlack">
+                        <td data-tooltip="QColor"><code>BLACK</code></td>
+                        <td data-tooltip="Jak chcesz to zmień."><code>(QColor){0.0, 0.0, 0.0, 1.0}</code></td>
+                        <td>Kolor czarny.</td>
+                    </tr>
+                    <tr class="defRed">
+                        <td data-tooltip="QColor"><code>RED</code></td>
+                        <td data-tooltip="Jak chcesz to zmień."><code>(QColor){1.0, 0.0, 0.0, 1.0}</code></td>
+                        <td>Kolor czerwony.</td>
+                    </tr>
+                    <tr class="defGreen">
+                        <td data-tooltip="QColor"><code>GREEN</code></td>
+                        <td data-tooltip="Jak chcesz to zmień."><code>(QColor){0.0, 1.0, 0.0, 1.0}</code></td>
+                        <td>Kolor zielony.</td>
+                    </tr>
+                    <tr class="defBlue">
+                        <td data-tooltip="QColor"><code>BLUE</code></td>
+                        <td data-tooltip="Jak chcesz to zmień."><code>(QColor){0.0, 0.0, 1.0, 1.0}</code></td>
+                        <td>Kolor niebieski.</td>
+                    </tr>
+                    <tr class="defDRed">
+                        <td data-tooltip="QColor"><code>DARK_RED</code></td>
+                        <td data-tooltip="Jak chcesz to zmień."><code>(QColor){0.5, 0.0, 0.0, 1.0}</code></td>
+                        <td>Kolor ciemny czerwony.</td>
+                    </tr>
+                    <tr class="defDGreen">
+                        <td data-tooltip="QColor"><code>DARK_GREEN</code></td>
+                        <td data-tooltip="Jak chcesz to zmień."><code>(QColor){0.0, 0.5, 0.0, 1.0}</code></td>
+                        <td>Kolor ciemy zielony.</td>
+                    </tr>
+                    <tr class="defDBlue">
+                        <td data-tooltip="QColor"><code>DARK_BLUE</code></td>
+                        <td data-tooltip="Jak chcesz to zmień."><code>(QColor){0.0, 0.0, 0.5, 1.0}</code></td>
+                        <td>Kolor ciemny niebieski.</td>
+                    </tr>
+                    <tr class="def">
+                        <td data-tooltip="int"><code>LMB</code></td>
+                        <td data-tooltip="Nie zmieniaj!"><code>0</code></td>
+                        <td>ID lewego przycisku myszy.</td>
+                    </tr>
+                    <tr class="def">
+                        <td data-tooltip="int"><code>RMB</code></td>
+                        <td data-tooltip="Nie zmieniaj!"><code>1</code></td>
+                        <td>ID prawego przycisku myszy.</td>
+                    </tr>
+                    <tr class="def">
+                        <td data-tooltip="int"><code>QKEY_A</code></td>
+                        <td data-tooltip="Nie zmieniaj!"><code>65</code></td>
+                        <td>ID przycisku 'A'.</td>
+                    </tr>
+                    <tr class="def">
+                        <td data-tooltip="int"><code>QKEY_B</code></td>
+                        <td data-tooltip="Nie zmieniaj!"><code>66</code></td>
+                        <td>ID przycisku 'B'.</td>
+                    </tr>
+                    <tr class="def">
+                        <td data-tooltip="int"><code>QKEY_B</code></td>
+                        <td data-tooltip="Nie zmieniaj!"><code>66</code></td>
+                        <td>ID przycisku 'B'.</td>
+                    </tr>
+                    <tr class="def">
+                        <td data-tooltip="int"><code>QKEY_C</code></td>
+                        <td data-tooltip="Nie zmieniaj!"><code>67</code></td>
+                        <td>ID przycisku 'C'.</td>
+                    </tr>
+                    <tr class="def">
+                        <td data-tooltip="int"><code>QKEY_D</code></td>
+                        <td data-tooltip="Nie zmieniaj!"><code>68</code></td>
+                        <td>ID przycisku 'D'.</td>
+                    </tr>
+                    <tr class="def">
+                        <td data-tooltip="int"><code>QKEY_E</code></td>
+                        <td data-tooltip="Nie zmieniaj!"><code>69</code></td>
+                        <td>ID przycisku 'E'.</td>
+                    </tr>
+                    <tr class="def">
+                        <td data-tooltip="int"><code>QKEY_F</code></td>
+                        <td data-tooltip="Nie zmieniaj!"><code>70</code></td>
+                        <td>ID przycisku 'F'.</td>
+                    </tr>
+                    <tr class="def">
+                        <td data-tooltip="int"><code>QKEY_G</code></td>
+                        <td data-tooltip="Nie zmieniaj!"><code>71</code></td>
+                        <td>ID przycisku 'G'.</td>
+                    </tr>
+                    <tr class="def">
+                        <td data-tooltip="int"><code>QKEY_H</code></td>
+                        <td data-tooltip="Nie zmieniaj!"><code>72</code></td>
+                        <td>ID przycisku 'H'.</td>
+                    </tr>
+                    <tr class="def">
+                        <td data-tooltip="int"><code>QKEY_I</code></td>
+                        <td data-tooltip="Nie zmieniaj!"><code>73</code></td>
+                        <td>ID przycisku 'I'.</td>
+                    </tr>
+                    <tr class="def">
+                        <td data-tooltip="int"><code>QKEY_J</code></td>
+                        <td data-tooltip="Nie zmieniaj!"><code>74</code></td>
+                        <td>ID przycisku 'J'.</td>
+                    </tr>
+                    <tr class="def">
+                        <td data-tooltip="int"><code>QKEY_K</code></td>
+                        <td data-tooltip="Nie zmieniaj!"><code>75</code></td>
+                        <td>ID przycisku 'K'.</td>
+                    </tr>
+                    <tr class="def">
+                        <td data-tooltip="int"><code>QKEY_L</code></td>
+                        <td data-tooltip="Nie zmieniaj!"><code>76</code></td>
+                        <td>ID przycisku 'L'.</td>
+                    </tr>
+                    <tr class="def">
+                        <td data-tooltip="int"><code>QKEY_M</code></td>
+                        <td data-tooltip="Nie zmieniaj!"><code>77</code></td>
+                        <td>ID przycisku 'M'.</td>
+                    </tr>
+                    <tr class="def">
+                        <td data-tooltip="int"><code>QKEY_N</code></td>
+                        <td data-tooltip="Nie zmieniaj!"><code>78</code></td>
+                        <td>ID przycisku 'N'.</td>
+                    </tr>
+                    <tr class="def">
+                        <td data-tooltip="int"><code>QKEY_O</code></td>
+                        <td data-tooltip="Nie zmieniaj!"><code>79</code></td>
+                        <td>ID przycisku 'O'.</td>
+                    </tr>
+                    <tr class="def">
+                        <td data-tooltip="int"><code>QKEY_P</code></td>
+                        <td data-tooltip="Nie zmieniaj!"><code>80</code></td>
+                        <td>ID przycisku 'P'.</td>
+                    </tr>
+                    <tr class="def">
+                        <td data-tooltip="int"><code>QKEY_Q</code></td>
+                        <td data-tooltip="Nie zmieniaj!"><code>81</code></td>
+                        <td>ID przycisku 'Q'.</td>
+                    </tr>
+                    <tr class="def">
+                        <td data-tooltip="int"><code>QKEY_R</code></td>
+                        <td data-tooltip="Nie zmieniaj!"><code>82</code></td>
+                        <td>ID przycisku 'R'.</td>
+                    </tr>
+                    <tr class="def">
+                        <td data-tooltip="int"><code>QKEY_S</code></td>
+                        <td data-tooltip="Nie zmieniaj!"><code>83</code></td>
+                        <td>ID przycisku 'S'.</td>
+                    </tr>
+                    <tr class="def">
+                        <td data-tooltip="int"><code>QKEY_T</code></td>
+                        <td data-tooltip="Nie zmieniaj!"><code>84</code></td>
+                        <td>ID przycisku 'T'.</td>
+                    </tr>
+                    <tr class="def">
+                        <td data-tooltip="int"><code>QKEY_U</code></td>
+                        <td data-tooltip="Nie zmieniaj!"><code>85</code></td>
+                        <td>ID przycisku 'U'.</td>
+                    </tr>
+                    <tr class="def">
+                        <td data-tooltip="int"><code>QKEY_V</code></td>
+                        <td data-tooltip="Nie zmieniaj!"><code>86</code></td>
+                        <td>ID przycisku 'V'.</td>
+                    </tr>
+                    <tr class="def">
+                        <td data-tooltip="int"><code>QKEY_W</code></td>
+                        <td data-tooltip="Nie zmieniaj!"><code>87</code></td>
+                        <td>ID przycisku 'W'.</td>
+                    </tr>
+                    <tr class="def">
+                        <td data-tooltip="int"><code>QKEY_X</code></td>
+                        <td data-tooltip="Nie zmieniaj!"><code>88</code></td>
+                        <td>ID przycisku 'X'.</td>
+                    </tr>
+                    <tr class="def">
+                        <td data-tooltip="int"><code>QKEY_Y</code></td>
+                        <td data-tooltip="Nie zmieniaj!"><code>89</code></td>
+                        <td>ID przycisku 'Y'.</td>
+                    </tr>
+                    <tr class="def">
+                        <td data-tooltip="int"><code>QKEY_Z</code></td>
+                        <td data-tooltip="Nie zmieniaj!"><code>90</code></td>
+                        <td>ID przycisku 'Z'.</td>
+                    </tr>
+                    <tr class="def">
+                        <td data-tooltip="int"><code>QKEY_SPACE</code></td>
+                        <td data-tooltip="Nie zmieniaj!"><code>32</code></td>
+                        <td>ID przycisku spacji.</td>
+                    </tr>
+                    <tr class="def">
+                        <td data-tooltip="int"><code>QKEY_ESCAPE</code></td>
+                        <td data-tooltip="Nie zmieniaj!"><code>256</code></td>
+                        <td>ID przycisku Escape.</td>
+                    </tr>
+                    <tr class="def">
+                        <td data-tooltip="int"><code>QKEY_ENTER</code></td>
+                        <td data-tooltip="Nie zmieniaj!"><code>257</code></td>
+                        <td>ID przycisku Enter.</td>
+                    </tr>
+                    <tr class="def">
+                        <td data-tooltip="int"><code>QKEY_BACKSPACE</code></td>
+                        <td data-tooltip="Nie zmieniaj!"><code>259</code></td>
+                        <td>ID przycisku Backspace.</td>
+                    </tr>
+                    <tr class="def">
+                        <td data-tooltip="int"><code>QKEY_LSHIFT</code></td>
+                        <td data-tooltip="Nie zmieniaj!"><code>340</code></td>
+                        <td>ID przycisku lewego Shift.</td>
+                    </tr>
+                    <tr class="def">
+                        <td data-tooltip="int"><code>QKEY_LCTRL</code></td>
+                        <td data-tooltip="Nie zmieniaj!"><code>341</code></td>
+                        <td>ID przycisku lewego Ctrl.</td>
+                    </tr>
+                    <tr class="def">
+                        <td data-tooltip="int"><code>QKEY_RIGHT</code></td>
+                        <td data-tooltip="Nie zmieniaj!"><code>262</code></td>
+                        <td>ID przycisku strzałki w prawo.</td>
+                    </tr>
+                    <tr class="def">
+                        <td data-tooltip="int"><code>QKEY_LEFT</code></td>
+                        <td data-tooltip="Nie zmieniaj!"><code>263</code></td>
+                        <td>ID przycisku strzałki w lewo.</td>
+                    </tr>
+                    <tr class="def">
+                        <td data-tooltip="int"><code>QKEY_DOWN</code></td>
+                        <td data-tooltip="Nie zmieniaj!"><code>264</code></td>
+                        <td>ID przycisku strzałki w dół.</td>
+                    </tr>
+                    <tr class="def">
+                        <td data-tooltip="int"><code>QKEY_UP</code></td>
+                        <td data-tooltip="Nie zmieniaj!"><code>265</code></td>
+                        <td>ID przycisku strzałki w górę.</td>
+                    </tr>
+                </tr>
+                </tbody>
+            </table>
+        </main>
+    </div>
+</body>
+</html>

@@ -42,7 +42,7 @@ typedef struct {
     void* mappedIndexBuffer;
 } InternalContext;
 static InternalContext g_ctx;
-RawTexture txts[TEXTURES];
+RawTexture txts[MAX_TEXTURES];
 // ==========================================
 float q_abs(float x) { return (x < 0) ? -x : x; }
 float q_sqrt(float x) {
@@ -117,7 +117,7 @@ static VkShaderModule createShaderModule(const char* filename) {
     return shaderModule;
 }
 // ==========================================
-void cleanup_textures() { for (int i = 0; i < TEXTURES; i++) { if (txts[i].pixels != NULL) { free(txts[i].pixels); txts[i].pixels = NULL; } } }
+void cleanup_textures() { for (int i = 0; i < MAX_TEXTURES; i++) { if (txts[i].pixels != NULL) { free(txts[i].pixels); txts[i].pixels = NULL; } } }
 void qgpuCreate(int width, int height, const char* title, void (*updateFunc)()) {
     if (!glfwInit()) return;
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
@@ -491,7 +491,7 @@ void drawWireCircle(float posX, float posY, float radius, int segments, float th
 }
 // ========================================================================================================================================================================
 void loadTexture(const char* filename, int slot) {
-    if (slot < 0 || slot >= TEXTURES) return;
+    if (slot < 0 || slot >= MAX_TEXTURES) return;
     if (txts[slot].pixels != NULL) { free(txts[slot].pixels); txts[slot].pixels = NULL; }
     FILE* file = fopen(filename, "r");
     if (!file) { print("Cannot find texture '%s'!", filename); return; }
@@ -519,7 +519,7 @@ void loadTexture(const char* filename, int slot) {
     printf("Loaded texture '%s' to slot '%d' (%dx%d)\n", filename, slot, width, height);
 }
 void drawTextureScale(float posX, float posY, int slot, float scale) {
-    if (slot < 0 || slot >= TEXTURES || txts[slot].pixels == NULL) return;
+    if (slot < 0 || slot >= MAX_TEXTURES || txts[slot].pixels == NULL) return;
     RawTexture* tex = &txts[slot];
     int vc = tex->pixelCount * 4, ic = tex->pixelCount * 6;
     float halfW = (tex->width * scale) / 2.0f, halfH = (tex->height * scale) / 2.0f;

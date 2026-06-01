@@ -26,7 +26,7 @@ all: prepare
 	@$(MAKE) $(APP)
 
 prepare:
-	@mkdir -p $(BIN) $(FILES) $(BUILD) $(FILESB)
+	@mkdir -p $(BIN) $(BUILD) $(FILES) $(FILESB) src include
 
 $(FILESB)/%.spv: $(SHADERS_DIR)/shader.%
 	@echo "Shader compilation $*..."
