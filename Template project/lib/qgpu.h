@@ -7,8 +7,10 @@
 #define MAX_VERTICES 65536 // (2^16) Max vertices in one frame ( Change if objects disappear :P )
 #define TEXTURES 16 // Max textures ( Change if you want :P )
 
-#define CHAR_SIZE_X 1
-#define CHAR_SIZE_Y 2
+#define CHAR_SIZE_X 1.0
+#define CHAR_SIZE_Y 1.8
+#define CHAR_SIZE_SMALL_X CHAR_SIZE_X * 0.8
+#define CHAR_SIZE_SMALL_Y CHAR_SIZE_Y / 2
 
 // !===== Structs ==================================================!
 typedef struct {
@@ -24,11 +26,9 @@ typedef struct {
 } RawTexture;
 extern RawTexture txts[TEXTURES];
 typedef struct {
-    float points[64];
-    int draws[32];
+    float points[96]; // Max 32 points
     int pointCount;
 } QGPU_Char;
-extern QGPU_Char defaultFont[128];
 // !===== Colors ==================================================!
 // ===== Grayscale ========================================
 #define WHITE       (QColor){1.0f, 1.0f, 1.0f, 1.0f}
@@ -58,7 +58,6 @@ void drawWireRect(float posX, float posY, float sizeX, float sizeY, float thickn
 void drawWireTriangle(float posX, float posY, float p1X, float p1Y, float p2X, float p2Y, float p3X, float p3Y, float thickness, QColor clr);
 void drawWireCircle(float posX, float posY, float radius, int segments, float thickness, QColor clr);
 // ===== Texture ========================================
-
 void loadTexture(const char* filename, int slot);
 void drawTextureScale(float posX, float posY, int slot, float scale);
 // ===== UI ========================================
@@ -68,6 +67,9 @@ int drawToggle(float posX, float posY, float width, float height, int* value, QC
 // !===== Screen ==================================================!
 int getWidth();
 int getHeight();
+// !===== Text ==================================================!
+void drawChar(float posX, float posY, unsigned char c, float scale, QColor color);
+void drawText(float posX, float posY, char* text, float scale, QColor color);
 // !===== Keyboard / Mouse ==================================================!
 int getKey(int key);
 int onKey(int key);

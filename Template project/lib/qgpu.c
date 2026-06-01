@@ -617,18 +617,66 @@ int drawToggle(float posX, float posY, float width, float height, int* value, QC
 }
 // ========================================================================================================================================================================
 QGPU_Char defaultFont[128] = {
+    // ===== SMALL ====================
+    ['a'] = {
+        .points = {
+            0.1, 0.5,   0,
+            0.9, 0.5,   1,
+            0.9, 0,     1,
+            0.9, 0.25,  0,
+            0.1, 0.25,  1,
+            0.1, 0,     1,
+            0.9, 0,     1
+        },
+        .pointCount = 7
+    },
+    ['b'] = {
+        .points = {
+            0.1, 0.9,   0,
+            0.1, 0,     1,
+            0.9, 0,     1,
+            0.9, 0.5,   1,
+            0.1, 0.5,   1,
+        },
+        .pointCount = 5,
+    },
+    // ===== BIG ====================
     ['A'] = {
         .points = {
-            0, 0,
-            0.5f, 1,
-            1, 0,
-            0.25f, 0.5f,
-            0.75f, 0.5f
+            0.5, 1,     1,
+            1, 0,       1,
+            0.15, 0.3,  0,
+            0.85, 0.3,  1
         },
-        .draws = { 0, 1, 1, 0, 1 },
-        .pointCount = 5
-    }
+        .pointCount = 4
+    },
+    ['B'] = {
+        .points = {
+            0, 1,       1,
+            0.8, 1,     1,
+            0.8, 0.5,   1,
+            0, 0.5,     0,
+            1, 0.5,     1,
+            1, 0,       1,
+            0, 0,       1
+        },
+        .pointCount = 7
+    },
 };
-void drawChar(float posX, float posY, char c, float scale, QColor color) {
-
+void drawChar(float posX, float posY, unsigned char c, float scale, QColor color) {
+    if (defaultFont[c].pointCount <= 0) return;
+    float lastX = posX, lastY = posY; int i = 0;
+    for (int p = 0; p < defaultFont[c].pointCount; p++) {
+        float x = defaultFont[c].points[i] * CHAR_SIZE_X * scale + posX, y = defaultFont[c].points[i + 1] * CHAR_SIZE_Y * scale + posY;
+        if (defaultFont[c].points[i + 2] != 0) drawLine(lastX, lastY, x, y, scale / 6, color);
+        lastX = x; lastY = y; i += 3;
+    }
+}
+void drawText(float posX, float posY, char* text, float scale, QColor color) {
+    float sx = CHAR_SIZE_X * scale * 1.25, sy = CHAR_SIZE_Y * scale * 1.25, cx = posX, cy = posY;
+    while (*text) {
+        if (*text == '\n') { cx = posX; cy -= sy; text++; continue; }
+        drawChar(cx, cy, *text, scale, color);
+        cx += sx; text++;
+    }
 }
