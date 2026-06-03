@@ -16,7 +16,7 @@ void Update() {
 
     // if (drawToggle(0, -100, 20, 20, &toggle, normal, hover)) print("Toggle!");
 
-    drawText(px, py, "abc\nABC", s, normal);
+    drawText(px, py, "abc\nABCDEFGHIJKLMNOPQRSTUVWXYZ", s, normal);
 
     if (getKey(QKEY_UP)) s++;
     if (getKey(QKEY_DOWN) && s > 0) s--;
