@@ -644,24 +644,18 @@ QGPU_Char defaultFont[128] = {
     ['-'] = { .points = { 0, 0.5, 0, 1, 0.5, 1 }, .pointCount = 2 },
     ['='] = { .points = { 0, 0.4, 0, 1, 0.4, 1, 0, 0.6, 0, 1, 0.6, 1 }, .pointCount = 4 },
 
-    ['~'] = { .points = {
-        0, 0, 0
-    }, .pointCount = 0 },
-    ['!'] = { .points = {
-        0, 0, 0
-    }, .pointCount = 0 },
+    ['~'] = { .points = { 0.2, 0.45, 0, 0.4, 0.55, 1, 0.6, 0.45, 1, 0.8, 0.55, 1 }, .pointCount = 4 },
+    ['!'] = { .points = { 0.5, 1, 0, 0.5, 0.25, 1, 0.5, 0.1, 0, 0.5, 0, 1 }, .pointCount = 4 },
     ['@'] = { .points = {
         0, 0, 0
     }, .pointCount = 0 },
-    ['#'] = { .points = {
-        0, 0, 0
-    }, .pointCount = 0 },
+    ['#'] = { .points = { 0.35, 1, 0, 0.25, 0, 1, 0.75, 1, 0, 0.65, 0, 1, 0, 0.7, 0, 1, 0.7, 1, 0, 0.3, 0, 1, 0.3, 1 }, .pointCount = 8 },
     ['$'] = { .points = {
         0, 0, 0
     }, .pointCount = 0 },
     ['%'] = { .points = {
-        0, 0, 0
-    }, .pointCount = 0 },
+        1, 1, 1
+    }, .pointCount = 10 },
     ['^'] = { .points = {
         0, 0, 0
     }, .pointCount = 0 },
