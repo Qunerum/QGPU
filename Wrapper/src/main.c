@@ -2,7 +2,7 @@
 
 float x = 1;
 int toggle = 0;
-float px = -800, py = 0;
+float px = -500, py = 0;
 float spd = 5;
 QColor normal = {0.4f, 0.4f, 0.4f, 1.0f};
 QColor hover  = {0.5f, 0.5f, 0.5f, 1.0f};
@@ -16,7 +16,7 @@ void Update() {
 
     // if (drawToggle(0, -100, 20, 20, &toggle, normal, hover)) print("Toggle!");
 
-    drawText(px, py, "abc\nABCDEFGHIJKLMNOPQRSTUVWXYZ", s, normal);
+    drawText(px, py, "`1234567890-=\n~!@#$%^&*()_+\nabcdefghijklmnopqrstuvwxyz\nABCDEFGHIJKLMNOPQRSTUVWXYZ", s, normal);
 
     if (getKey(QKEY_UP)) s++;
     if (getKey(QKEY_DOWN) && s > 0) s--;
