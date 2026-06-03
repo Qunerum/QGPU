@@ -2,8 +2,8 @@
 
 float x = 1;
 int toggle = 0;
-float px = 0, py = 0;
-float spd = 1;
+float px = -800, py = 0;
+float spd = 5;
 QColor normal = {0.4f, 0.4f, 0.4f, 1.0f};
 QColor hover  = {0.5f, 0.5f, 0.5f, 1.0f};
 QColor press  = {0.3f, 0.3f, 0.3f, 1.0f};
