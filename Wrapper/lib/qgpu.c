@@ -617,7 +617,6 @@ int drawToggle(float posX, float posY, float width, float height, int* value, QC
 }
 // ========================================================================================================================================================================
 QGPU_Char defaultFont[128] = {
-    [' '] = { .points = { 0 }, .pointCount = 0 },
     ['.'] = { .points = { 0.4, 0.1, 0, 0.6, 0.1, 1, 0.6, 0, 1, 0.4, 0, 1, 0.4, 0.1, 1 }, .pointCount = 5 },
     ['!'] = { .points = { 0.5, 1, 0, 0.5, 0.3, 1, 0.5, 0.1, 0, 0.5, 0, 1 }, .pointCount = 4 },
     ['?'] = { .points = { 0.2, 0.8, 0, 0.5, 1, 1, 0.8, 0.8, 1, 0.5, 0.5, 1, 0.5, 0.3, 1, 0.5, 0.1, 0, 0.5, 0, 1 }, .pointCount = 7 },
@@ -705,6 +704,7 @@ void drawText(float posX, float posY, char* text, float scale, QColor color) {
     float sx = CHAR_SIZE_X * scale * 1.25, sy = CHAR_SIZE_Y * scale * 1.25, cx = posX, cy = posY;
     while (*text) {
         if (*text == '\n') { cx = posX; cy -= sy; text++; continue; }
+        if (*text == ' ') { cx += sx; text++; continue; }
         drawChar(cx, cy, *text, scale, color);
         cx += sx; text++;
     }
