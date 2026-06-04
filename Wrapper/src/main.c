@@ -19,7 +19,6 @@ void Update() {
 
     // if (drawToggle(0, -100, 20, 20, &toggle, normal, hover)) print("Toggle!");
 
-
     // drawText(-600, 0, "`1234567890-=\n~!@#$%^&*()_+\nabcdefghijklmnopqrstuvwxyz\nABCDEFGHIJKLMNOPQRSTUVWXYZ", s, normal);
 
     if (getKey(QKEY_UP)) s++;
