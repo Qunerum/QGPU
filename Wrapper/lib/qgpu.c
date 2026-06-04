@@ -679,9 +679,9 @@ int drawToggle(float posX, float posY, float width, float height, int* value, QC
 
 ↑ 0.25
 */
-
 QGPU_Char defaultFont[128] = {
-    ['`'] = { .points = { 0.4, 1, 0, 0.6, 0.8, 1 }, .pointCount = 2 },
+    // ===== Digits ========================================
+    ['9'] = { .points = { 0.75, 0.5, 0, 0.25, 0.5, 1, 0, 0.75, 1, 0.25, 1, 1, 0.75, 1, 1, 1, 0.75, 1, 1, 0.25, 1, 0.75, 0, 1, 0.25, 0, 1, 0, 0.25, 1, 1, 0.75, 0, 0.75, 0.5, 1, }, .pointCount = 12 },
     ['1'] = { .points = { 0.25, 0.75, 0, 0.5, 1, 1, 0.5, 0, 1, 0.25, 0, 0, 0.75, 0, 1 }, .pointCount = 5 },
     ['2'] = { .points = { 0, 0.75, 0, 0.25, 1, 1, 0.75, 1, 1, 1, 0.75, 1, 0, 0, 1, 1, 0, 1 }, .pointCount = 6 },
     ['3'] = { .points = { 0, 0.75, 0, 0.25, 1, 1, 0.75, 1, 1, 1, 0.75, 1, 0.75, 0.5, 1, 0.25, 0.5, 1, 0.75, 0.5, 0, 1, 0.25, 1, 0.75, 0, 1, 0.25, 0, 1, 0, 0.25, 1 }, .pointCount = 11 },
@@ -690,14 +690,10 @@ QGPU_Char defaultFont[128] = {
     ['6'] = { .points = { 1, 0.75, 0, 0.75, 1, 1, 0.25, 1, 1, 0, 0.75, 1, 0, 0.25, 1, 0.25, 0, 1, 0.75, 0, 1, 1, 0.25, 1, 0.75, 0.5, 1, 0.25, 0.5, 1, 0, 0.25, 1 }, .pointCount = 11 },
     ['7'] = { .points = { 0, 1, 0, 1, 1, 1, 0, 0, 1, 0.25, 0.5, 0, 0.75, 0.5, 1 }, .pointCount = 5 },
     ['8'] = { .points = { 0.25, 0.5, 0, 0, 0.75, 1, 0.25, 1, 1, 0.75, 1, 1, 1, 0.75, 1, 0.75, 0.5, 1, 0.25, 0.5, 1, 0, 0.25, 1, 0.25, 0, 1, 0.75, 0, 1, 1, 0.25, 1, 0.75, 0.5, 1 }, .pointCount = 12 },
-    ['9'] = { .points = { 0.75, 0.5, 0, 0.25, 0.5, 1, 0, 0.75, 1, 0.25, 1, 1, 0.75, 1, 1, 1, 0.75, 1, 1, 0.25, 1, 0.75, 0, 1, 0.25, 0, 1, 0, 0.25, 1, 1, 0.75, 0, 0.75, 0.5, 1, }, .pointCount = 12 },
     ['0'] = { .points = { 0, 0.25, 0, 0, 0.75, 1, 0.25, 1, 1, 0.75, 1, 1, 1, 0.75, 1, 1, 0.25, 1, 0.75, 0, 1, 0.25, 0, 1, 0, 0.25, 1 }, .pointCount = 9 },
-    ['-'] = { .points = { 0, 0.5, 0, 1, 0.5, 1 }, .pointCount = 2 },
-    ['='] = { .points = { 0, 0.4, 0, 1, 0.4, 1, 0, 0.6, 0, 1, 0.6, 1 }, .pointCount = 4 },
-
-    ['~'] = { .points = { 0.2, 0.45, 0, 0.4, 0.55, 1, 0.6, 0.45, 1, 0.8, 0.55, 1 }, .pointCount = 4 },
+    // ===== Punctuation & Symbols ========================================
     ['!'] = { .points = { 0.5, 1, 0, 0.5, 0.25, 1, 0.5, 0.1, 0, 0.5, 0, 1 }, .pointCount = 4 },
-    ['@'] = { .points = {
+    ['\"'] = { .points = {
         0, 0, 0
     }, .pointCount = 0 },
     ['#'] = { .points = { 0.35, 1, 0, 0.25, 0, 1, 0.75, 1, 0, 0.65, 0, 1, 0, 0.7, 0, 1, 0.7, 1, 0, 0.3, 0, 1, 0.3, 1 }, .pointCount = 8 },
@@ -705,15 +701,12 @@ QGPU_Char defaultFont[128] = {
         0, 0, 0
     }, .pointCount = 0 },
     ['%'] = { .points = {
-        1, 1, 1
-    }, .pointCount = 10 },
-    ['^'] = { .points = {
         0, 0, 0
     }, .pointCount = 0 },
     ['&'] = { .points = {
         0, 0, 0
     }, .pointCount = 0 },
-    ['*'] = { .points = {
+    ['\''] = { .points = {
         0, 0, 0
     }, .pointCount = 0 },
     ['('] = { .points = {
@@ -722,17 +715,143 @@ QGPU_Char defaultFont[128] = {
     [')'] = { .points = {
         0, 0, 0
     }, .pointCount = 0 },
-    ['_'] = { .points = {
+    ['*'] = { .points = {
         0, 0, 0
     }, .pointCount = 0 },
     ['+'] = { .points = {
         0, 0, 0
     }, .pointCount = 0 },
-
+    [','] = { .points = {
+        0, 0, 0
+    }, .pointCount = 0 },
+    ['-'] = { .points = { 0, 0.5, 0, 1, 0.5, 1 }, .pointCount = 2 },
+    ['.'] = { .points = {
+        0, 0, 0
+    }, .pointCount = 0 },
+    ['/'] = { .points = {
+        0, 0, 0
+    }, .pointCount = 0 },
+    [':'] = { .points = {
+        0, 0, 0
+    }, .pointCount = 0 },
+    [';'] = { .points = {
+        0, 0, 0
+    }, .pointCount = 0 },
+    ['<'] = { .points = {
+        0, 0, 0
+    }, .pointCount = 0 },
+    ['='] = { .points = { 0, 0.4, 0, 1, 0.4, 1, 0, 0.6, 0, 1, 0.6, 1 }, .pointCount = 4 },
+    ['>'] = { .points = {
+        0, 0, 0
+    }, .pointCount = 0 },
+    ['?'] = { .points = {
+        0, 0, 0
+    }, .pointCount = 0 },
+    ['@'] = { .points = {
+        0, 0, 0
+    }, .pointCount = 0 },
+    ['['] = { .points = {
+        0, 0, 0
+    }, .pointCount = 0 },
+    ['\\'] = { .points = {
+        0, 0, 0
+    }, .pointCount = 0 },
+    [']'] = { .points = {
+        0, 0, 0
+    }, .pointCount = 0 },
+    ['^'] = { .points = {
+        0, 0, 0
+    }, .pointCount = 0 },
+    ['_'] = { .points = {
+        0, 0, 0
+    }, .pointCount = 0 },
+    ['`'] = { .points = { 0.4, 1, 0, 0.6, 0.8, 1 }, .pointCount = 2 },
+    ['{'] = { .points = {
+        0, 0, 0
+    }, .pointCount = 0 },
+    ['|'] = { .points = {
+        0, 0, 0
+    }, .pointCount = 0 },
+    ['}'] = { .points = {
+        0, 0, 0
+    }, .pointCount = 0 },
+    ['~'] = { .points = { 0.2, 0.45, 0, 0.4, 0.55, 1, 0.6, 0.45, 1, 0.8, 0.55, 1 }, .pointCount = 4 },
+    // ===== Lowercase letters ========================================
     ['a'] = { .points = { 0.1, 0.5, 0, 0.9, 0.5, 1, 0.9, 0, 1, 0.9, 0.25, 0, 0.1, 0.25, 1, 0.1, 0, 1, 0.9, 0, 1 }, .pointCount = 7 },
     ['b'] = { .points = { 0.1, 0.9, 0, 0.1, 0, 1, 0.9, 0, 1, 0.9, 0.5, 1, 0.1, 0.5, 1, }, .pointCount = 5, },
-
-
+    ['c'] = { .points = {
+        0, 0, 0
+    }, .pointCount = 0 },
+    ['d'] = { .points = {
+        0, 0, 0
+    }, .pointCount = 0 },
+    ['e'] = { .points = {
+        0, 0, 0
+    }, .pointCount = 0 },
+    ['f'] = { .points = {
+        0, 0, 0
+    }, .pointCount = 0 },
+    ['g'] = { .points = {
+        0, 0, 0
+    }, .pointCount = 0 },
+    ['h'] = { .points = {
+        0, 0, 0
+    }, .pointCount = 0 },
+    ['i'] = { .points = {
+        0, 0, 0
+    }, .pointCount = 0 },
+    ['j'] = { .points = {
+        0, 0, 0
+    }, .pointCount = 0 },
+    ['k'] = { .points = {
+        0, 0, 0
+    }, .pointCount = 0 },
+    ['l'] = { .points = {
+        0, 0, 0
+    }, .pointCount = 0 },
+    ['m'] = { .points = {
+        0, 0, 0
+    }, .pointCount = 0 },
+    ['n'] = { .points = {
+        0, 0, 0
+    }, .pointCount = 0 },
+    ['o'] = { .points = {
+        0, 0, 0
+    }, .pointCount = 0 },
+    ['p'] = { .points = {
+        0, 0, 0
+    }, .pointCount = 0 },
+    ['q'] = { .points = {
+        0, 0, 0
+    }, .pointCount = 0 },
+    ['r'] = { .points = {
+        0, 0, 0
+    }, .pointCount = 0 },
+    ['s'] = { .points = {
+        0, 0, 0
+    }, .pointCount = 0 },
+    ['t'] = { .points = {
+        0, 0, 0
+    }, .pointCount = 0 },
+    ['u'] = { .points = {
+        0, 0, 0
+    }, .pointCount = 0 },
+    ['v'] = { .points = {
+        0, 0, 0
+    }, .pointCount = 0 },
+    ['w'] = { .points = {
+        0, 0, 0
+    }, .pointCount = 0 },
+    ['x'] = { .points = {
+        0, 0, 0
+    }, .pointCount = 0 },
+    ['y'] = { .points = {
+        0, 0, 0
+    }, .pointCount = 0 },
+    ['z'] = { .points = {
+        0, 0, 0
+    }, .pointCount = 0 },
+    // ===== Uppercase letters ========================================
     ['A'] = { .points = { 0.5, 1, 1, 1, 0, 1, 0.15, 0.3, 0, 0.85, 0.3, 1 }, .pointCount = 4 },
     ['B'] = { .points = { 0, 1, 1, 0.8, 1, 1, 0.8, 0.5, 1, 0, 0.5, 0, 1, 0.5, 1, 1, 0, 1, 0, 0, 1 }, .pointCount = 7 },
     ['C'] = { .points = { 1, 1, 0, 0.5, 1, 1, 0.15, 0.85, 1, 0, 0.5, 1, 0.15, 0.15, 1, 0.5, 0, 1, 1, 0, 1 }, .pointCount = 7 },
