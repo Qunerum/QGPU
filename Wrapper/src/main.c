@@ -6,7 +6,7 @@ QColor normal = {0.4f, 0.4f, 0.4f, 1.0f};
 QColor hover  = {0.5f, 0.5f, 0.5f, 1.0f};
 QColor press  = {0.3f, 0.3f, 0.3f, 1.0f};
 
-float s = 1;
+float s = 50;
 int firstFrame = 1;
 void Update() {
     if (firstFrame) {
@@ -21,8 +21,8 @@ void Update() {
 
     // drawText(px, py, "`1234567890-=\n~!@#$%^&*()_+\nabcdefghijklmnopqrstuvwxyz\nABCDEFGHIJKLMNOPQRSTUVWXYZ", s, normal);
 
-    if (getKey(QKEY_UP)) s += 0.01;
-    if (getKey(QKEY_DOWN) && s > 0) s -= 0.01;
+    if (getKey(QKEY_UP)) s++;
+    if (getKey(QKEY_DOWN) && s > 0) s--;
 
     drawTextureScale(0, 0, 0, s);
 }
