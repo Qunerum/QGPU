@@ -15,7 +15,8 @@ OBJS = $(patsubst %.c, $(BIN)/%.o, $(notdir $(SRCS)))
 
 vpath %.c src lib
 
-APP = $(BUILD)/qengine
+APP_NAME = qgpuApp
+APP = $(BUILD)/$(APP_NAME)
 
 VERT_SRC = $(SHADERS_DIR)/shader.vert
 FRAG_SRC = $(SHADERS_DIR)/shader.frag
@@ -42,7 +43,7 @@ $(APP): $(OBJS)
 run: all
 	@echo "--- Starting $(APP) ---"
 	@cp -r $(FILES)/ $(BUILD)/
-	@cd $(BUILD) && ./qengine
+	@cd $(BUILD) && ./$(APP_NAME)
 
 clean:
 	@echo "Cleaning..."

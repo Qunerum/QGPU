@@ -11,8 +11,6 @@
 // !===== Structs ==================================================!
 typedef struct { float pos[2]; float color[4]; } QGPU_Vertex;
 typedef struct { float r, g, b, a; } QColor;
-typedef struct { unsigned char* pixels; int pixelCount; int width; int height; } RawTexture;
-extern RawTexture txts[MAX_TEXTURES];
 typedef struct { float points[96]; int pointCount; } QGPU_Char; // Max 32 points
 // !===== Colors ==================================================!
 // ===== Grayscale ========================================

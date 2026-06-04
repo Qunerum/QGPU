@@ -41,8 +41,12 @@ typedef struct {
     void* mappedVertexBuffer;
     void* mappedIndexBuffer;
 } InternalContext;
+typedef struct { unsigned char* pixels; int pixelCount; int width; int height; VkBuffer buffer; VkDeviceMemory memory; } RawTexture;
 static InternalContext g_ctx;
 RawTexture txts[MAX_TEXTURES];
+VkDescriptorSetLayout g_descriptorSetLayout;
+VkDescriptorPool      g_descriptorPool;
+VkDescriptorSet       g_descriptorSets[MAX_TEXTURES];
 // ==========================================
 float q_abs(float x) { return (x < 0) ? -x : x; }
 float q_sqrt(float x) {
@@ -117,7 +121,8 @@ static VkShaderModule createShaderModule(const char* filename) {
     return shaderModule;
 }
 // ==========================================
-void cleanup_textures() { for (int i = 0; i < MAX_TEXTURES; i++) { if (txts[i].pixels != NULL) { free(txts[i].pixels); txts[i].pixels = NULL; } } }
+void cleanup_textures() { for (int i = 0; i < MAX_TEXTURES; i++) { if (txts[i].pixels != NULL) {
+    if (g_ctx.device != VK_NULL_HANDLE) { vkDestroyBuffer(g_ctx.device, txts[i].buffer, NULL); vkFreeMemory(g_ctx.device, txts[i].memory, NULL); } txts[i].pixels = NULL; } } }
 void qgpuCreate(int width, int height, const char* title, void (*updateFunc)()) {
     if (!glfwInit()) return;
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
@@ -214,9 +219,50 @@ void qgpuCreate(int width, int height, const char* title, void (*updateFunc)()) 
         .pDependencies = &dependency
     };
     vkCreateRenderPass(g_ctx.device, &renderPassInfo, NULL, &g_ctx.renderPass);
+    VkDescriptorSetLayoutBinding layoutBinding = {
+        .binding = 0,
+        .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+        .descriptorCount = 1,
+        .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+        .pImmutableSamplers = NULL
+    };
+    VkDescriptorSetLayoutCreateInfo layoutInfo = {
+        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+        .bindingCount = 1,
+        .pBindings = &layoutBinding
+    };
+    vkCreateDescriptorSetLayout(g_ctx.device, &layoutInfo, NULL, &g_descriptorSetLayout);
+    VkDescriptorPoolSize poolSize = {
+        .type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+        .descriptorCount = MAX_TEXTURES
+    };
+    VkDescriptorPoolCreateInfo descPoolInfo = {
+        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+        .poolSizeCount = 1,
+        .pPoolSizes = &poolSize,
+        .maxSets = MAX_TEXTURES
+    };
+    vkCreateDescriptorPool(g_ctx.device, &descPoolInfo, NULL, &g_descriptorPool);
+
+    VkDescriptorSetLayout layouts[MAX_TEXTURES];
+    for (int i = 0; i < MAX_TEXTURES; i++) { layouts[i] = g_descriptorSetLayout; }
+
+    VkDescriptorSetAllocateInfo allocInfoDesc = {
+        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+        .descriptorPool = g_descriptorPool,
+        .descriptorSetCount = MAX_TEXTURES,
+        .pSetLayouts = layouts
+    };
+
+    if (vkAllocateDescriptorSets(g_ctx.device, &allocInfoDesc, g_descriptorSets) != VK_SUCCESS) {
+        print("Failed to allocate descriptor sets!");
+    }
+
     VkPushConstantRange pushConstantRange = { .stageFlags = VK_SHADER_STAGE_VERTEX_BIT, .offset = 0, .size = sizeof(float) * 4 };
     VkPipelineLayoutCreateInfo pipelineLayoutInfo = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+        .setLayoutCount = 1,
+        .pSetLayouts = &g_descriptorSetLayout,
         .pushConstantRangeCount = 1,
         .pPushConstantRanges = &pushConstantRange
     };
@@ -228,7 +274,7 @@ void qgpuCreate(int width, int height, const char* title, void (*updateFunc)()) 
         {.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .stage = VK_SHADER_STAGE_FRAGMENT_BIT, .module = fragModule, .pName = "main"}
     };
     VkVertexInputBindingDescription bindingDesc = { .binding = 0, .stride = sizeof(QGPU_Vertex), .inputRate = VK_VERTEX_INPUT_RATE_VERTEX };
-    VkVertexInputAttributeDescription attribDescs[2] = {
+    VkVertexInputAttributeDescription attribDescs[3] = {
         {.binding = 0, .location = 0, .format = VK_FORMAT_R32G32_SFLOAT, .offset = offsetof(QGPU_Vertex, pos)},
         {.binding = 0, .location = 1, .format = VK_FORMAT_R32G32B32A32_SFLOAT, .offset = offsetof(QGPU_Vertex, color)}
     };
@@ -321,7 +367,7 @@ void qgpuCreate(int width, int height, const char* title, void (*updateFunc)()) 
         VkDeviceSize offsets[] = {0};
         vkCmdBindVertexBuffers(g_ctx.currentCmd, 0, 1, &g_ctx.vertexBuffer, offsets);
         vkCmdBindIndexBuffer(g_ctx.currentCmd, g_ctx.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
-        updateFunc();
+        if (updateFunc) { updateFunc(); }
         vkCmdEndRenderPass(g_ctx.currentCmd);
         vkEndCommandBuffer(g_ctx.currentCmd);
         VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
@@ -366,13 +412,14 @@ void qgpuCreate(int width, int height, const char* title, void (*updateFunc)()) 
     vkDestroyPipelineLayout(g_ctx.device, g_ctx.pipelineLayout, NULL);
     vkDestroyRenderPass(g_ctx.device, g_ctx.renderPass, NULL);
     vkDestroySwapchainKHR(g_ctx.device, g_ctx.swapchain, NULL);
+    vkDestroyDescriptorPool(g_ctx.device, g_descriptorPool, NULL);
+    vkDestroyDescriptorSetLayout(g_ctx.device, g_descriptorSetLayout, NULL);
     vkDestroyDevice(g_ctx.device, NULL);
     vkDestroySurfaceKHR(g_ctx.instance, g_ctx.surface, NULL);
     vkDestroyInstance(g_ctx.instance, NULL);
     glfwDestroyWindow(g_ctx.window);
     glfwTerminate();
 }
-
 // ========================================================================================================================================================================
 // ========================================================================================================================================================================
 // ========================================================================================================================================================================
@@ -492,70 +539,66 @@ void drawWireCircle(float posX, float posY, float radius, int segments, float th
 // ========================================================================================================================================================================
 void loadTexture(const char* filename, int slot) {
     if (slot < 0 || slot >= MAX_TEXTURES) return;
-    if (txts[slot].pixels != NULL) { free(txts[slot].pixels); txts[slot].pixels = NULL; }
+    if (txts[slot].pixels != NULL) {
+        vkDestroyBuffer(g_ctx.device, txts[slot].buffer, NULL);
+        vkFreeMemory(g_ctx.device, txts[slot].memory, NULL);
+        free(txts[slot].pixels);
+        txts[slot].pixels = NULL;
+    }
     FILE* file = fopen(filename, "r");
     if (!file) { print("Cannot find texture '%s'!", filename); return; }
     char line[16];
-    int width = 0, height = 0;
+    int width = 0, height = 0, currentPixel = 0;
     if (fgets(line, sizeof(line), file)) { sscanf(line, "%d %d", &width, &height); }
     int pixelCount = width * height;
-    unsigned char* pixelData = (unsigned char*)malloc(pixelCount * 4);
-    if (!pixelData) { fclose(file); return; }
-    int currentByte = 0;
-    while (fgets(line, sizeof(line), file) && currentByte < pixelCount * 4) {
-        int r, g, b, a;
-        if (sscanf(line, "%d %d %d %d", &r, &g, &b, &a) == 4) {
-            pixelData[currentByte++] = (unsigned char)r;
-            pixelData[currentByte++] = (unsigned char)g;
-            pixelData[currentByte++] = (unsigned char)b;
-            pixelData[currentByte++] = (unsigned char)a;
+    size_t ssboSize = sizeof(uint32_t) * 2 + (pixelCount * sizeof(uint32_t));
+    uint32_t* ssboData = (uint32_t*)malloc(ssboSize);
+    if (!ssboData) { fclose(file); return; }
+    ssboData[0] = (uint32_t)width;
+    ssboData[1] = (uint32_t)height;
+    while (fgets(line, sizeof(line), file) && currentPixel < pixelCount) {
+        int r, g, b, a; if (sscanf(line, "%d %d %d %d", &r, &g, &b, &a) == 4) {
+            uint32_t packedColor = ((uint32_t)a << 24) | ((uint32_t)b << 16) | ((uint32_t)g << 8) | (uint32_t)r;
+            ssboData[2 + currentPixel] = packedColor;
+            currentPixel++;
         }
     }
-    txts[slot].pixels = pixelData;
-    txts[slot].pixelCount = pixelCount;
+    fclose(file);
+    createBuffer(ssboSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &txts[slot].buffer, &txts[slot].memory);
+    void* mappedData;
+    vkMapMemory(g_ctx.device, txts[slot].memory, 0, ssboSize, 0, &mappedData);
+    memcpy(mappedData, ssboData, ssboSize);
+    vkUnmapMemory(g_ctx.device, txts[slot].memory);
+    free(ssboData);
+    VkDescriptorBufferInfo bufferInfo = { .buffer = txts[slot].buffer, .offset = 0, .range = ssboSize };
+    VkWriteDescriptorSet descriptorWrite = {
+        .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+        .dstSet = g_descriptorSets[slot],
+        .dstBinding = 0,
+        .dstArrayElement = 0,
+        .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+        .descriptorCount = 1,
+        .pBufferInfo = &bufferInfo
+    };
+    vkUpdateDescriptorSets(g_ctx.device, 1, &descriptorWrite, 0, NULL);
+    txts[slot].pixels = (void*)1;
     txts[slot].width = width;
     txts[slot].height = height;
-    fclose(file);
-    printf("Loaded texture '%s' to slot '%d' (%dx%d)\n", filename, slot, width, height);
+    txts[slot].pixelCount = pixelCount;
+    printf("Loaded texture '%s' to SSBO slot '%d' (%dx%d)\n", filename, slot, width, height);
 }
 void drawTextureScale(float posX, float posY, int slot, float scale) {
     if (slot < 0 || slot >= MAX_TEXTURES || txts[slot].pixels == NULL) return;
-    RawTexture* tex = &txts[slot];
-    int vc = tex->pixelCount * 4, ic = tex->pixelCount * 6;
-    float halfW = (tex->width * scale) / 2.0f, halfH = (tex->height * scale) / 2.0f;
-    QGPU_Vertex* v = malloc(vc * sizeof(QGPU_Vertex));
-    uint32_t* i_ptr = malloc(ic * sizeof(uint32_t));
-    if (!v || !i_ptr) { free(v); free(i_ptr); return; }
-    int vIdx = 0, iIdx = 0;
-    for (int y = 0; y < tex->height; y++) {
-        for (int x = 0; x < tex->width; x++) {
-            int p = (y * tex->width + x) * 4;
-            float r = tex->pixels[p] / 255.0f,
-            g = tex->pixels[p + 1] / 255.0f,
-            b = tex->pixels[p + 2] / 255.0f,
-            a = tex->pixels[p + 3] / 255.0f,
-            x0 = (x * scale) - halfW,
-            x1 = ((x + 1) * scale) - halfW,
-            y0 = halfH - ((y + 1) * scale),
-            y1 = halfH - (y * scale);
-            v[vIdx + 0] = (QGPU_Vertex){{x0, y1}, {r, g, b, a}};
-            v[vIdx + 1] = (QGPU_Vertex){{x1, y1}, {r, g, b, a}};
-            v[vIdx + 2] = (QGPU_Vertex){{x1, y0}, {r, g, b, a}};
-            v[vIdx + 3] = (QGPU_Vertex){{x0, y0}, {r, g, b, a}};
-            uint32_t offset = vIdx;
-            i_ptr[iIdx + 0] = offset + 0;
-            i_ptr[iIdx + 1] = offset + 1;
-            i_ptr[iIdx + 2] = offset + 2;
-            i_ptr[iIdx + 3] = offset + 0;
-            i_ptr[iIdx + 4] = offset + 2;
-            i_ptr[iIdx + 5] = offset + 3;
-            vIdx += 4;
-            iIdx += 6;
-        }
-    }
-    drawGeometry(posX, posY, v, vc, i_ptr, ic);
-    free(v);
-    free(i_ptr);
+    float w = (txts[slot].width * scale) / 2.0f, h = (txts[slot].height * scale) / 2.0f;
+    QGPU_Vertex v[] = {
+        {{ -w,  h }, {0.0f, 0.0f, 1.0f, 1.0f}},
+        {{  w,  h }, {1.0f, 0.0f, 1.0f, 1.0f}},
+        {{  w, -h }, {1.0f, 1.0f, 1.0f, 1.0f}},
+        {{ -w, -h }, {0.0f, 1.0f, 1.0f, 1.0f}}
+    };
+    uint32_t i[] = {0, 1, 2,  0, 2, 3};
+    vkCmdBindDescriptorSets(g_ctx.currentCmd, VK_PIPELINE_BIND_POINT_GRAPHICS, g_ctx.pipelineLayout, 0, 1, &g_descriptorSets[slot], 0, NULL);
+    drawGeometry(posX, posY, v, 4, i, 6);
 }
 // ========================================================================================================================================================================
 int getKey(int key) { if (!g_ctx.window || key < 0 || key >= GLFW_KEY_LAST) return 0; return glfwGetKey(g_ctx.window, key) == GLFW_PRESS; }
