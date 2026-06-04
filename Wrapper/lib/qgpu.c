@@ -44,6 +44,7 @@ typedef struct {
 typedef struct { unsigned char* pixels; int pixelCount; int width; int height; VkBuffer buffer; VkDeviceMemory memory; } RawTexture;
 static InternalContext g_ctx;
 RawTexture txts[MAX_TEXTURES];
+uint32_t g_currentRenderType = 0;
 VkDescriptorSetLayout g_descriptorSetLayout;
 VkDescriptorPool      g_descriptorPool;
 VkDescriptorSet       g_descriptorSets[MAX_TEXTURES];
@@ -258,7 +259,7 @@ void qgpuCreate(int width, int height, const char* title, void (*updateFunc)()) 
         print("Failed to allocate descriptor sets!");
     }
 
-    VkPushConstantRange pushConstantRange = { .stageFlags = VK_SHADER_STAGE_VERTEX_BIT, .offset = 0, .size = sizeof(float) * 4 };
+    VkPushConstantRange pushConstantRange = { .stageFlags = VK_SHADER_STAGE_VERTEX_BIT, .offset = 0, .size = 20 };
     VkPipelineLayoutCreateInfo pipelineLayoutInfo = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
         .setLayoutCount = 1,
@@ -426,10 +427,15 @@ void qgpuCreate(int width, int height, const char* title, void (*updateFunc)()) 
 void drawGeometry(float posX, float posY, QGPU_Vertex* vertices, uint32_t vCount, uint32_t* indices, uint32_t iCount) {
     if (vCount == 0 || iCount == 0) return;
     if (g_ctx.currentVOffset + vCount >= MAX_VERTICES || g_ctx.currentIOffset + iCount >= MAX_VERTICES * 1.5f) return;
-    int w, h;
-    glfwGetFramebufferSize(g_ctx.window, &w, &h);
-    float pushConstants[4] = { posX, posY, (float)w, (float)h };
-    vkCmdPushConstants(g_ctx.currentCmd, g_ctx.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(float) * 4, pushConstants);
+    int w, h; glfwGetFramebufferSize(g_ctx.window, &w, &h);
+    uint32_t pushData[5];
+    float fPosX = posX, fPosY = posY, fW = (float)w, fH = (float)h;
+    memcpy(&pushData[0], &fPosX, 4);
+    memcpy(&pushData[1], &fPosY, 4);
+    memcpy(&pushData[2], &fW, 4);
+    memcpy(&pushData[3], &fH, 4);
+    pushData[4] = g_currentRenderType;
+    vkCmdPushConstants(g_ctx.currentCmd, g_ctx.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, 20, pushData);
     QGPU_Vertex* vDst = (QGPU_Vertex*)g_ctx.mappedVertexBuffer + g_ctx.currentVOffset;
     memcpy(vDst, vertices, vCount * sizeof(QGPU_Vertex));
     uint32_t* iDst = (uint32_t*)g_ctx.mappedIndexBuffer + g_ctx.currentIOffset;
@@ -598,7 +604,9 @@ void drawTextureScale(float posX, float posY, int slot, float scale) {
     };
     uint32_t i[] = {0, 1, 2,  0, 2, 3};
     vkCmdBindDescriptorSets(g_ctx.currentCmd, VK_PIPELINE_BIND_POINT_GRAPHICS, g_ctx.pipelineLayout, 0, 1, &g_descriptorSets[slot], 0, NULL);
+    g_currentRenderType = 1;
     drawGeometry(posX, posY, v, 4, i, 6);
+    g_currentRenderType = 0;
 }
 // ========================================================================================================================================================================
 int getKey(int key) { if (!g_ctx.window || key < 0 || key >= GLFW_KEY_LAST) return 0; return glfwGetKey(g_ctx.window, key) == GLFW_PRESS; }

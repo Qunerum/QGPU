@@ -19,7 +19,8 @@ void Update() {
 
     // if (drawToggle(0, -100, 20, 20, &toggle, normal, hover)) print("Toggle!");
 
-    // drawText(px, py, "`1234567890-=\n~!@#$%^&*()_+\nabcdefghijklmnopqrstuvwxyz\nABCDEFGHIJKLMNOPQRSTUVWXYZ", s, normal);
+
+    // drawText(-600, 0, "`1234567890-=\n~!@#$%^&*()_+\nabcdefghijklmnopqrstuvwxyz\nABCDEFGHIJKLMNOPQRSTUVWXYZ", s, normal);
 
     if (getKey(QKEY_UP)) s++;
     if (getKey(QKEY_DOWN) && s > 0) s--;
