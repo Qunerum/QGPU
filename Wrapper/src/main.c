@@ -10,7 +10,7 @@ float s = 1;
 int firstFrame = 1;
 void Update() {
     if (firstFrame) {
-        loadTexture(FILES "zt.qgt", 0);
+        loadTexture(FILES "test.qgt", 0);
         firstFrame = 0;
     }
     // if (drawButton(0, 0, 200, 60, normal, hover, press) == 1) print("Click!");
