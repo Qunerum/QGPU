@@ -67,14 +67,7 @@ float q_sin(float x) {
 float q_cos(float x) { return q_sin(x + (PI / 2.0f)); }
 int AABB(float x, float y, float posX, float posY, float width, float height) { return (posX - width / 2 <= x && x <= posX + width / 2) && (posY - height / 2 <= y && y <= posY + height / 2); }
 // ==========================================
-void print(const char* format, ...) {
-    printf("[QGPU]: ");
-    va_list args;
-    va_start(args, format);
-    vprintf(format, args);
-    va_end(args);
-    printf("\n");
-}
+void print(const char* format, ...) { printf("[QGPU]: "); va_list args; va_start(args, format); vprintf(format, args); va_end(args); printf("\n"); }
 // ==========================================
 static uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
     VkPhysicalDeviceMemoryProperties memProperties;
@@ -124,7 +117,7 @@ static VkShaderModule createShaderModule(const char* filename) {
 // ==========================================
 void cleanup_textures() { for (int i = 0; i < MAX_TEXTURES; i++) { if (txts[i].pixels != NULL) {
     if (g_ctx.device != VK_NULL_HANDLE) { vkDestroyBuffer(g_ctx.device, txts[i].buffer, NULL); vkFreeMemory(g_ctx.device, txts[i].memory, NULL); } txts[i].pixels = NULL; } } }
-void qgpuCreate(int width, int height, const char* title, void (*updateFunc)()) {
+void qgpuCreate(int width, int height, const char* title, void (*initFunc)(), void (*updateFunc)()) {
     if (!glfwInit()) return;
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     g_ctx.window = glfwCreateWindow(width, height, title, NULL, NULL);
@@ -244,21 +237,15 @@ void qgpuCreate(int width, int height, const char* title, void (*updateFunc)()) 
         .maxSets = MAX_TEXTURES
     };
     vkCreateDescriptorPool(g_ctx.device, &descPoolInfo, NULL, &g_descriptorPool);
-
     VkDescriptorSetLayout layouts[MAX_TEXTURES];
     for (int i = 0; i < MAX_TEXTURES; i++) { layouts[i] = g_descriptorSetLayout; }
-
     VkDescriptorSetAllocateInfo allocInfoDesc = {
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
         .descriptorPool = g_descriptorPool,
         .descriptorSetCount = MAX_TEXTURES,
         .pSetLayouts = layouts
     };
-
-    if (vkAllocateDescriptorSets(g_ctx.device, &allocInfoDesc, g_descriptorSets) != VK_SUCCESS) {
-        print("Failed to allocate descriptor sets!");
-    }
-
+    if (vkAllocateDescriptorSets(g_ctx.device, &allocInfoDesc, g_descriptorSets) != VK_SUCCESS) { print("Failed to allocate descriptor sets!"); }
     VkPushConstantRange pushConstantRange = { .stageFlags = VK_SHADER_STAGE_VERTEX_BIT, .offset = 0, .size = 20 };
     VkPipelineLayoutCreateInfo pipelineLayoutInfo = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
@@ -339,6 +326,7 @@ void qgpuCreate(int width, int height, const char* title, void (*updateFunc)()) 
     vkCreateSemaphore(g_ctx.device, &semaphoreInfo, NULL, &g_ctx.renderFinishedSemaphore);
     memset(g_ctx.lastKeyState, 0, sizeof(g_ctx.lastKeyState));
     memset(g_ctx.lastMouseState, 0, sizeof(g_ctx.lastMouseState));
+    if (initFunc) initFunc();
     while (!glfwWindowShouldClose(g_ctx.window)) {
         for (int i = 0; i < GLFW_KEY_LAST; i++) g_ctx.lastKeyState[i] = glfwGetKey(g_ctx.window, i);
         for (int i = 0; i < GLFW_MOUSE_BUTTON_LAST; i++) g_ctx.lastMouseState[i] = glfwGetMouseButton(g_ctx.window, i);
@@ -368,7 +356,7 @@ void qgpuCreate(int width, int height, const char* title, void (*updateFunc)()) 
         VkDeviceSize offsets[] = {0};
         vkCmdBindVertexBuffers(g_ctx.currentCmd, 0, 1, &g_ctx.vertexBuffer, offsets);
         vkCmdBindIndexBuffer(g_ctx.currentCmd, g_ctx.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
-        if (updateFunc) { updateFunc(); }
+        if (updateFunc) updateFunc();
         vkCmdEndRenderPass(g_ctx.currentCmd);
         vkEndCommandBuffer(g_ctx.currentCmd);
         VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};

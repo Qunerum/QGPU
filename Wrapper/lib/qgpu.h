@@ -27,7 +27,7 @@ typedef struct { float points[96]; int pointCount; } QGPU_Char; // Max 32 points
 // !===== Console ==================================================!
 void print(const char* format, ...);
 // !===== Init ==================================================!
-void qgpuCreate(int width, int height, const char* title, void (*updateFunc)());
+void qgpuCreate(int width, int height, const char* title, void (*initFunc)(), void (*updateFunc)());
 // !===== Drawing ==================================================!
 void drawGeometry(float posX, float posY, QGPU_Vertex* vertices, uint32_t vCount, uint32_t* indices, uint32_t iCount);
 // ===== Simple ========================================

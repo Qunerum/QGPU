@@ -1,13 +1,10 @@
 #include "../lib/qgpu.h"
 
-float s = 3;
-int firstFrame = 1;
+float s = 30;
+void Init() {
+    loadTexture(FILES "test.qgt", 0);
+}
 void Update() {
-    if (firstFrame) {
-        loadTexture(FILES "test.qgt", 0);
-        firstFrame = 0;
-    }
-
     if (getKey(QKEY_UP)) s++;
     if (getKey(QKEY_DOWN) && s > 0) s--;
 
@@ -15,6 +12,6 @@ void Update() {
 }
 
 int main() {
-    qgpuCreate(1280, 720, "QGPU Template Project", Update);
+    qgpuCreate(1280, 720, "QGPU Template Project", Init, Update);
     return 0;
 }
