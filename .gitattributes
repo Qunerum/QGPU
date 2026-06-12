@@ -1,0 +1,4 @@
+**/Makefile linguist-vendored
+**/*.vert linguist-vendored
+**/*.frag linguist-vendored
+**/*.py linguist-vendored
