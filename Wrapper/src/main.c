@@ -8,7 +8,8 @@ void Update() {
     if (getKey(QKEY_UP)) s++;
     if (getKey(QKEY_DOWN) && s > 0) s--;
 
-    drawTextureScale(0, 0, 0, s);
+    // drawTextureScale(0, 0, 0, s);
+    drawText(-600, 0, "ABCDEFGHIJKLMNOPQRSTUVWXYZ", 4, (QColor){.8, .8, .8, 1});
 }
 
 int main() {
