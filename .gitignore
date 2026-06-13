@@ -1,7 +1,8 @@
-Build/
-build/
-bin/
-*.sh
-*.bat
-*.qc
-*.kate-swp
+**/bin/
+**/obj/
+**/build/
+**/*.sh
+**/*.bat
+**/*.qc
+**/*.qa
+**/*.kate-swp
