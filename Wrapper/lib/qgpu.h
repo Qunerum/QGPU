@@ -43,6 +43,7 @@ void drawWireCircle(float posX, float posY, float radius, int segments, float th
 // ===== Mesh ========================================
 void setCameraOrtographic(int state);
 void drawMesh(float posX, float posY, float posZ, float rotX, float rotY, float rotZ, QGPU_Vertex3D* verts, uint32_t vCnt, uint32_t* inds, uint32_t iCnt);
+void drawBox(float posX, float posY, float posZ, float rotX, float rotY, float rotZ, float sizeX, float sizeY, float sizeZ, QColor clr);
 // ===== Texture ========================================
 void loadTexture(const char* filename, int slot);
 void drawTextureScale(float posX, float posY, int slot, float scale);

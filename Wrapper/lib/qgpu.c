@@ -239,6 +239,15 @@ void drawMesh(float posX, float posY, float posZ, float rotX, float rotY, float 
             float fovFactor = 1200.0f; if (worldZ < 1.0f) { worldZ = 1.0f; } tempVerts[i].pos[0] = (worldX * fovFactor) / worldZ; tempVerts[i].pos[1] = (-worldY * fovFactor) / worldZ; }
         tempVerts[i].color[0] = verts[i].color[0]; tempVerts[i].color[1] = verts[i].color[1]; tempVerts[i].color[2] = verts[i].color[2]; tempVerts[i].color[3] = verts[i].color[3]; }
     drawGeometry(0, 0, tempVerts, vCnt, inds, iCnt); free(tempVerts); }
+void drawBox(float posX, float posY, float posZ, float rotX, float rotY, float rotZ, float sizeX, float sizeY, float sizeZ, QColor clr) {
+    float r = clr.r, g = clr.g, b = clr.b, a = clr.a, x = sizeX / 2, y = sizeY / 2, z = sizeZ / 2;
+    QGPU_Vertex3D v[] = {{{ -x,  y,  z }, {r, g, b, a}}, {{  x,  y,  z }, {r, g, b, a}}, {{  x, -y,  z }, {r, g, b, a}}, {{ -x, -y,  z }, {r, g, b, a}},
+        {{ -x,  y,  z }, {r, g, b, a}}, {{ -x,  y, -z }, {r, g, b, a}}, {{  x,  y, -z }, {r, g, b, a}}, {{  x,  y,  z }, {r, g, b, a}}, {{  x,  y,  z }, {r, g, b, a}},
+        {{  x,  y, -z }, {r, g, b, a}}, {{  x, -y, -z }, {r, g, b, a}}, {{  x, -y,  z }, {r, g, b, a}}, {{  x, -y,  z }, {r, g, b, a}}, {{  x, -y, -z }, {r, g, b, a}},
+        {{ -x, -y, -z }, {r, g, b, a}}, {{ -x, -y,  z }, {r, g, b, a}}, {{ -x,  y, -z }, {r, g, b, a}}, {{ -x,  y,  z }, {r, g, b, a}}, {{ -x, -y,  z }, {r, g, b, a}},
+        {{ -x, -y, -z }, {r, g, b, a}}, {{  x,  y, -z }, {r, g, b, a}}, {{ -x,  y, -z }, {r, g, b, a}}, {{ -x, -y, -z }, {r, g, b, a}}, {{  x, -y, -z }, {r, g, b, a}}};
+    uint32_t i[] = { 0, 1, 2, 0, 2, 3, 4, 5, 6, 4, 6, 7, 8, 9, 10, 8, 10, 11, 12, 13, 14, 12, 14, 15, 16, 17, 18, 16, 18, 19, 20, 21, 22, 20, 22, 23 };
+    drawMesh(posX, posY, posZ, rotX, rotY, rotZ, v, 24, i, 36); }
 // ========================================================================================================================================================================
 // ========================================================================================================================================================================
 // ========================================================================================================================================================================
