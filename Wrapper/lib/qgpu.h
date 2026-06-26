@@ -41,6 +41,8 @@ void drawWireRect(float posX, float posY, float sizeX, float sizeY, float thickn
 void drawWireTriangle(float posX, float posY, float p1X, float p1Y, float p2X, float p2Y, float p3X, float p3Y, float thickness, QColor color);
 void drawWireCircle(float posX, float posY, float radius, int segments, float thickness, QColor color);
 // ===== Mesh ========================================
+int addLight(float x, float y, float z, float range, float intensity);
+void setLight(int id, float x, float y, float z, float range, float intensity);
 void setCameraOrtographic(int state);
 void drawMesh(float posX, float posY, float posZ, float rotX, float rotY, float rotZ, QGPU_Vertex3D* verts, uint32_t vCnt, uint32_t* inds, uint32_t iCnt);
 void drawBox(float posX, float posY, float posZ, float rotX, float rotY, float rotZ, float sizeX, float sizeY, float sizeZ, QColor clr);
