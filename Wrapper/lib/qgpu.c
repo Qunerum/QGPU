@@ -234,99 +234,53 @@ void drawWireCircle(float posX, float posY, float radius, int segments, float th
 // ========================================================================================================================================================================
 int addLight(float x, float y, float z, float range, float intensity) { if (lightCount >= MAX_LIGHTS) return -1;
     lights[lightCount].x=x; lights[lightCount].y=y; lights[lightCount].z=z; lights[lightCount].range=range; lights[lightCount].intensity=intensity; lightCount++; return lightCount-1; }
-    void setLight(int id, float x, float y, float z, float range, float intensity) { id = id > lightCount ? lightCount : id < 0 ? 0 : id;
-        lights[id].x=x; lights[id].y=y; lights[id].z=z; lights[id].range=range; lights[id].intensity=intensity; }
+void setLight(int id, float x, float y, float z, float range, float intensity) { id = id > lightCount ? lightCount : id < 0 ? 0 : id;
+    lights[id].x=x; lights[id].y=y; lights[id].z=z; lights[id].range=range; lights[id].intensity=intensity; }
 void setCameraOrtographic(int state) { camOrtographic = state; }
 void drawMesh(float posX, float posY, float posZ, float rotX, float rotY, float rotZ, QGPU_Vertex3D* verts, uint32_t vCnt, uint32_t* inds, uint32_t iCnt) {
     if (vCnt == 0 || iCnt == 0) { return; } float radX = rotX * (PI / 180.0f), radY = rotY * (PI / 180.0f), radZ = rotZ * (PI / 180.0f),
-    cx = q_cos(radX), sx = q_sin(radX), cy = q_cos(radY), sy = q_sin(radY), cz = q_cos(radZ), sz = q_sin(radZ);
-    QGPU_Vertex* tempVerts = (QGPU_Vertex*)malloc(vCnt * sizeof(QGPU_Vertex));
-    if (!tempVerts) return;
-    float ambientIntensity = 0.15f;
+    cx = q_cos(radX), sx = q_sin(radX), cy = q_cos(radY), sy = q_sin(radY), cz = q_cos(radZ), sz = q_sin(radZ); posY = -posY;
+    QGPU_Vertex* tempVerts = (QGPU_Vertex*)malloc(vCnt * sizeof(QGPU_Vertex)); if (!tempVerts) return;
+    float ambientIntensity = 0.0f;
     for (uint32_t i = 0; i < vCnt; i++) {
         float x = verts[i].pos[0], y = verts[i].pos[1], z = verts[i].pos[2],
-        x1 = x, y1 = y * cx - z * sx, z1 = y * sx + z * cx,
-        x2 = x1 * cy + z1 * sy, y2 = y1, z2 = -x1 * sy + z1 * cy,
-        x3 = x2 * cz - y2 * sz, y3 = x2 * sz + y2 * cz, z3 = z2,
-        worldX = x3 + posX, worldY = y3 + posY, worldZ = z3 + posZ;
-
-        // --- APARAT / KAMERA ---
-        if (camOrtographic) {
-            float orthoScale = 2.5f;
-            tempVerts[i].pos[0] = worldX * orthoScale;
-            tempVerts[i].pos[1] = -worldY * orthoScale;
-        } else {
-            float fovFactor = 1200.0f;
-            if (worldZ < 1.0f) { worldZ = 1.0f; }
-            tempVerts[i].pos[0] = (worldX * fovFactor) / worldZ;
-            tempVerts[i].pos[1] = (-worldY * fovFactor) / worldZ;
-        }
-
-        // --- OŚWIETLENIE (Per-Vertex) ---
-
-        // Ponieważ nie masz normalnych w strukturze wierzchołka, aproksymujemy normalną
-        // na podstawie kierunku od środka modelu (posX, posY, posZ) do wierzchołka w świecie.
-        float nx = worldX - posX;
-        float ny = worldY - posY;
-        float nz = worldZ - posZ;
-        float nLen = q_sqrt(nx*nx + ny*ny + nz*nz);
-        if (nLen > 0.0f) { nx /= nLen; ny /= nLen; nz /= nLen; }
-
-        // Zaczynamy od światła bazowego (otoczenia)
-        float totalLight = ambientIntensity;
-
+        x1 = x, y1 = y * cx - z * sx, z1 = y * sx + z * cx, x2 = x1 * cy + z1 * sy, y2 = y1, z2 = -x1 * sy + z1 * cy,
+        x3 = x2 * cz - y2 * sz, y3 = x2 * sz + y2 * cz, z3 = z2, worldX = x3 + posX, worldY = y3 + posY, worldZ = z3 + posZ;
+        if (camOrtographic) { float orthoScale = 2.5f; tempVerts[i].pos[0] = worldX * orthoScale; tempVerts[i].pos[1] = -worldY * orthoScale; }
+        else { float fovFactor = 1200.0f; if (worldZ < 1.0f) { worldZ = 1.0f; } tempVerts[i].pos[0] = (worldX * fovFactor) / worldZ; tempVerts[i].pos[1] = (-worldY * fovFactor) / worldZ; }
+        float nx_local = verts[i].normal[0], ny_local = verts[i].normal[1], nz_local = verts[i].normal[2],
+         nx1 = nx_local, ny1 = ny_local * cx - nz_local * sx, nz1 = ny_local * sx + nz_local * cx,
+         nx2 = nx1 * cy + nz1 * sy, ny2 = ny1, nz2 = -nx1 * sy + nz1 * cy,
+         nx = nx2 * cz - ny2 * sz, ny = nx2 * sz + ny2 * cz, nz = nz2,
+         totalLight = ambientIntensity;
         for (int l = 0; l < lightCount; l++) {
-            // Wektor od wierzchołka w świecie do pozycji światła
-            float lx = lights[l].x - worldX;
-            float ly = lights[l].y - worldY;
-            float lz = lights[l].z - worldZ;
-
-            float dist = q_sqrt(lx*lx + ly*ly + lz*lz);
-            if (dist == 0.0f) dist = 1.0f;
-
-            // Normalizacja wektora światła
+            float lx = lights[l].x - worldX, ly = lights[l].y + worldY, lz = lights[l].z - worldZ,
+            dist = q_sqrt(lx*lx + ly*ly + lz*lz); if (dist == 0.0f) dist = 1.0f;
             lx /= dist; ly /= dist; lz /= dist;
-
-            // Obliczanie tłumienia (Attenuation) na podstawie odległości i zasięgu światła
-            float attenuation = 1.0f / (1.0f + 0.005f * dist * dist); // Klasyczny wzór na spadek światła
-            if (lights[l].range > 0.0f) {
-                attenuation = 1.0f - (dist / lights[l].range);
-                if (attenuation < 0.0f) attenuation = 0.0f;
-            }
-
-            // Iloczyn skalarny (Dot product) - kąt padania
-            float dot = lx * nx + ly * ny + lz * nz;
-            if (dot < 0.0f) dot = 0.0f;
-
-            // Dodajemy wkład tego punktu świetlnego
-            totalLight += dot * attenuation * lights[l].intensity;
-        }
-
-        // Zabezpieczenie przed przepaleniem koloru (max 1.5, żeby mogło być lekko rozjaśnione)
+            float attenuation = 1.0f - (dist / lights[l].range); if (attenuation < 0.0f) attenuation = 0.0f;
+            float dot = lx * nx + ly * ny + lz * nz; if (dot < 0.0f) dot = 0.0f;
+            totalLight += dot * attenuation * lights[l].intensity; }
         if (totalLight > 1.5f) totalLight = 1.5f;
-
-        // Aplikujemy wyliczone światło na składowe R, G, B
-        float finalR = verts[i].color[0] * totalLight;
-        float finalG = verts[i].color[1] * totalLight;
-        float finalB = verts[i].color[2] * totalLight;
-
-        // Kontrola zakresów 0.0f - 1.0f dla Vulkana
-        tempVerts[i].color[0] = (finalR > 1.0f) ? 1.0f : finalR;
-        tempVerts[i].color[1] = (finalG > 1.0f) ? 1.0f : finalG;
-        tempVerts[i].color[2] = (finalB > 1.0f) ? 1.0f : finalB;
-        tempVerts[i].color[3] = verts[i].color[3]; // Alfa bez zmian
-    }
-    drawGeometry(0, 0, tempVerts, vCnt, inds, iCnt);
-    free(tempVerts);
-}
+        float finalR = verts[i].color[0] * totalLight, finalG = verts[i].color[1] * totalLight, finalB = verts[i].color[2] * totalLight;
+        tempVerts[i].color[0] = (finalR > 1.0f) ? 1.0f : finalR; tempVerts[i].color[1] = (finalG > 1.0f) ? 1.0f : finalG; tempVerts[i].color[2] = (finalB > 1.0f) ? 1.0f : finalB;
+        tempVerts[i].color[3] = verts[i].color[3]; }
+    drawGeometry(0, 0, tempVerts, vCnt, inds, iCnt); free(tempVerts); }
 void drawBox(float posX, float posY, float posZ, float rotX, float rotY, float rotZ, float sizeX, float sizeY, float sizeZ, QColor clr) {
-    float r = clr.r, g = clr.g, b = clr.b, a = clr.a, x = sizeX / 2, y = sizeY / 2, z = sizeZ / 2;
-    QGPU_Vertex3D v[] = {{{ -x,  y,  z }, {r, g, b, a}}, {{  x,  y,  z }, {r, g, b, a}}, {{  x, -y,  z }, {r, g, b, a}}, {{ -x, -y,  z }, {r, g, b, a}},
-        {{ -x,  y,  z }, {r, g, b, a}}, {{ -x,  y, -z }, {r, g, b, a}}, {{  x,  y, -z }, {r, g, b, a}}, {{  x,  y,  z }, {r, g, b, a}}, {{  x,  y,  z }, {r, g, b, a}},
-        {{  x,  y, -z }, {r, g, b, a}}, {{  x, -y, -z }, {r, g, b, a}}, {{  x, -y,  z }, {r, g, b, a}}, {{  x, -y,  z }, {r, g, b, a}}, {{  x, -y, -z }, {r, g, b, a}},
-        {{ -x, -y, -z }, {r, g, b, a}}, {{ -x, -y,  z }, {r, g, b, a}}, {{ -x,  y, -z }, {r, g, b, a}}, {{ -x,  y,  z }, {r, g, b, a}}, {{ -x, -y,  z }, {r, g, b, a}},
-        {{ -x, -y, -z }, {r, g, b, a}}, {{  x,  y, -z }, {r, g, b, a}}, {{ -x,  y, -z }, {r, g, b, a}}, {{ -x, -y, -z }, {r, g, b, a}}, {{  x, -y, -z }, {r, g, b, a}}};
-    uint32_t i[] = { 0, 1, 2, 0, 2, 3, 4, 5, 6, 4, 6, 7, 8, 9, 10, 8, 10, 11, 12, 13, 14, 12, 14, 15, 16, 17, 18, 16, 18, 19, 20, 21, 22, 20, 22, 23 };
+    float r = clr.r, g = clr.g, b = clr.b, a = clr.a, x = sizeX / 2.0f, y = sizeY / 2.0f, z = sizeZ / 2.0f;
+    QGPU_Vertex3D v[] = {
+        {{ -x,  y,  z }, {r, g, b, a}, {0.0f, 0.0f, 1.0f}}, {{  x,  y,  z }, {r, g, b, a}, {0.0f, 0.0f, 1.0f}},
+        {{  x, -y,  z }, {r, g, b, a}, {0.0f, 0.0f, 1.0f}}, {{ -x, -y,  z }, {r, g, b, a}, {0.0f, 0.0f, 1.0f}},
+        {{ -x,  y,  z }, {r, g, b, a}, {0.0f, 1.0f, 0.0f}}, {{ -x,  y, -z }, {r, g, b, a}, {0.0f, 1.0f, 0.0f}},
+        {{  x,  y, -z }, {r, g, b, a}, {0.0f, 1.0f, 0.0f}}, {{  x,  y,  z }, {r, g, b, a}, {0.0f, 1.0f, 0.0f}},
+        {{  x,  y,  z }, {r, g, b, a}, {1.0f, 0.0f, 0.0f}}, {{  x,  y, -z }, {r, g, b, a}, {1.0f, 0.0f, 0.0f}},
+        {{  x, -y, -z }, {r, g, b, a}, {1.0f, 0.0f, 0.0f}}, {{  x, -y,  z }, {r, g, b, a}, {1.0f, 0.0f, 0.0f}},
+        {{  x, -y,  z }, {r, g, b, a}, {0.0f, -1.0f, 0.0f}}, {{  x, -y, -z }, {r, g, b, a}, {0.0f, -1.0f, 0.0f}},
+        {{ -x, -y, -z }, {r, g, b, a}, {0.0f, -1.0f, 0.0f}}, {{ -x, -y,  z }, {r, g, b, a}, {0.0f, -1.0f, 0.0f}},
+        {{ -x,  y, -z }, {r, g, b, a}, {-1.0f, 0.0f, 0.0f}}, {{ -x,  y,  z }, {r, g, b, a}, {-1.0f, 0.0f, 0.0f}},
+        {{ -x, -y,  z }, {r, g, b, a}, {-1.0f, 0.0f, 0.0f}}, {{ -x, -y, -z }, {r, g, b, a}, {-1.0f, 0.0f, 0.0f}},
+        {{  x,  y, -z }, {r, g, b, a}, {0.0f, 0.0f, -1.0f}}, {{ -x,  y, -z }, {r, g, b, a}, {0.0f, 0.0f, -1.0f}},
+        {{ -x, -y, -z }, {r, g, b, a}, {0.0f, 0.0f, -1.0f}}, {{  x, -y, -z }, {r, g, b, a}, {0.0f, 0.0f, -1.0f}}};
+    uint32_t i[] = { 0,1,2, 0,2,3, 4,5,6, 4,6,7, 8,9,10, 8,10,11, 12,13,14, 12,14,15, 16,17,18, 16,18,19, 20,21,22, 20,22,23 };
     drawMesh(posX, posY, posZ, rotX, rotY, rotZ, v, 24, i, 36); }
 // ========================================================================================================================================================================
 // ========================================================================================================================================================================
