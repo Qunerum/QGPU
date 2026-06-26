@@ -45,6 +45,8 @@ int addLight(float x, float y, float z, float range, float intensity);
 void setLight(int id, float x, float y, float z, float range, float intensity);
 void setCameraOrtographic(int state);
 void drawMesh(float posX, float posY, float posZ, float rotX, float rotY, float rotZ, QGPU_Vertex3D* verts, uint32_t vCnt, uint32_t* inds, uint32_t iCnt);
+void drawPlane(float posX, float posY, float posZ, float rotX, float rotY, float rotZ, float sizeX, float sizeZ, QColor clr);
+void drawDisk(float posX, float posY, float posZ, float rotX, float rotY, float rotZ, float radius, uint32_t segments, QColor clr);
 void drawBox(float posX, float posY, float posZ, float rotX, float rotY, float rotZ, float sizeX, float sizeY, float sizeZ, QColor clr);
 // ===== Texture ========================================
 void loadTexture(const char* filename, int slot);

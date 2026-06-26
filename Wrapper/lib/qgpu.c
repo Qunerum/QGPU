@@ -29,8 +29,9 @@ int lightCount = 0;
 // ==========================================
 float q_abs(float x) { return (x < 0) ? -x : x; }
 float q_sqrt(float x) { if(x<=0)return 0;float xhalf=0.5f * x;union{float f;int i;}conv;conv.f=x;conv.i =0x5f3759df-(conv.i >> 1);x=conv.f;x=x*(1.5f-xhalf*x*x);return 1.0f/x; }
-float q_sin(float x) { while (x > PI) { x -= 2.0f * PI; } while (x < -PI) { x += 2.0f * PI; }
-    float abs_x = q_abs(x), pi2 = PI * PI, sin_x = (16.0f * x * (PI - abs_x)) / (5.0f * pi2 - 4.0f * x * (PI - abs_x)); return sin_x; }
+float q_sin(float x) {  while (x < 0.0f) x += 2.0f * PI; while (x >= 2.0f * PI) x -= 2.0f * PI;
+    if (x > PI) x -= 2.0f * PI; if (x > PI / 2.0f)  x = PI - x; if (x < -PI / 2.0f) x = -PI - x;
+    float x2 = x * x, x3 = x2 * x, x5 = x3 * x2, x7 = x5 * x2; return x - (x3 / 6.0f) + (x5 / 120.0f) - (x7 / 5040.0f); }
 float q_cos(float x) { return q_sin(x + (PI / 2.0f)); }
 int AABB(float x, float y, float posX, float posY, float width, float height) { return (posX - width / 2 <= x && x <= posX + width / 2) && (posY - height / 2 <= y && y <= posY + height / 2); }
 // ==========================================
@@ -238,8 +239,9 @@ void setLight(int id, float x, float y, float z, float range, float intensity) {
     lights[id].x=x; lights[id].y=y; lights[id].z=z; lights[id].range=range; lights[id].intensity=intensity; }
 void setCameraOrtographic(int state) { camOrtographic = state; }
 void drawMesh(float posX, float posY, float posZ, float rotX, float rotY, float rotZ, QGPU_Vertex3D* verts, uint32_t vCnt, uint32_t* inds, uint32_t iCnt) {
-    if (vCnt == 0 || iCnt == 0) { return; } float radX = rotX * (PI / 180.0f), radY = rotY * (PI / 180.0f), radZ = rotZ * (PI / 180.0f),
-    cx = q_cos(radX), sx = q_sin(radX), cy = q_cos(radY), sy = q_sin(radY), cz = q_cos(radZ), sz = q_sin(radZ); posY = -posY;
+    if (vCnt == 0 || iCnt == 0) { return; } posY = -posY; rotX = -rotX;
+    float radX = rotX * (PI / 180.0f), radY = rotY * (PI / 180.0f), radZ = rotZ * (PI / 180.0f),
+    cx = q_cos(radX), sx = q_sin(radX), cy = q_cos(radY), sy = q_sin(radY), cz = q_cos(radZ), sz = q_sin(radZ);
     QGPU_Vertex* tempVerts = (QGPU_Vertex*)malloc(vCnt * sizeof(QGPU_Vertex)); if (!tempVerts) return;
     float ambientIntensity = 0.0f;
     for (uint32_t i = 0; i < vCnt; i++) {
@@ -249,22 +251,42 @@ void drawMesh(float posX, float posY, float posZ, float rotX, float rotY, float 
         if (camOrtographic) { float orthoScale = 2.5f; tempVerts[i].pos[0] = worldX * orthoScale; tempVerts[i].pos[1] = -worldY * orthoScale; }
         else { float fovFactor = 1200.0f; if (worldZ < 1.0f) { worldZ = 1.0f; } tempVerts[i].pos[0] = (worldX * fovFactor) / worldZ; tempVerts[i].pos[1] = (-worldY * fovFactor) / worldZ; }
         float nx_local = verts[i].normal[0], ny_local = verts[i].normal[1], nz_local = verts[i].normal[2],
-         nx1 = nx_local, ny1 = ny_local * cx - nz_local * sx, nz1 = ny_local * sx + nz_local * cx,
-         nx2 = nx1 * cy + nz1 * sy, ny2 = ny1, nz2 = -nx1 * sy + nz1 * cy,
-         nx = nx2 * cz - ny2 * sz, ny = nx2 * sz + ny2 * cz, nz = nz2,
-         totalLight = ambientIntensity;
-        for (int l = 0; l < lightCount; l++) {
+        nx1 = nx_local, ny1 = ny_local * cx - nz_local * sx, nz1 = ny_local * sx + nz_local * cx,
+        nx2 = nx1 * cy + nz1 * sy, ny2 = ny1, nz2 = -nx1 * sy + nz1 * cy,
+        nx = nx2 * cz - ny2 * sz, ny = nx2 * sz + ny2 * cz, nz = nz2,
+        totalLight = ambientIntensity;
+        if (lightCount > 0) { for (int l = 0; l < lightCount; l++) {
             float lx = lights[l].x - worldX, ly = lights[l].y + worldY, lz = lights[l].z - worldZ,
             dist = q_sqrt(lx*lx + ly*ly + lz*lz); if (dist == 0.0f) dist = 1.0f;
             lx /= dist; ly /= dist; lz /= dist;
             float attenuation = 1.0f - (dist / lights[l].range); if (attenuation < 0.0f) attenuation = 0.0f;
             float dot = lx * nx + ly * ny + lz * nz; if (dot < 0.0f) dot = 0.0f;
-            totalLight += dot * attenuation * lights[l].intensity; }
+            totalLight += dot * attenuation * lights[l].intensity; } } else totalLight = 1;
         if (totalLight > 1.5f) totalLight = 1.5f;
         float finalR = verts[i].color[0] * totalLight, finalG = verts[i].color[1] * totalLight, finalB = verts[i].color[2] * totalLight;
         tempVerts[i].color[0] = (finalR > 1.0f) ? 1.0f : finalR; tempVerts[i].color[1] = (finalG > 1.0f) ? 1.0f : finalG; tempVerts[i].color[2] = (finalB > 1.0f) ? 1.0f : finalB;
         tempVerts[i].color[3] = verts[i].color[3]; }
     drawGeometry(0, 0, tempVerts, vCnt, inds, iCnt); free(tempVerts); }
+void drawPlane(float posX, float posY, float posZ, float rotX, float rotY, float rotZ, float sizeX, float sizeZ, QColor clr) {
+    float r = clr.r, g = clr.g, b = clr.b, a = clr.a, x = sizeX / 2, z = sizeZ / 2;
+    QGPU_Vertex3D v[] = {{{-x, 0, z}, {r, g, b, a}, {0, 1, 0}}, {{-x, 0, -z}, {r, g, b, a}, {0, 1, 0}}, {{x, 0, -z}, {r, g, b, a}, {0, 1, 0}}, {{x, 0, z}, {r, g, b, a}, {0, 1, 0}}};
+    uint32_t i[] = {2, 1, 0, 3, 2, 0}; drawMesh(posX, posY, posZ, rotX, rotY, rotZ, v, 4, i, 6); }
+void drawDisk(float posX, float posY, float posZ, float rotX, float rotY, float rotZ, float radius, uint32_t segments, QColor clr) {
+    if (segments < 3) segments = 3; uint32_t vCnt = segments + 1, iCnt = segments * 3;
+    QGPU_Vertex3D* v = (QGPU_Vertex3D*)malloc(vCnt * sizeof(QGPU_Vertex3D)); uint32_t* i = (uint32_t*)malloc(iCnt * sizeof(uint32_t));
+    if (!v || !i) { if(v) free(v); if(i) free(i); return; }
+    float r = clr.r, g = clr.g, b = clr.b, a = clr.a;
+    v[0].pos[0] = 0.0f; v[0].pos[1] = 0.0f; v[0].pos[2] = 0.0f; v[0].color[0] = r; v[0].color[1] = g; v[0].color[2] = b; v[0].color[3] = a;
+    v[0].normal[0] = 0.0f; v[0].normal[1] = 1.0f; v[0].normal[2] = 0.0f; float angleStep = (2.0f * PI) / segments;
+    for (uint32_t s = 0; s < segments; s++) {
+        float angle = s * angleStep; uint32_t vIdx = s + 1;
+        v[vIdx].pos[0] = q_cos(angle) * radius; v[vIdx].pos[1] = 0.0f; v[vIdx].pos[2] = q_sin(angle) * radius;
+        v[vIdx].color[0] = r; v[vIdx].color[1] = g; v[vIdx].color[2] = b; v[vIdx].color[3] = a;
+        v[vIdx].normal[0] = 0.0f; v[vIdx].normal[1] = 1.0f; v[vIdx].normal[2] = 0.0f; }
+    for (uint32_t s = 0; s < segments; s++) {
+        uint32_t iIdx = s * 3, currentVert = s + 1, nextVert = (s == segments - 1) ? 1 : s + 2;
+        i[iIdx] = 0; i[iIdx + 1] = nextVert; i[iIdx + 2] = currentVert; }
+    drawMesh(posX, posY, posZ, rotX, rotY, rotZ, v, vCnt, i, iCnt); free(v); free(i); }
 void drawBox(float posX, float posY, float posZ, float rotX, float rotY, float rotZ, float sizeX, float sizeY, float sizeZ, QColor clr) {
     float r = clr.r, g = clr.g, b = clr.b, a = clr.a, x = sizeX / 2.0f, y = sizeY / 2.0f, z = sizeZ / 2.0f;
     QGPU_Vertex3D v[] = {
@@ -280,8 +302,10 @@ void drawBox(float posX, float posY, float posZ, float rotX, float rotY, float r
         {{ -x, -y,  z }, {r, g, b, a}, {-1.0f, 0.0f, 0.0f}}, {{ -x, -y, -z }, {r, g, b, a}, {-1.0f, 0.0f, 0.0f}},
         {{  x,  y, -z }, {r, g, b, a}, {0.0f, 0.0f, -1.0f}}, {{ -x,  y, -z }, {r, g, b, a}, {0.0f, 0.0f, -1.0f}},
         {{ -x, -y, -z }, {r, g, b, a}, {0.0f, 0.0f, -1.0f}}, {{  x, -y, -z }, {r, g, b, a}, {0.0f, 0.0f, -1.0f}}};
-    uint32_t i[] = { 0,1,2, 0,2,3, 4,5,6, 4,6,7, 8,9,10, 8,10,11, 12,13,14, 12,14,15, 16,17,18, 16,18,19, 20,21,22, 20,22,23 };
-    drawMesh(posX, posY, posZ, rotX, rotY, rotZ, v, 24, i, 36); }
+        uint32_t i[] = { 0,1,2, 0,2,3, 4,5,6, 4,6,7, 8,9,10, 8,10,11, 12,13,14, 12,14,15, 16,17,18, 16,18,19, 20,21,22, 20,22,23 };
+        drawMesh(posX, posY, posZ, rotX, rotY, rotZ, v, 24, i, 36); }
+
+// Pyramid , Cylinder , Sphere , Capsule
 // ========================================================================================================================================================================
 // ========================================================================================================================================================================
 // ========================================================================================================================================================================
