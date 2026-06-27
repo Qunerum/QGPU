@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
-// #include <vulkan/vulkan.h>
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 #include "qgpu.h"
@@ -118,7 +117,11 @@ void qgpuCreate(int width, int height, const char* title, void (*initFunc)(), vo
     g_ctx.window = glfwCreateWindow(width, height, title, NULL, NULL);
     uint32_t glfwExtensionCount = 0;
     const char** glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
-    VkInstanceCreateInfo instanceInfo = { .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO, .enabledExtensionCount = glfwExtensionCount, .ppEnabledExtensionNames = glfwExtensions };
+    VkInstanceCreateInfo instanceInfo = { .
+        sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
+        .enabledExtensionCount = glfwExtensionCount,
+        .ppEnabledExtensionNames = glfwExtensions
+    };
     vkCreateInstance(&instanceInfo, NULL, &g_ctx.instance);
     glfwCreateWindowSurface(g_ctx.instance, g_ctx.window, NULL, &g_ctx.surface);
     uint32_t deviceCount = 0;
@@ -127,7 +130,24 @@ void qgpuCreate(int width, int height, const char* title, void (*initFunc)(), vo
     vkEnumeratePhysicalDevices(g_ctx.instance, &deviceCount, devices); g_ctx.physicalDevice = devices[0];
     free(devices);
     float queuePriority = 1.0f;
-    VkDeviceQueueCreateInfo queueCreateInfo = { .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO, .queueFamilyIndex = 0, .queueCount = 1, .pQueuePriorities = &queuePriority };
+    uint32_t queueFamilyCount = 0;
+    vkGetPhysicalDeviceQueueFamilyProperties(g_ctx.physicalDevice, &queueFamilyCount, NULL);
+    VkQueueFamilyProperties* queueFamilies = malloc(sizeof(VkQueueFamilyProperties) * queueFamilyCount);
+    vkGetPhysicalDeviceQueueFamilyProperties(g_ctx.physicalDevice, &queueFamilyCount, queueFamilies);
+    uint32_t graphicsQueueFamilyIndex = UINT32_MAX;
+    for (uint32_t i = 0; i < queueFamilyCount; i++) {
+        if (queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+            graphicsQueueFamilyIndex = i;
+            break;
+        }
+    }
+    free(queueFamilies);
+    VkDeviceQueueCreateInfo queueCreateInfo = {
+        .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+        .queueFamilyIndex = graphicsQueueFamilyIndex,
+        .queueCount = 1,
+        .pQueuePriorities = &queuePriority
+    };
     const char* deviceExtensions[] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
     VkDeviceCreateInfo deviceCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
