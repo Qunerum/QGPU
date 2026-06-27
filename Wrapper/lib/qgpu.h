@@ -48,6 +48,7 @@ void drawMesh(float posX, float posY, float posZ, float rotX, float rotY, float 
 void drawPlane(float posX, float posY, float posZ, float rotX, float rotY, float rotZ, float sizeX, float sizeZ, QColor clr);
 void drawDisk(float posX, float posY, float posZ, float rotX, float rotY, float rotZ, float radius, uint32_t segments, QColor clr);
 void drawBox(float posX, float posY, float posZ, float rotX, float rotY, float rotZ, float sizeX, float sizeY, float sizeZ, QColor clr);
+void drawPyramid(float posX, float posY, float posZ, float rotX, float rotY, float rotZ, float sizeX, float sizeY, float sizeZ, QColor clr);
 // ===== Texture ========================================
 void loadTexture(const char* filename, int slot);
 void drawTextureScale(float posX, float posY, int slot, float scale);
