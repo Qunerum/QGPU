@@ -2,9 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
-#include <dirent.h>
-#include <sys/stat.h>
-#include <vulkan/vulkan.h>
+// #include <vulkan/vulkan.h>
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 #include "qgpu.h"
