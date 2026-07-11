@@ -46,6 +46,8 @@ static int camOrtographic = 0;
 typedef struct { float x, y, z, range, intensity; } Light;
 Light lights[MAX_LIGHTS];
 int lightCount = 0;
+VkBuffer g_dummyBuffer;
+VkDeviceMemory g_dummyBufferMemory;
 // ==========================================
 float q_abs(float x) { return (x < 0) ? -x : x; }
 float q_sqrt(float x) {
@@ -492,6 +494,12 @@ void qgpuCreate(int width, int height, const char* title, void (*initFunc)(), vo
     vkCreateSemaphore(g_ctx.device, &semaphoreInfo, NULL, &g_ctx.renderFinishedSemaphore);
     memset(g_ctx.lastKeyState, 0, sizeof(g_ctx.lastKeyState));
     memset(g_ctx.lastMouseState, 0, sizeof(g_ctx.lastMouseState));
+    createBuffer(sizeof(uint32_t) * 4, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                 &g_dummyBuffer, &g_dummyBufferMemory);
+    for(int i = 0; i < MAX_TEXTURES; i++) {
+        updateDescriptorSet(g_ctx.device, g_descriptorSets[i], g_dummyBuffer);
+    }
     if (initFunc) initFunc();
     while (!glfwWindowShouldClose(g_ctx.window)) {
         for (int i = 0; i < GLFW_KEY_LAST; i++) g_ctx.lastKeyState[i] = glfwGetKey(g_ctx.window, i);
@@ -582,6 +590,8 @@ void qgpuCreate(int width, int height, const char* title, void (*initFunc)(), vo
     vkDestroyImageView(g_ctx.device, g_ctx.depthImageView, NULL);
     vkDestroyImage(g_ctx.device, g_ctx.depthImage, NULL);
     vkFreeMemory(g_ctx.device, g_ctx.depthImageMemory, NULL);
+    vkDestroyBuffer(g_ctx.device, g_dummyBuffer, NULL);
+    vkFreeMemory(g_ctx.device, g_dummyBufferMemory, NULL);
     vkDestroyDevice(g_ctx.device, NULL);
     vkDestroySurfaceKHR(g_ctx.instance, g_ctx.surface, NULL);
     vkDestroyInstance(g_ctx.instance, NULL);
