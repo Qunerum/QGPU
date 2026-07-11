@@ -35,6 +35,9 @@ typedef struct {
     uint32_t currentVOffset, currentIOffset;
     int lastKeyState[GLFW_KEY_LAST], lastMouseState[GLFW_MOUSE_BUTTON_LAST];
     void *mappedVertexBuffer, *mappedIndexBuffer;
+    VkImage depthImage;
+    VkDeviceMemory depthImageMemory;
+    VkImageView depthImageView;
 } InternalContext;
 typedef struct { unsigned char* pixels; int pixelCount; int width; int height; VkBuffer buffer; VkDeviceMemory memory; } RawTexture;
 static InternalContext g_ctx; RawTexture txts[MAX_TEXTURES]; uint32_t g_currentRenderType = 0;
@@ -99,6 +102,52 @@ static VkShaderModule createShaderModule(const char* filename) {
     free(code);
     return shaderModule;
 }
+static void createDepthResources(int width, int height) {
+    VkImageCreateInfo imageInfo = {0};
+    imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    imageInfo.imageType = VK_IMAGE_TYPE_2D;
+    imageInfo.extent = (VkExtent3D){(uint32_t)width, (uint32_t)height, 1};
+    imageInfo.mipLevels = 1;
+    imageInfo.arrayLayers = 1;
+    imageInfo.format = VK_FORMAT_D32_SFLOAT;
+    imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+    imageInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+    imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+    vkCreateImage(g_ctx.device, &imageInfo, NULL, &g_ctx.depthImage);
+    VkMemoryRequirements memReqs;
+    vkGetImageMemoryRequirements(g_ctx.device, g_ctx.depthImage, &memReqs);
+    VkMemoryAllocateInfo allocInfo = {
+        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+        .allocationSize = memReqs.size,
+        .memoryTypeIndex = findMemoryType(memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+    };
+    vkAllocateMemory(g_ctx.device, &allocInfo, NULL, &g_ctx.depthImageMemory);
+    vkBindImageMemory(g_ctx.device, g_ctx.depthImage, g_ctx.depthImageMemory, 0);
+    VkImageViewCreateInfo viewInfo = {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+        .image = g_ctx.depthImage,
+        .viewType = VK_IMAGE_VIEW_TYPE_2D,
+        .format = VK_FORMAT_D32_SFLOAT,
+        .subresourceRange = {VK_IMAGE_ASPECT_DEPTH_BIT, 0, 1, 0, 1}
+    };
+    vkCreateImageView(g_ctx.device, &viewInfo, NULL, &g_ctx.depthImageView);
+}
+void updateDescriptorSet(VkDevice device, VkDescriptorSet descriptorSet, VkBuffer buffer) {
+    VkDescriptorBufferInfo bufferInfo = {
+        .buffer = buffer,
+        .offset = 0,
+        .range = VK_WHOLE_SIZE
+    };
+    VkWriteDescriptorSet descriptorWrite = {0};
+    descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    descriptorWrite.dstSet = descriptorSet;
+    descriptorWrite.dstBinding = 0;
+    descriptorWrite.dstArrayElement = 0;
+    descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    descriptorWrite.descriptorCount = 1;
+    descriptorWrite.pBufferInfo = &bufferInfo;
+    vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, NULL);
+}
 // ==========================================
 void cleanup_textures() {
     for (int i = 0; i < MAX_TEXTURES; i++) {
@@ -117,10 +166,13 @@ void qgpuCreate(int width, int height, const char* title, void (*initFunc)(), vo
     g_ctx.window = glfwCreateWindow(width, height, title, NULL, NULL);
     uint32_t glfwExtensionCount = 0;
     const char** glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+    const char* layers[] = { "VK_LAYER_KHRONOS_validation" };
     VkInstanceCreateInfo instanceInfo = { .
         sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
+        .enabledLayerCount = 1,
+        .ppEnabledLayerNames = layers,
         .enabledExtensionCount = glfwExtensionCount,
-        .ppEnabledExtensionNames = glfwExtensions
+        .ppEnabledExtensionNames = glfwExtensions,
     };
     vkCreateInstance(&instanceInfo, NULL, &g_ctx.instance);
     glfwCreateWindowSurface(g_ctx.instance, g_ctx.window, NULL, &g_ctx.surface);
@@ -160,10 +212,14 @@ void qgpuCreate(int width, int height, const char* title, void (*initFunc)(), vo
     vkGetDeviceQueue(g_ctx.device, 0, 0, &g_ctx.graphicsQueue);
     int fbW, fbH;
     glfwGetFramebufferSize(g_ctx.window, &fbW, &fbH);
+    VkSurfaceCapabilitiesKHR capabilities;
+    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(g_ctx.physicalDevice, g_ctx.surface, &capabilities);
+    uint32_t imageCount = capabilities.minImageCount + 1;
+    if (capabilities.maxImageCount > 0 && imageCount > capabilities.maxImageCount) imageCount = capabilities.maxImageCount;
     VkSwapchainCreateInfoKHR swapchainInfo = {
         .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
         .surface = g_ctx.surface,
-        .minImageCount = 2,
+        .minImageCount = imageCount,
         .imageFormat = VK_FORMAT_B8G8R8A8_UNORM,
         .imageColorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR,
         .imageExtent = {(uint32_t)fbW, (uint32_t)fbH},
@@ -202,10 +258,21 @@ void qgpuCreate(int width, int height, const char* title, void (*initFunc)(), vo
         .attachment = 0,
         .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
     };
+    VkAttachmentDescription depthAttachment = {
+        .format = VK_FORMAT_D32_SFLOAT,
+        .samples = VK_SAMPLE_COUNT_1_BIT,
+        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+        .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+        .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+        .finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+    };
+    VkAttachmentReference depthRef = { .attachment = 1, .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
     VkSubpassDescription subpass = {
         .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
         .colorAttachmentCount = 1,
-        .pColorAttachments = &colorAttachmentRef
+        .pColorAttachments = &colorAttachmentRef,
+        .pDepthStencilAttachment = &depthRef
     };
     VkSubpassDependency dependency = {
         .srcSubpass = VK_SUBPASS_EXTERNAL,
@@ -215,10 +282,14 @@ void qgpuCreate(int width, int height, const char* title, void (*initFunc)(), vo
         .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
         .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT
     };
+    VkAttachmentDescription attachments[2] = {
+        colorAttachment,
+        depthAttachment
+    };
     VkRenderPassCreateInfo renderPassInfo = {
         .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
-        .attachmentCount = 1,
-        .pAttachments = &colorAttachment,
+        .attachmentCount = 2,
+        .pAttachments = attachments,
         .subpassCount = 1,
         .pSubpasses = &subpass,
         .dependencyCount = 1,
@@ -353,6 +424,15 @@ void qgpuCreate(int width, int height, const char* title, void (*initFunc)(), vo
         .dynamicStateCount = 2,
         .pDynamicStates = dynamicStates
     };
+    VkPipelineDepthStencilStateCreateInfo depthStencil = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
+        .depthTestEnable = VK_TRUE,
+        .depthWriteEnable = VK_TRUE,
+        .depthCompareOp = VK_COMPARE_OP_LESS,
+        .depthBoundsTestEnable = VK_FALSE,
+        .minDepthBounds = 0.0f,
+        .maxDepthBounds = 1.0f
+    };
     VkGraphicsPipelineCreateInfo pipelineInfo = {
         .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
         .stageCount = 2,
@@ -366,18 +446,24 @@ void qgpuCreate(int width, int height, const char* title, void (*initFunc)(), vo
         .pDynamicState = &dynamicState,
         .layout = g_ctx.pipelineLayout,
         .renderPass = g_ctx.renderPass,
-        .subpass = 0
+        .subpass = 0,
+        .pDepthStencilState = &depthStencil
     };
     vkCreateGraphicsPipelines(g_ctx.device, VK_NULL_HANDLE, 1, &pipelineInfo, NULL, &g_ctx.graphicsPipeline);
     vkDestroyShaderModule(g_ctx.device, fragModule, NULL);
     vkDestroyShaderModule(g_ctx.device, vertModule, NULL);
+    createDepthResources(fbW, fbH);
     g_ctx.swapchainFramebuffers = malloc(sizeof(VkFramebuffer) * g_ctx.imageCount);
     for (uint32_t i = 0; i < g_ctx.imageCount; i++) {
+        VkImageView attachments[] = {
+            g_ctx.swapchainImageViews[i],
+            g_ctx.depthImageView
+        };
         VkFramebufferCreateInfo fbInfo = {
             .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
             .renderPass = g_ctx.renderPass,
-            .attachmentCount = 1,
-            .pAttachments = &g_ctx.swapchainImageViews[i],
+            .attachmentCount = 2,
+            .pAttachments = attachments,
             .width = (uint32_t)fbW,
             .height = (uint32_t)fbH,
             .layers = 1
@@ -422,17 +508,20 @@ void qgpuCreate(int width, int height, const char* title, void (*initFunc)(), vo
             .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT
         };
         vkBeginCommandBuffer(g_ctx.currentCmd, &beginInfo);
-        VkClearValue clearColor = {{{0.1f, 0.1f, 0.1f, 1.0f}}};
+        VkClearValue clearValues[2];
+        clearValues[0].color = (VkClearColorValue){{0.1f, 0.1f, 0.1f, 1.0f}};
+        clearValues[1].depthStencil = (VkClearDepthStencilValue){1.0f, 0};
         VkRenderPassBeginInfo renderPassInfo = {
             .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
             .renderPass = g_ctx.renderPass,
             .framebuffer = g_ctx.swapchainFramebuffers[imageIndex],
             .renderArea = {{0, 0}, {(uint32_t)width, (uint32_t)height}},
-            .clearValueCount = 1,
-            .pClearValues = &clearColor
+            .clearValueCount = 2,
+            .pClearValues = clearValues
         };
         vkCmdBeginRenderPass(g_ctx.currentCmd, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
         vkCmdBindPipeline(g_ctx.currentCmd, VK_PIPELINE_BIND_POINT_GRAPHICS, g_ctx.graphicsPipeline);
+        vkCmdBindDescriptorSets(g_ctx.currentCmd, VK_PIPELINE_BIND_POINT_GRAPHICS, g_ctx.pipelineLayout, 0, 1, &g_descriptorSets[0], 0, NULL);
         VkViewport viewport = {0.0f, 0.0f, (float)width, (float)height, 0.0f, 1.0f};
         VkRect2D scissor = {{0, 0}, {(uint32_t)width, (uint32_t)height}};
         vkCmdSetViewport(g_ctx.currentCmd, 0, 1, &viewport);
@@ -490,6 +579,9 @@ void qgpuCreate(int width, int height, const char* title, void (*initFunc)(), vo
     vkDestroySwapchainKHR(g_ctx.device, g_ctx.swapchain, NULL);
     vkDestroyDescriptorPool(g_ctx.device, g_descriptorPool, NULL);
     vkDestroyDescriptorSetLayout(g_ctx.device, g_descriptorSetLayout, NULL);
+    vkDestroyImageView(g_ctx.device, g_ctx.depthImageView, NULL);
+    vkDestroyImage(g_ctx.device, g_ctx.depthImage, NULL);
+    vkFreeMemory(g_ctx.device, g_ctx.depthImageMemory, NULL);
     vkDestroyDevice(g_ctx.device, NULL);
     vkDestroySurfaceKHR(g_ctx.instance, g_ctx.surface, NULL);
     vkDestroyInstance(g_ctx.instance, NULL);
@@ -650,11 +742,17 @@ void drawMesh(float posX, float posY, float posZ, float rotX, float rotY, float 
             float orthoScale = 2.5f;
             tempVerts[i].pos[0] = worldX * orthoScale;
             tempVerts[i].pos[1] = -worldY * orthoScale;
+            tempVerts[i].pos[2] = worldZ / 1000.0f;
         } else {
             float fovFactor = 1200.0f;
             if (worldZ < 1.0f) { worldZ = 1.0f; }
             tempVerts[i].pos[0] = (worldX * fovFactor) / worldZ;
             tempVerts[i].pos[1] = (-worldY * fovFactor) / worldZ;
+            tempVerts[i].pos[2] = worldZ / 1000.0f;
+        }
+        static int frame = 0;
+        if (frame++ % 500 == 0) {
+            printf("Debug Z: worldZ=%f, zNorm=%f\n", worldZ, tempVerts[i].pos[2]);
         }
         float nx_local = verts[i].normal[0], ny_local = verts[i].normal[1], nz_local = verts[i].normal[2],
         nx1 = nx_local, ny1 = ny_local * cx - nz_local * sx, nz1 = ny_local * sx + nz_local * cx,

@@ -6,7 +6,7 @@ layout(location = 2) in flat uint inRenderType;
 
 layout(location = 0) out vec4 outColor;
 
-layout(std430, binding = 0) buffer TextureBuffer {
+layout(std430, binding = 0) readonly buffer TextureBuffer {
     uint width;
     uint height;
     uint pixels[];

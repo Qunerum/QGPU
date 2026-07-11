@@ -14,6 +14,7 @@ void Update() {
     drawBox(0, 5, 25, 0, 0, 0, 1, 1, 1, (QColor){1, 1, 0, 1});
 
     drawPlane(-20, -10, 100, angle + 20, 20, 0, 25, 25, DARK_RED);
+    drawBox(20, -10, 200, 20, an, 0, 20, 5, 20, DARK_GREEN);
     drawBox(20, -10, 100, 20, an, 0, 20, 5, 20, DARK_GREEN);
     drawDisk(0, -10, 100, 30, angle*2, 0, 5, 8, DARK_BLUE);
 

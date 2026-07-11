@@ -8,7 +8,7 @@
 #define MAX_TEXTURES 16 // Max textures ( Change if you want :P )
 #define CHAR_SIZE 8
 // !===== Structs ==================================================!
-typedef struct { float pos[2]; float color[4]; } QGPU_Vertex;
+typedef struct { float pos[3]; float color[4]; } QGPU_Vertex;
 typedef struct { float pos[3]; float color[4]; float normal[3]; } QGPU_Vertex3D;
 typedef struct { float r, g, b, a; } QColor;
 typedef struct { float points[96]; int pointCount; } QGPU_Char; // Max 32 points
