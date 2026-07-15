@@ -1,5 +1,6 @@
 #include "qgpu.h"
 
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -83,6 +84,17 @@ int qgpuInit(const char* title, int width, int height) {
 	// Error handling
 	glfwSetErrorCallback(glfwErrCallback);
 	atexit(exitCallback);
+	// Log info
+	{
+		uint32_t instApiVer;
+		vkEnumerateInstanceVersion(&instApiVer);
+		uint32_t apiVerVariant = VK_API_VERSION_VARIANT(instApiVer);
+		uint32_t apiVerMajor = VK_API_VERSION_MAJOR(instApiVer);
+		uint32_t apiVerMinor = VK_API_VERSION_MINOR(instApiVer);
+		uint32_t apiVerPatch = VK_API_VERSION_PATCH(instApiVer);
+		print("Vulkan API %i.%i.%i.%i\n", apiVerVariant, apiVerMajor, apiVerMinor, apiVerPatch);
+		print("QLFW %s\n", glfwGetVersionString());
+	}
 	// Create window
 	glfwInit();
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
@@ -90,25 +102,28 @@ int qgpuInit(const char* title, int width, int height) {
 	if (data.qwin.fullscreen) data.monitor = glfwGetPrimaryMonitor();
 	data.window = glfwCreateWindow(data.qwin.width, data.qwin.height, data.qwin.title, data.monitor, NULL);
 	// Create instance
-	uint32_t req_ext_count;
-	const char** req_exts = glfwGetRequiredInstanceExtensions(&req_ext_count);
-	VkApplicationInfo applicationInfo = {
-		.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
-		.apiVersion = data.api_version
-	};
-	VkInstanceCreateInfo createInfo = {
-		.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
-		.pApplicationInfo = &applicationInfo,
-		.enabledExtensionCount = req_ext_count,
-		.ppEnabledExtensionNames = req_exts
-	};
-	QGPU_ERROR(vkCreateInstance(&createInfo, data.allocator, &data.instance), "Couldn't create instance");
+	{
+		uint32_t reqExtCount;
+		const char** reqExts = glfwGetRequiredInstanceExtensions(&reqExtCount);
+		VkApplicationInfo applicationInfo = {
+			.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
+			.apiVersion = data.api_version
+		};
+		VkInstanceCreateInfo createInfo = {
+			.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
+			.pApplicationInfo = &applicationInfo,
+			.enabledExtensionCount = reqExtCount,
+			.ppEnabledExtensionNames = reqExts
+		};
+		QGPU_ERROR(vkCreateInstance(&createInfo, data.allocator, &data.instance), "Couldn't create instance");
+	}
 	// = = = = = LOOP = = = = =
 	while (!glfwWindowShouldClose(data.window)) {
 		glfwPollEvents();
 	}
 	// = = = = = CLEANUP = = = = =
 	glfwDestroyWindow(data.window);
+	vkDestroyInstance(data.instance, data.allocator);
 	data.window = NULL;
 
 	return EXIT_SUCCESS;
