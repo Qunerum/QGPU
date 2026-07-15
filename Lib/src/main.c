@@ -1,6 +1,5 @@
 #include "../lib/qgpu.h"
 
 int main() {
-    qgpuInit();
-    return 0;
+    return qgpuInit("QGPU Project", 720, 480);
 }

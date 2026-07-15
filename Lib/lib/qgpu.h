@@ -1,13 +1,10 @@
 #ifndef QGPU_H
 #define QGPU_H
-
 // = = = > COLORS
 // ANSI escape code using 8-bit color depth
 #define RST     "\033[0m"
-
 #define REGULAR       0
 #define BOLD          1
-
 #define BLACK         16
 #define WHITE         15
 // = > LIGHT
@@ -37,7 +34,25 @@
 #define DARK_BLUE     19
 #define DARK_MAGENTA  128
 #define DARK_CYAN     68
+// QPrint
+void setColor(int color);
+void restoreColor();
+void setStyle(int style);
+void print(const char* format, ...);
+void printc(int color, const char* format, ...);
 
-void qgpuInit();
+typedef struct {
+	const char* title;
+	int width,
+	height,
+	resizable,
+	fullscreen;
+} qgpuWindow;
+
+// QGPU
+void qgpuShowBanner(int show);
+void qgpuShowWelcome(int show);
+void qgpuShowLogs(int show);
+int qgpuInit(const char* title, int width, int height);
 
 #endif
