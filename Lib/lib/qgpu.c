@@ -90,15 +90,19 @@ int qgpuInit(const char* title, int width, int height) {
 	if (data.qwin.fullscreen) data.monitor = glfwGetPrimaryMonitor();
 	data.window = glfwCreateWindow(data.qwin.width, data.qwin.height, data.qwin.title, data.monitor, NULL);
 	// Create instance
+	uint32_t req_ext_count;
+	const char** req_exts = glfwGetRequiredInstanceExtensions(&req_ext_count);
 	VkApplicationInfo applicationInfo = {
 		.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
 		.apiVersion = data.api_version
 	};
 	VkInstanceCreateInfo createInfo = {
 		.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
-		.pApplicationInfo = &applicationInfo
+		.pApplicationInfo = &applicationInfo,
+		.enabledExtensionCount = req_ext_count,
+		.ppEnabledExtensionNames = req_exts
 	};
-	vkCreateInstance(&createInfo, data.allocator, &data.instance);
+	QGPU_ERROR(vkCreateInstance(&createInfo, data.allocator, &data.instance), "Couldn't create instance");
 	// = = = = = LOOP = = = = =
 	while (!glfwWindowShouldClose(data.window)) {
 		glfwPollEvents();
