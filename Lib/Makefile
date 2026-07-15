@@ -3,9 +3,8 @@ CC = gcc
 CFLAGS = -Wall -Wextra -O2 -I. -Iinclude -Ilib
 LDFLAGS = -lglfw -lvulkan -ldl -lpthread -lX11 -lXxf86vm -lXrandr -lXi
 
-OBJ = obj
+OBJ = .obj
 BUILD = build
-FILES = Files
 
 SRCS = $(wildcard src/*.c) $(wildcard lib/*.c)
 OBJS = $(patsubst %.c, $(OBJ)/%.o, $(notdir $(SRCS)))
@@ -18,7 +17,7 @@ APP = $(BUILD)/$(APP_NAME)
 all: prepare $(APP)
 
 prepare:
-	@mkdir -p $(OBJ) $(BUILD) $(FILES) src include
+	@mkdir -p $(OBJ) $(BUILD)
 
 $(OBJ)/%.o: %.c
 	@echo "Compilation $<..."
@@ -29,9 +28,7 @@ $(APP): $(OBJS)
 	@$(CC) -o $@ $(OBJS) $(LDFLAGS)
 
 run: all
-	@echo "--- Starting $(APP) ---"
-	@cp -r $(FILES)/ $(BUILD)/ 2>/dev/null || true
-	@cd $(BUILD) && ./$(APP_NAME)
+	@clear && cd $(BUILD) && ./$(APP_NAME)
 
 clean:
 	@echo "Cleaning..."
