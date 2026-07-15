@@ -13,6 +13,7 @@
 #define QGPU_ERROR(CODE, FORMAT, ...) { if (CODE) { printf("\033[1;38;5;%imQGPU Error [\033[1;38;5;%im%03i\033[1;38;5;%im] in file '%s' on line \033[1;38;5;%im%i\033[1;38;5;%im:\n —> "FORMAT"\n"RST, \
 	RED, LIGHT_RED, CODE, RED, __FILE_NAME__, LIGHT_RED, __LINE__, RED, ##__VA_ARGS__); exit(1); } }
 // = = = = = = = = = = = = = = = = = = = = VISUAL / START = = = = = = = = = = = = = = = = = = = =
+static int _showBanner = 1, _showWelcome = 1, _showLogs = 1, qgpuClr = MAGENTA;
 // ╔ ═ ╗
 // ╚ ║ ╝
 // = = = QPrint
@@ -23,7 +24,8 @@ void restoreColor() { int x = actClr; actClr = oldClr; oldClr = x; }
 void setStyle(int style) { actStyle = qclamp(style, 0, 1); }
 void print(const char* format, ...) { printf("\033[%i;38;5;%im", actStyle, actClr); va_list args; va_start(args, format); vprintf(format, args); va_end(args); printf(RST); }
 void printc(int color, const char* format, ...) { printf("\033[%i;38;5;%im", actStyle, color); va_list args; va_start(args, format); vprintf(format, args); va_end(args); printf(RST); }
-static int _showBanner = 1, _showWelcome = 1, _showLogs = 1, qgpuClr = MAGENTA;
+void qlog(const char* format, ...) { if (_showLogs) { printf("\033[%i;38;5;%im", actStyle, actClr); va_list args; va_start(args, format); vprintf(format, args); va_end(args); printf(RST); } }
+
 void qgpuShowBanner(int show) { _showBanner = show; }
 void qgpuShowWelcome(int show) { _showWelcome = show; }
 void qgpuShowLogs(int show) { _showLogs = show; }
@@ -92,8 +94,8 @@ int qgpuInit(const char* title, int width, int height) {
 		uint32_t apiVerMajor = VK_API_VERSION_MAJOR(instApiVer);
 		uint32_t apiVerMinor = VK_API_VERSION_MINOR(instApiVer);
 		uint32_t apiVerPatch = VK_API_VERSION_PATCH(instApiVer);
-		print("Vulkan API %i.%i.%i.%i\n", apiVerVariant, apiVerMajor, apiVerMinor, apiVerPatch);
-		print("QLFW %s\n", glfwGetVersionString());
+		qlog("Vulkan API %i.%i.%i.%i\n", apiVerVariant, apiVerMajor, apiVerMinor, apiVerPatch);
+		qlog("QLFW %s\n", glfwGetVersionString());
 	}
 	// Create window
 	glfwInit();

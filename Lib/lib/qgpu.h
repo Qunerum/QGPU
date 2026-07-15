@@ -40,6 +40,7 @@ void restoreColor();
 void setStyle(int style);
 void print(const char* format, ...);
 void printc(int color, const char* format, ...);
+void qlog(const char* format, ...);
 
 typedef struct {
 	const char* title;
