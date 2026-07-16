@@ -24,7 +24,7 @@ void restoreColor() { int x = actClr; actClr = oldClr; oldClr = x; }
 void setStyle(int style) { actStyle = qclamp(style, 0, 1); }
 void print(const char* format, ...) { printf("\033[%i;38;5;%im", actStyle, actClr); va_list args; va_start(args, format); vprintf(format, args); va_end(args); printf(RST); }
 void printc(int color, const char* format, ...) { printf("\033[%i;38;5;%im", actStyle, color); va_list args; va_start(args, format); vprintf(format, args); va_end(args); printf(RST); }
-void qlog(const char* format, ...) { if (_showLogs) { printf("\033[%i;38;5;%imQLog: ", actStyle, actClr); va_list args; va_start(args, format); vprintf(format, args); va_end(args); printf(RST); } }
+void qlog(const char* format, ...) { if (_showLogs) { printf("\033[%i;38;5;%im", actStyle, actClr); va_list args; va_start(args, format); vprintf(format, args); va_end(args); printf(RST); } }
 
 void qgpuShowBanner(int show) { _showBanner = show; }
 void qgpuShowWelcome(int show) { _showWelcome = show; }
@@ -53,13 +53,16 @@ typedef struct {
 	qgpuWindow qwin;
 	const char* engineName;
 
-	uint32_t api_version;
+	uint32_t api_version, queueFamily;
 
 	GLFWwindow* window;
 	GLFWmonitor* monitor;
 
 	VkAllocationCallbacks* allocator;
 	VkInstance instance;
+	VkPhysicalDevice physicalDevice;
+	VkSurfaceKHR surface;
+	VkDevice device;
 } qgpuData;
 // = = = = = = = = = = CALLBACKS = = = = = = = = = =
 void glfwErrCallback(int code, const char* desc) { QGPU_ERROR(code, "GLFW: %s", desc) }
@@ -84,7 +87,7 @@ static void setupErrorHandling() {
 }
 static void logInfo() {
 	uint32_t instApiVer;
-	QGPU_ERROR(vkEnumerateInstanceVersion(&instApiVer), "Couldn't enumerate instance version");
+	QGPU_ERROR(vkEnumerateInstanceVersion(&instApiVer), "Couldn't enumerate instance version")
 	uint32_t apiVerVariant = VK_API_VERSION_VARIANT(instApiVer);
 	uint32_t apiVerMajor = VK_API_VERSION_MAJOR(instApiVer);
 	uint32_t apiVerMinor = VK_API_VERSION_MINOR(instApiVer);
@@ -107,7 +110,7 @@ static void createInstance() {
 		.enabledExtensionCount = reqExtCount,
 		.ppEnabledExtensionNames = reqExts
 	};
-	QGPU_ERROR(vkCreateInstance(&createInfo, data.allocator, &data.instance), "Couldn't create instance");
+	QGPU_ERROR(vkCreateInstance(&createInfo, data.allocator, &data.instance), "Couldn't create instance")
 }
 static void createWindow() {
 	glfwInit();
@@ -118,30 +121,57 @@ static void createWindow() {
 }
 static void selectPhysicalDevice() {
 	uint32_t count;
-	QGPU_ERROR(vkEnumeratePhysicalDevices(data.instance, &count, NULL), "Couldn't enumerate physical devices count");
-	qlog("%i\n", count);
+	QGPU_ERROR(vkEnumeratePhysicalDevices(data.instance, &count, NULL), "Couldn't enumerate physical devices count")
+	QGPU_ERROR(count == 0, "Couldn't find a Vulkan supported physical device")
+	QGPU_ERROR(vkEnumeratePhysicalDevices(data.instance, &(uint32_t){1}, &data.physicalDevice), "Couldn't enumerate physical devices count")
 }
-static void createSurface() {
-
-}
+static void createSurface() { QGPU_ERROR(glfwCreateWindowSurface(data.instance, data.window, data.allocator, &data.surface), "Couldn't create window surface"); }
 static void selectQueneFamily() {
-
+	data.queueFamily = UINT32_MAX;
+	uint32_t count;
+	vkGetPhysicalDeviceQueueFamilyProperties(data.physicalDevice, &count, NULL);
+	VkQueueFamilyProperties* queneFamilies = malloc(count*sizeof(VkQueueFamilyProperties));
+	QGPU_ERROR(queneFamilies == NULL, "Couldn't allocate memory")
+	vkGetPhysicalDeviceQueueFamilyProperties(data.physicalDevice, &count, queneFamilies);
+	for (int i = 0; i < count; i++) {
+		VkQueueFamilyProperties props = queneFamilies[i];
+		if (props.queueFlags & VK_QUEUE_GRAPHICS_BIT && glfwGetPhysicalDevicePresentationSupport(data.instance, data.physicalDevice, i)) {
+			data.queueFamily = i;
+			break;
+		}
+	}
+	QGPU_ERROR(data.queueFamily == UINT32_MAX, "Couldn't find a suitable queue family")
+	free(queneFamilies);
 }
 static void createDevice() {
-
+	QGPU_ERROR(vkCreateDevice(data.physicalDevice, &(VkDeviceCreateInfo) {
+		.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
+		.pQueueCreateInfos = &(VkDeviceQueueCreateInfo) {
+			.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+			.queueFamilyIndex = data.queueFamily,
+			.queueCount = 1,
+			.pQueuePriorities = &(float){1.0}
+		},
+		.queueCreateInfoCount = 1,
+		.enabledExtensionCount = 1,
+		.ppEnabledExtensionNames = &(const char*) {VK_KHR_SWAPCHAIN_EXTENSION_NAME}
+	}, data.allocator, &data.device), "Couldn't create device")
 }
 static void getQuene() {
 
 }
 // = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 static void loop() {
+	print("Hello\n");
 	while (!glfwWindowShouldClose(data.window)) {
 		glfwPollEvents();
 	}
 }
 static void cleanup() {
-	glfwDestroyWindow(data.window);
+	vkDestroyDevice(data.device, data.allocator);
+	vkDestroySurfaceKHR(data.instance, data.surface, data.allocator);
 	vkDestroyInstance(data.instance, data.allocator);
+	glfwDestroyWindow(data.window);
 }
 int qgpuInit(const char* title, int width, int height) {
 	start();
@@ -156,8 +186,8 @@ int qgpuInit(const char* title, int width, int height) {
 	// = = = > Init
 	setupErrorHandling();
 	logInfo();
-	createInstance();
 	createWindow();
+	createInstance();
 	selectPhysicalDevice();
 	createSurface();
 	selectQueneFamily();
