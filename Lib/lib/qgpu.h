@@ -44,6 +44,7 @@ void qlog(const char* format, ...);
 
 typedef struct {
 	const char* title;
+	const char* appName;
 	int width,
 	height,
 	resizable,

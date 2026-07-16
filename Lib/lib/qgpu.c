@@ -24,7 +24,7 @@ void restoreColor() { int x = actClr; actClr = oldClr; oldClr = x; }
 void setStyle(int style) { actStyle = qclamp(style, 0, 1); }
 void print(const char* format, ...) { printf("\033[%i;38;5;%im", actStyle, actClr); va_list args; va_start(args, format); vprintf(format, args); va_end(args); printf(RST); }
 void printc(int color, const char* format, ...) { printf("\033[%i;38;5;%im", actStyle, color); va_list args; va_start(args, format); vprintf(format, args); va_end(args); printf(RST); }
-void qlog(const char* format, ...) { if (_showLogs) { printf("\033[%i;38;5;%im", actStyle, actClr); va_list args; va_start(args, format); vprintf(format, args); va_end(args); printf(RST); } }
+void qlog(const char* format, ...) { if (_showLogs) { printf("\033[%i;38;5;%imQLog: ", actStyle, actClr); va_list args; va_start(args, format); vprintf(format, args); va_end(args); printf(RST); } }
 
 void qgpuShowBanner(int show) { _showBanner = show; }
 void qgpuShowWelcome(int show) { _showWelcome = show; }
@@ -51,6 +51,7 @@ static void printColors() {
 // = = = = = = = = = = = = = = = = = = = = GLFW / VULKAN = = = = = = = = = = = = = = = = = = = =
 typedef struct {
 	qgpuWindow qwin;
+	const char* engineName;
 
 	uint32_t api_version;
 
@@ -64,8 +65,9 @@ typedef struct {
 void glfwErrCallback(int code, const char* desc) { QGPU_ERROR(code, "GLFW: %s", desc) }
 void exitCallback() { glfwTerminate(); }
 
-int qgpuInit(const char* title, int width, int height) {
-	// Start
+// = = = = = = = = = = CODE = = = = = = = = = =
+qgpuData data;
+static void start() {
 	setStyle(BOLD);
 	if (_showBanner) printBanner();
 	if (_showWelcome) {
@@ -74,59 +76,95 @@ int qgpuInit(const char* title, int width, int height) {
 		printColors();
 	}
 	setStyle(REGULAR);
-	// = = = = = INIT = = = = =
-	qgpuData data = {
-		.qwin = {
-			.title = title,
-			.width = width,
-			.height = height
-		},
-		.api_version = VK_API_VERSION_1_3
-	};
-	// Error handling
+}
+// = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+static void setupErrorHandling() {
 	glfwSetErrorCallback(glfwErrCallback);
 	atexit(exitCallback);
-	// Log info
-	{
-		uint32_t instApiVer;
-		vkEnumerateInstanceVersion(&instApiVer);
-		uint32_t apiVerVariant = VK_API_VERSION_VARIANT(instApiVer);
-		uint32_t apiVerMajor = VK_API_VERSION_MAJOR(instApiVer);
-		uint32_t apiVerMinor = VK_API_VERSION_MINOR(instApiVer);
-		uint32_t apiVerPatch = VK_API_VERSION_PATCH(instApiVer);
-		qlog("Vulkan API %i.%i.%i.%i\n", apiVerVariant, apiVerMajor, apiVerMinor, apiVerPatch);
-		qlog("QLFW %s\n", glfwGetVersionString());
-	}
-	// Create window
+}
+static void logInfo() {
+	uint32_t instApiVer;
+	QGPU_ERROR(vkEnumerateInstanceVersion(&instApiVer), "Couldn't enumerate instance version");
+	uint32_t apiVerVariant = VK_API_VERSION_VARIANT(instApiVer);
+	uint32_t apiVerMajor = VK_API_VERSION_MAJOR(instApiVer);
+	uint32_t apiVerMinor = VK_API_VERSION_MINOR(instApiVer);
+	uint32_t apiVerPatch = VK_API_VERSION_PATCH(instApiVer);
+	qlog("Vulkan API %i.%i.%i.%i\n", apiVerVariant, apiVerMajor, apiVerMinor, apiVerPatch);
+	qlog("QLFW %s\n", glfwGetVersionString());
+}
+static void createInstance() {
+	uint32_t reqExtCount;
+	const char** reqExts = glfwGetRequiredInstanceExtensions(&reqExtCount);
+	VkApplicationInfo applicationInfo = {
+		.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
+		.pApplicationName = data.qwin.appName,
+		.pEngineName = data.engineName,
+		.apiVersion = data.api_version
+	};
+	VkInstanceCreateInfo createInfo = {
+		.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
+		.pApplicationInfo = &applicationInfo,
+		.enabledExtensionCount = reqExtCount,
+		.ppEnabledExtensionNames = reqExts
+	};
+	QGPU_ERROR(vkCreateInstance(&createInfo, data.allocator, &data.instance), "Couldn't create instance");
+}
+static void createWindow() {
 	glfwInit();
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	glfwWindowHint(GLFW_RESIZABLE, data.qwin.resizable);
 	if (data.qwin.fullscreen) data.monitor = glfwGetPrimaryMonitor();
 	data.window = glfwCreateWindow(data.qwin.width, data.qwin.height, data.qwin.title, data.monitor, NULL);
-	// Create instance
-	{
-		uint32_t reqExtCount;
-		const char** reqExts = glfwGetRequiredInstanceExtensions(&reqExtCount);
-		VkApplicationInfo applicationInfo = {
-			.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
-			.apiVersion = data.api_version
-		};
-		VkInstanceCreateInfo createInfo = {
-			.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
-			.pApplicationInfo = &applicationInfo,
-			.enabledExtensionCount = reqExtCount,
-			.ppEnabledExtensionNames = reqExts
-		};
-		QGPU_ERROR(vkCreateInstance(&createInfo, data.allocator, &data.instance), "Couldn't create instance");
-	}
-	// = = = = = LOOP = = = = =
+}
+static void selectPhysicalDevice() {
+	uint32_t count;
+	QGPU_ERROR(vkEnumeratePhysicalDevices(data.instance, &count, NULL), "Couldn't enumerate physical devices count");
+	qlog("%i\n", count);
+}
+static void createSurface() {
+
+}
+static void selectQueneFamily() {
+
+}
+static void createDevice() {
+
+}
+static void getQuene() {
+
+}
+// = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+static void loop() {
 	while (!glfwWindowShouldClose(data.window)) {
 		glfwPollEvents();
 	}
-	// = = = = = CLEANUP = = = = =
+}
+static void cleanup() {
 	glfwDestroyWindow(data.window);
 	vkDestroyInstance(data.instance, data.allocator);
-	data.window = NULL;
-
+}
+int qgpuInit(const char* title, int width, int height) {
+	start();
+	data = (qgpuData){
+		.qwin = {
+			.title = title,
+			.width = width,
+			.height = height
+		},
+		.api_version = VK_API_VERSION_1_4
+	};
+	// = = = > Init
+	setupErrorHandling();
+	logInfo();
+	createInstance();
+	createWindow();
+	selectPhysicalDevice();
+	createSurface();
+	selectQueneFamily();
+	createDevice();
+	getQuene();
+	// < = = =
+	loop();
+	cleanup();
 	return EXIT_SUCCESS;
 }
