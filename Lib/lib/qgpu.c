@@ -180,8 +180,19 @@ static void createDevice() {
 static void getQuene() { vkGetDeviceQueue(data.device, data.queueFamily, 0, &data.queue); }
 static void createSwapchain() {
 	VkSurfaceCapabilitiesKHR caps;
-	QGPU_ERROR(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(data.physicalDevice, data.surface, &caps), "Failed to get surface capabilities");
-	// To continue
+	QGPU_ERROR(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(data.physicalDevice, data.surface, &caps), "Failed to get surface capabilities")
+	uint32_t formatCount;
+	QGPU_ERROR(vkGetPhysicalDeviceSurfaceFormatsKHR(data.physicalDevice, data.surface, &formatCount, NULL), "Couldn't get surface formats")
+	VkSurfaceFormatKHR* formats = malloc(formatCount*sizeof(VkSurfaceFormatKHR));
+	QGPU_ERROR(!formats, "Couldn't allocate memory")
+	QGPU_ERROR(vkGetPhysicalDeviceSurfaceFormatsKHR(data.physicalDevice, data.surface, &formatCount, formats), "Couldn't get surface formats")
+	uint32_t formatI;
+	for (int i = 0; i < formatCount; i++) {
+		VkSurfaceFormatKHR f = formats[i];
+		if (f.colorSpace == VK_COLORSPACE_SRGB_NONLINEAR_KHR && f.format == VK_FORMAT_B8G8R8A8_SRGB) { formatI = i; break; }
+	}
+	VkSurfaceFormatKHR f = formats[formatI];
+	free(formats);
 	VkSwapchainKHR swapchain;
 	vkCreateSwapchainKHR(data.device, &(VkSwapchainCreateInfoKHR) {
 		.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
@@ -190,11 +201,11 @@ static void createSwapchain() {
 		.pQueueFamilyIndices = &data.queueFamily,
 		.clipped = 1,
 		.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
-		.imageArrayLayers = 1,
+		.imageArrayLayers = caps.maxImageArrayLayers,
 		.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
 		.oldSwapchain = data.swapchain,
-		.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR,
-
+		.preTransform = caps.currentTransform,
+		.imageExtent = caps.currentExtent
 	}, data.allocator, &data.swapchain);
 }
 static void t() {
