@@ -52,9 +52,12 @@ typedef struct {
 } qgpuWindow;
 
 // QGPU
-void qgpuShowBanner(int show);
-void qgpuShowWelcome(int show);
-void qgpuShowLogs(int show);
+#define Q_SHOW_BANNER          0
+#define Q_SHOW_MADE_WITH_QGPU  1
+#define Q_SHOW_INFO            2
+#define Q_SHOW_COLORS          3
+#define Q_SHOW_LOGS            4
+void qgpuSetShow(int shower, int state);
 int qgpuInit(const char* title, int width, int height);
 
 #endif

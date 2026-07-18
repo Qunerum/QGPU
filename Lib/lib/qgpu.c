@@ -9,11 +9,15 @@
 #include <GLFW/glfw3.h>
 #include <vulkan/vulkan_core.h>
 
+#define QGPU_VERSION_MAJOR 0
+#define QGPU_VERSION_MINOR 0
+#define QGPU_VERSION_PATCH 19
+
 // = = = = = = = = = = ERROR HANDLING = = = = = = = = = =
 #define QGPU_ERROR(CODE, FORMAT, ...) { if (CODE) { printf("\033[1;38;5;%imQGPU Error [\033[1;38;5;%im%03i\033[1;38;5;%im] in file '%s' on line \033[1;38;5;%im%i\033[1;38;5;%im:\n —> "FORMAT"\n"RST, \
 	RED, LIGHT_RED, CODE, RED, __FILE_NAME__, LIGHT_RED, __LINE__, RED, ##__VA_ARGS__); exit(1); } }
 // = = = = = = = = = = = = = = = = = = = = VISUAL / START = = = = = = = = = = = = = = = = = = = =
-static int _showBanner = 1, _showWelcome = 1, _showLogs = 1, qgpuClr = MAGENTA;
+static int _showBanner = 1, _madeWith = 1, _showInfo = 1, _showColors = 1, _showLogs = 1, qgpuClr = MAGENTA, creator = LIGHT_RED, frame = GRAY;
 // ╔ ═ ╗
 // ╚ ║ ╝
 // = = = QPrint
@@ -26,9 +30,15 @@ void print(const char* format, ...) { printf("\033[%i;38;5;%im", actStyle, actCl
 void printc(int color, const char* format, ...) { printf("\033[%i;38;5;%im", actStyle, color); va_list args; va_start(args, format); vprintf(format, args); va_end(args); printf(RST); }
 void qlog(const char* format, ...) { if (_showLogs) { printf("\033[%i;38;5;%im", actStyle, actClr); va_list args; va_start(args, format); vprintf(format, args); va_end(args); printf(RST); } }
 
-void qgpuShowBanner(int show) { _showBanner = show; }
-void qgpuShowWelcome(int show) { _showWelcome = show; }
-void qgpuShowLogs(int show) { _showLogs = show; }
+void qgpuSetShow(int shower, int state) {
+	switch (shower) {
+		case Q_SHOW_BANNER: _showBanner = state; break;
+		case Q_SHOW_MADE_WITH_QGPU: _madeWith = state; break;
+		case Q_SHOW_INFO: _showInfo = state; break;
+		case Q_SHOW_COLORS: _showColors = state; break;
+		case Q_SHOW_LOGS: _showLogs = state; break;
+	}
+}
 static void printBanner() {
 	printc(165, "╔═════╗ ╔═════╗ ╔═════╗ ╔═╗ ╔═╗ \n");
 	printc(164, "║ ╔═╗ ║ ║ ╔═══╝ ║ ╔═╗ ║ ║ ║ ║ ║\n");
@@ -37,16 +47,23 @@ static void printBanner() {
 	printc(161, "╚═══╗ ║ ╚═════╝ ╚═╝     ╚═════╝  \n");
 	printc(160, "    ╚═╝                   \n");
 }
+static void printMadeWith() { printc(ORANGE, "The application was made with the "); printc(qgpuClr, "QGPU"); printc(ORANGE, " library.\n"); }
+static void printInfo() {
+	printc(frame, "╔═══════════════════════╦╗\n");
+	printc(frame, "║ Name: "); printc(qgpuClr, "QGPU"); printc(frame, "            ╚╝\n");
+	printc(frame, "║ Version: "); printc(qgpuClr, "%i.%i.%i\n", QGPU_VERSION_MAJOR, QGPU_VERSION_MINOR, QGPU_VERSION_PATCH);
+	printc(frame, "║ Creator: "); printc(creator, "Qunerum"); printc(frame, "      ╔╗\n");
+	printc(frame, "╚═══════════════════════╩╝\n");
+}
 static void c(int v) { printf("\033[0;38;5;%im██ ", v); }
 static void printColors() {
-	int x = GRAY;
-	printc(x,"       colors ╗   ╔═══════╗\n");
-	printc(x,"  ╔═════════╦═╝   ║ "); c(WHITE); c(BLACK); printc(x,"║\n");
-	printc(x,"╔═╩═════════╩═════╩═══════╣\n");
-	printc(x,"║ "); c(LIGHT_GRAY); c(LIGHT_RED); c(LIGHT_GREEN); c(LIGHT_YELLOW); c(LIGHT_ORANGE); c(LIGHT_BLUE); c(LIGHT_MAGENTA); c(LIGHT_CYAN); printc(x,"║\n");
-	printc(x,"║ "); c(GRAY);       c(RED);       c(GREEN);       c(YELLOW);       c(ORANGE);       c(BLUE);       c(MAGENTA);       c(CYAN);       printc(x,"║\n");
-	printc(x,"║ "); c(DARK_GRAY);  c(DARK_RED);  c(DARK_GREEN);  c(DARK_YELLOW);  c(DARK_ORANGE);  c(DARK_BLUE);  c(DARK_MAGENTA);  c(DARK_CYAN);  printc(x,"║\n");
-	printc(x,"╚═════════════════════════╝\n");
+	printc(frame,"       colors ╗   ╔═══════╗\n");
+	printc(frame,"  ╔═════════╦═╝   ║ "); c(WHITE); c(BLACK); printc(frame,"║\n");
+	printc(frame,"╔═╩═════════╩═════╩═══════╣\n");
+	printc(frame,"║ "); c(LIGHT_GRAY); c(LIGHT_RED); c(LIGHT_GREEN); c(LIGHT_YELLOW); c(LIGHT_ORANGE); c(LIGHT_BLUE); c(LIGHT_MAGENTA); c(LIGHT_CYAN); printc(frame,"║\n");
+	printc(frame,"║ "); c(GRAY);       c(RED);       c(GREEN);       c(YELLOW);       c(ORANGE);       c(BLUE);       c(MAGENTA);       c(CYAN);       printc(frame,"║\n");
+	printc(frame,"║ "); c(DARK_GRAY);  c(DARK_RED);  c(DARK_GREEN);  c(DARK_YELLOW);  c(DARK_ORANGE);  c(DARK_BLUE);  c(DARK_MAGENTA);  c(DARK_CYAN);  printc(frame,"║\n");
+	printc(frame,"╚═════════════════════════╝\n");
 }
 // = = = = = = = = = = = = = = = = = = = = GLFW / VULKAN = = = = = = = = = = = = = = = = = = = =
 typedef struct {
@@ -63,6 +80,7 @@ typedef struct {
 	VkPhysicalDevice physicalDevice;
 	VkSurfaceKHR surface;
 	VkDevice device;
+	VkQueue queue;
 } qgpuData;
 // = = = = = = = = = = CALLBACKS = = = = = = = = = =
 void glfwErrCallback(int code, const char* desc) { QGPU_ERROR(code, "GLFW: %s", desc) }
@@ -73,13 +91,12 @@ qgpuData data;
 static void start() {
 	setStyle(BOLD);
 	if (_showBanner) printBanner();
-	if (_showWelcome) {
-		printc(ORANGE, "The application was made with the "); printc(qgpuClr, "QGPU"); printc(ORANGE, " library.\n");
-		printc(qgpuClr, "  QGPU"); printc(GRAY, " repo "); printc(LIGHT_MAGENTA, "https://github.com/Qunerum/"); printc(qgpuClr, "QGPU\n");
-		printColors();
-	}
+	if (_madeWith) printMadeWith();
+	if (_showInfo) printInfo();
+	if (_showColors) printColors();
 	setStyle(REGULAR);
 }
+//  _showInfo = 1
 // = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 static void setupErrorHandling() {
 	glfwSetErrorCallback(glfwErrCallback);
@@ -155,14 +172,13 @@ static void createDevice() {
 		.queueCreateInfoCount = 1,
 		.enabledExtensionCount = 1,
 		.ppEnabledExtensionNames = &(const char*) {VK_KHR_SWAPCHAIN_EXTENSION_NAME}
-	}, data.allocator, &data.device), "Couldn't create device")
+	}, data.allocator, &data.device), "Couldn't create device and queues")
 }
 static void getQuene() {
-
+	vkGetDeviceQueue(data.device, data.queueFamily, 0, &data.queue);
 }
 // = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 static void loop() {
-	print("Hello\n");
 	while (!glfwWindowShouldClose(data.window)) {
 		glfwPollEvents();
 	}
