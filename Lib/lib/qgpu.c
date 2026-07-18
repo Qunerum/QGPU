@@ -11,15 +11,16 @@
 
 #define QGPU_VERSION_MAJOR 0
 #define QGPU_VERSION_MINOR 0
-#define QGPU_VERSION_PATCH 19
+#define QGPU_VERSION_PATCH 20
 
 // = = = = = = = = = = ERROR HANDLING = = = = = = = = = =
 #define QGPU_ERROR(CODE, FORMAT, ...) { if (CODE) { printf("\033[1;38;5;%imQGPU Error [\033[1;38;5;%im%03i\033[1;38;5;%im] in file '%s' on line \033[1;38;5;%im%i\033[1;38;5;%im:\n —> "FORMAT"\n"RST, \
 	RED, LIGHT_RED, CODE, RED, __FILE_NAME__, LIGHT_RED, __LINE__, RED, ##__VA_ARGS__); exit(1); } }
 // = = = = = = = = = = = = = = = = = = = = VISUAL / START = = = = = = = = = = = = = = = = = = = =
 static int _showBanner = 1, _madeWith = 1, _showInfo = 1, _showColors = 1, _showLogs = 1, qgpuClr = MAGENTA, creator = LIGHT_RED, frame = GRAY;
-// ╔ ═ ╗
-// ╚ ║ ╝
+// ═ ║ ╬
+// ╔ ╗ ╚ ╝
+// ╠ ╣ ╦ ╩
 // = = = QPrint
 static int qclamp(int v, int min, int max) { return v < min ? min : v > max ? max : v; }
 static int oldClr = 255, actClr = 255, actStyle = 0; // White , Regular text
@@ -28,7 +29,7 @@ void restoreColor() { int x = actClr; actClr = oldClr; oldClr = x; }
 void setStyle(int style) { actStyle = qclamp(style, 0, 1); }
 void print(const char* format, ...) { printf("\033[%i;38;5;%im", actStyle, actClr); va_list args; va_start(args, format); vprintf(format, args); va_end(args); printf(RST); }
 void printc(int color, const char* format, ...) { printf("\033[%i;38;5;%im", actStyle, color); va_list args; va_start(args, format); vprintf(format, args); va_end(args); printf(RST); }
-void qlog(const char* format, ...) { if (_showLogs) { printf("\033[%i;38;5;%im", actStyle, actClr); va_list args; va_start(args, format); vprintf(format, args); va_end(args); printf(RST); } }
+void qlog(const char* format, ...) { if (_showLogs) { printf("\033[0;38;5;%im", DARK_GRAY); va_list args; va_start(args, format); vprintf(format, args); va_end(args); printf(RST); } }
 
 void qgpuSetShow(int shower, int state) {
 	switch (shower) {
@@ -49,7 +50,7 @@ static void printBanner() {
 }
 static void printMadeWith() { printc(ORANGE, "The application was made with the "); printc(qgpuClr, "QGPU"); printc(ORANGE, " library.\n"); }
 static void printInfo() {
-	printc(frame, "╔═══════════════════════╦╗\n");
+	printc(frame, "╔═╣   Info   ╠══════════╦╗\n");
 	printc(frame, "║ Name: "); printc(qgpuClr, "QGPU"); printc(frame, "            ╚╝\n");
 	printc(frame, "║ Version: "); printc(qgpuClr, "%i.%i.%i\n", QGPU_VERSION_MAJOR, QGPU_VERSION_MINOR, QGPU_VERSION_PATCH);
 	printc(frame, "║ Creator: "); printc(creator, "Qunerum"); printc(frame, "      ╔╗\n");
@@ -57,9 +58,9 @@ static void printInfo() {
 }
 static void c(int v) { printf("\033[0;38;5;%im██ ", v); }
 static void printColors() {
-	printc(frame,"       colors ╗   ╔═══════╗\n");
-	printc(frame,"  ╔═════════╦═╝   ║ "); c(WHITE); c(BLACK); printc(frame,"║\n");
-	printc(frame,"╔═╩═════════╩═════╩═══════╣\n");
+	printc(frame,"╔═╣  Colors  ╠═╗  ╔═══════╗\n");
+	printc(frame,"╚═╦══════════╦═╝  ║ "); c(WHITE); c(BLACK); printc(frame,"║\n");
+	printc(frame,"╔═╩══════════╩════╩═══════╣\n");
 	printc(frame,"║ "); c(LIGHT_GRAY); c(LIGHT_RED); c(LIGHT_GREEN); c(LIGHT_YELLOW); c(LIGHT_ORANGE); c(LIGHT_BLUE); c(LIGHT_MAGENTA); c(LIGHT_CYAN); printc(frame,"║\n");
 	printc(frame,"║ "); c(GRAY);       c(RED);       c(GREEN);       c(YELLOW);       c(ORANGE);       c(BLUE);       c(MAGENTA);       c(CYAN);       printc(frame,"║\n");
 	printc(frame,"║ "); c(DARK_GRAY);  c(DARK_RED);  c(DARK_GREEN);  c(DARK_YELLOW);  c(DARK_ORANGE);  c(DARK_BLUE);  c(DARK_MAGENTA);  c(DARK_CYAN);  printc(frame,"║\n");
@@ -81,6 +82,8 @@ typedef struct {
 	VkSurfaceKHR surface;
 	VkDevice device;
 	VkQueue queue;
+
+	VkSwapchainKHR swapchain;
 } qgpuData;
 // = = = = = = = = = = CALLBACKS = = = = = = = = = =
 void glfwErrCallback(int code, const char* desc) { QGPU_ERROR(code, "GLFW: %s", desc) }
@@ -109,8 +112,8 @@ static void logInfo() {
 	uint32_t apiVerMajor = VK_API_VERSION_MAJOR(instApiVer);
 	uint32_t apiVerMinor = VK_API_VERSION_MINOR(instApiVer);
 	uint32_t apiVerPatch = VK_API_VERSION_PATCH(instApiVer);
-	qlog("Vulkan API %i.%i.%i.%i\n", apiVerVariant, apiVerMajor, apiVerMinor, apiVerPatch);
-	qlog("QLFW %s\n", glfwGetVersionString());
+	qlog("Vulkan API => %i.%i.%i.%i\n", apiVerVariant, apiVerMajor, apiVerMinor, apiVerPatch);
+	qlog("QLFW => %s\n", glfwGetVersionString());
 }
 static void createInstance() {
 	uint32_t reqExtCount;
@@ -174,8 +177,28 @@ static void createDevice() {
 		.ppEnabledExtensionNames = &(const char*) {VK_KHR_SWAPCHAIN_EXTENSION_NAME}
 	}, data.allocator, &data.device), "Couldn't create device and queues")
 }
-static void getQuene() {
-	vkGetDeviceQueue(data.device, data.queueFamily, 0, &data.queue);
+static void getQuene() { vkGetDeviceQueue(data.device, data.queueFamily, 0, &data.queue); }
+static void createSwapchain() {
+	VkSurfaceCapabilitiesKHR caps;
+	QGPU_ERROR(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(data.physicalDevice, data.surface, &caps), "Failed to get surface capabilities");
+	// To continue
+	VkSwapchainKHR swapchain;
+	vkCreateSwapchainKHR(data.device, &(VkSwapchainCreateInfoKHR) {
+		.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
+		.surface = data.surface,
+		.queueFamilyIndexCount = 1,
+		.pQueueFamilyIndices = &data.queueFamily,
+		.clipped = 1,
+		.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
+		.imageArrayLayers = 1,
+		.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+		.oldSwapchain = data.swapchain,
+		.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR,
+
+	}, data.allocator, &data.swapchain);
+}
+static void t() {
+
 }
 // = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 static void loop() {
@@ -209,6 +232,7 @@ int qgpuInit(const char* title, int width, int height) {
 	selectQueneFamily();
 	createDevice();
 	getQuene();
+	createSwapchain();
 	// < = = =
 	loop();
 	cleanup();
