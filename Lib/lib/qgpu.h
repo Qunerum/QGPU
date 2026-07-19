@@ -21,6 +21,7 @@ void qgpuSetShow(int shower, int state);
 // !===== Init ==================================================!
 void qgpuCreate(int width, int height, const char* title, void (*initFunc)(), void (*updateFunc)());
 // !===== Drawing ==================================================!
+void qgpuSetBackground(float r, float g, float b);
 uint32_t addVertex(float x, float y, float layer, float r, float g, float b, float a);
 void addIndex(uint32_t index);
 void addGeometry(QGPU_Vertex* verts, uint32_t vCount, uint32_t* indices, uint32_t iCount);

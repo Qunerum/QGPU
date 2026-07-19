@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
+#include <vulkan/vulkan_core.h>
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
@@ -40,8 +41,12 @@ typedef struct {
     uint32_t currentVOffset, currentIOffset;
     int lastKeyState[GLFW_KEY_LAST], lastMouseState[GLFW_MOUSE_BUTTON_LAST];
     void *mappedVertexBuffer, *mappedIndexBuffer;
+    VkImage depthImage;
+    VkDeviceMemory depthImageMemory;
+    VkImageView depthImageView;
 } InternalContext;
 static InternalContext g_ctx;
+static float backgroundR, backgroundG, backgroundB;
 // ==========================================
 static int _showBanner = 1, _madeWith = 1, _showInfo = 1, _showColors = 1, _showLogs = 1, qgpuClr = MAGENTA, creator = LIGHT_RED, title = YELLOW, frame = GRAY;
 // ═ ║ ╬
@@ -123,15 +128,64 @@ static void printColors() {
 static uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
     VkPhysicalDeviceMemoryProperties memProperties;
     vkGetPhysicalDeviceMemoryProperties(g_ctx.physicalDevice, &memProperties);
-    for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) { if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) { return i; } }
+    for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++)
+        if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) return i;
     return 0;
 }
+void createDepthResources(int width, int height) {
+    VkImageCreateInfo imageInfo = {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+        .imageType = VK_IMAGE_TYPE_2D,
+        .extent.width = width,
+        .extent.height = height,
+        .extent.depth = 1,
+        .mipLevels = 1,
+        .arrayLayers = 1,
+        .format = VK_FORMAT_D32_SFLOAT,
+        .tiling = VK_IMAGE_TILING_OPTIMAL,
+        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+        .usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+        .samples = VK_SAMPLE_COUNT_1_BIT,
+        .sharingMode = VK_SHARING_MODE_EXCLUSIVE
+    };
+    if (vkCreateImage(g_ctx.device, &imageInfo, NULL, &g_ctx.depthImage) != VK_SUCCESS) { }
+    VkMemoryRequirements memRequirements;
+    vkGetImageMemoryRequirements(g_ctx.device, g_ctx.depthImage, &memRequirements);
+    VkMemoryAllocateInfo allocInfo = {
+        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+        .allocationSize = memRequirements.size,
+        .memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+    };
+    if (vkAllocateMemory(g_ctx.device, &allocInfo, NULL, &g_ctx.depthImageMemory) != VK_SUCCESS) { }
+    vkBindImageMemory(g_ctx.device, g_ctx.depthImage, g_ctx.depthImageMemory, 0);
+    VkImageViewCreateInfo viewInfo = {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+        .image = g_ctx.depthImage,
+        .viewType = VK_IMAGE_VIEW_TYPE_2D,
+        .format = VK_FORMAT_D32_SFLOAT,
+        .subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
+        .subresourceRange.baseMipLevel = 0,
+        .subresourceRange.levelCount = 1,
+        .subresourceRange.baseArrayLayer = 0,
+        .subresourceRange.layerCount = 1
+    };
+    if (vkCreateImageView(g_ctx.device, &viewInfo, NULL, &g_ctx.depthImageView) != VK_SUCCESS) { }
+}
 static void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer* buffer, VkDeviceMemory* bufferMemory) {
-    VkBufferCreateInfo bufferInfo = { .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO, .size = size, .usage = usage, .sharingMode = VK_SHARING_MODE_EXCLUSIVE };
+    VkBufferCreateInfo bufferInfo = {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+        .size = size,
+        .usage = usage,
+        .sharingMode = VK_SHARING_MODE_EXCLUSIVE
+    };
     vkCreateBuffer(g_ctx.device, &bufferInfo, NULL, buffer);
     VkMemoryRequirements memReqs;
     vkGetBufferMemoryRequirements(g_ctx.device, *buffer, &memReqs);
-    VkMemoryAllocateInfo allocInfo = { .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO, .allocationSize = memReqs.size, .memoryTypeIndex = findMemoryType(memReqs.memoryTypeBits, properties)};
+    VkMemoryAllocateInfo allocInfo = {
+        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+        .allocationSize = memReqs.size,
+        .memoryTypeIndex = findMemoryType(memReqs.memoryTypeBits, properties)
+    };
     vkAllocateMemory(g_ctx.device, &allocInfo, NULL, bufferMemory);
     vkBindBufferMemory(g_ctx.device, *buffer, *bufferMemory, 0);
 }
@@ -222,6 +276,7 @@ void qgpuCreate(int width, int height, const char* title, void (*initFunc)(), vo
         };
         vkCreateImageView(g_ctx.device, &viewInfo, NULL, &g_ctx.swapchainImageViews[i]);
     }
+    createDepthResources(fbW, fbH);
     VkAttachmentDescription colorAttachment = {
         .format = VK_FORMAT_B8G8R8A8_UNORM,
         .samples = VK_SAMPLE_COUNT_1_BIT,
@@ -236,23 +291,40 @@ void qgpuCreate(int width, int height, const char* title, void (*initFunc)(), vo
         .attachment = 0,
         .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
     };
+    VkAttachmentDescription depthAttachment = {
+        .format = VK_FORMAT_D32_SFLOAT,
+        .samples = VK_SAMPLE_COUNT_1_BIT,
+        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+        .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+        .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+        .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+        .finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+    };
+
+    VkAttachmentReference depthAttachmentRef = {
+        .attachment = 1,
+        .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+    };
     VkSubpassDescription subpass = {
         .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
         .colorAttachmentCount = 1,
-        .pColorAttachments = &colorAttachmentRef
+        .pColorAttachments = &colorAttachmentRef,
+        .pDepthStencilAttachment = &depthAttachmentRef
     };
     VkSubpassDependency dependency = {
         .srcSubpass = VK_SUBPASS_EXTERNAL,
         .dstSubpass = 0,
-        .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+        .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
         .srcAccessMask = 0,
-        .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-        .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT
+        .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+        .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT
     };
+    VkAttachmentDescription attachments[2] = { colorAttachment, depthAttachment };
     VkRenderPassCreateInfo renderPassInfo = {
         .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
-        .attachmentCount = 1,
-        .pAttachments = &colorAttachment,
+        .attachmentCount = 2,
+        .pAttachments = attachments,
         .subpassCount = 1,
         .pSubpasses = &subpass,
         .dependencyCount = 1,
@@ -273,13 +345,13 @@ void qgpuCreate(int width, int height, const char* title, void (*initFunc)(), vo
     };
     vkCreatePipelineLayout(g_ctx.device, &pipelineLayoutInfo, NULL, &g_ctx.pipelineLayout);
     const uint32_t vert_code[] = {
-        0x07230203,0x00010000,0x000d000b,0x00000034,
+        0x07230203,0x00010000,0x000d000b,0x00000039,
         0x00000000,0x00020011,0x00000001,0x0006000b,
         0x00000001,0x4c534c47,0x6474732e,0x3035342e,
         0x00000000,0x0003000e,0x00000000,0x00000001,
         0x0009000f,0x00000000,0x00000004,0x6e69616d,
-        0x00000000,0x0000000b,0x00000025,0x00000030,
-        0x00000032,0x00030003,0x00000002,0x000001c2,
+        0x00000000,0x0000000c,0x00000027,0x00000035,
+        0x00000037,0x00030003,0x00000002,0x000001c2,
         0x000a0004,0x475f4c47,0x4c474f4f,0x70635f45,
         0x74735f70,0x5f656c79,0x656e696c,0x7269645f,
         0x69746365,0x00006576,0x00080004,0x475f4c47,
@@ -287,90 +359,96 @@ void qgpuCreate(int width, int height, const char* title, void (*initFunc)(), vo
         0x74636572,0x00657669,0x00040005,0x00000004,
         0x6e69616d,0x00000000,0x00050005,0x00000009,
         0x616e6966,0x736f506c,0x00000000,0x00040005,
-        0x0000000b,0x6f506e69,0x00000073,0x00040005,
-        0x0000000d,0x68737550,0x00000000,0x00050006,
-        0x0000000d,0x00000000,0x7366666f,0x00007465,
-        0x00060006,0x0000000d,0x00000001,0x65726373,
-        0x65526e65,0x00000073,0x00040005,0x0000000f,
-        0x68737570,0x00000000,0x00060005,0x00000023,
+        0x0000000c,0x6f506e69,0x00000073,0x00040005,
+        0x0000000f,0x68737550,0x00000000,0x00050006,
+        0x0000000f,0x00000000,0x7366666f,0x00007465,
+        0x00060006,0x0000000f,0x00000001,0x65726373,
+        0x65526e65,0x00000073,0x00040005,0x00000011,
+        0x68737570,0x00000000,0x00060005,0x00000025,
         0x505f6c67,0x65567265,0x78657472,0x00000000,
-        0x00060006,0x00000023,0x00000000,0x505f6c67,
-        0x7469736f,0x006e6f69,0x00070006,0x00000023,
+        0x00060006,0x00000025,0x00000000,0x505f6c67,
+        0x7469736f,0x006e6f69,0x00070006,0x00000025,
         0x00000001,0x505f6c67,0x746e696f,0x657a6953,
-        0x00000000,0x00070006,0x00000023,0x00000002,
+        0x00000000,0x00070006,0x00000025,0x00000002,
         0x435f6c67,0x4470696c,0x61747369,0x0065636e,
-        0x00070006,0x00000023,0x00000003,0x435f6c67,
+        0x00070006,0x00000025,0x00000003,0x435f6c67,
         0x446c6c75,0x61747369,0x0065636e,0x00030005,
-        0x00000025,0x00000000,0x00050005,0x00000030,
+        0x00000027,0x00000000,0x00050005,0x00000035,
         0x67617266,0x6f6c6f43,0x00000072,0x00040005,
-        0x00000032,0x6f436e69,0x00726f6c,0x00040047,
-        0x0000000b,0x0000001e,0x00000000,0x00030047,
-        0x0000000d,0x00000002,0x00050048,0x0000000d,
+        0x00000037,0x6f436e69,0x00726f6c,0x00040047,
+        0x0000000c,0x0000001e,0x00000000,0x00030047,
+        0x0000000f,0x00000002,0x00050048,0x0000000f,
         0x00000000,0x00000023,0x00000000,0x00050048,
-        0x0000000d,0x00000001,0x00000023,0x00000008,
-        0x00030047,0x00000023,0x00000002,0x00050048,
-        0x00000023,0x00000000,0x0000000b,0x00000000,
-        0x00050048,0x00000023,0x00000001,0x0000000b,
-        0x00000001,0x00050048,0x00000023,0x00000002,
-        0x0000000b,0x00000003,0x00050048,0x00000023,
+        0x0000000f,0x00000001,0x00000023,0x00000008,
+        0x00030047,0x00000025,0x00000002,0x00050048,
+        0x00000025,0x00000000,0x0000000b,0x00000000,
+        0x00050048,0x00000025,0x00000001,0x0000000b,
+        0x00000001,0x00050048,0x00000025,0x00000002,
+        0x0000000b,0x00000003,0x00050048,0x00000025,
         0x00000003,0x0000000b,0x00000004,0x00040047,
-        0x00000030,0x0000001e,0x00000000,0x00040047,
-        0x00000032,0x0000001e,0x00000001,0x00020013,
+        0x00000035,0x0000001e,0x00000000,0x00040047,
+        0x00000037,0x0000001e,0x00000001,0x00020013,
         0x00000002,0x00030021,0x00000003,0x00000002,
         0x00030016,0x00000006,0x00000020,0x00040017,
         0x00000007,0x00000006,0x00000002,0x00040020,
-        0x00000008,0x00000007,0x00000007,0x00040020,
-        0x0000000a,0x00000001,0x00000007,0x0004003b,
-        0x0000000a,0x0000000b,0x00000001,0x0004001e,
-        0x0000000d,0x00000007,0x00000007,0x00040020,
-        0x0000000e,0x00000009,0x0000000d,0x0004003b,
-        0x0000000e,0x0000000f,0x00000009,0x00040015,
-        0x00000010,0x00000020,0x00000001,0x0004002b,
-        0x00000010,0x00000011,0x00000000,0x00040020,
-        0x00000012,0x00000009,0x00000007,0x0004002b,
-        0x00000010,0x00000016,0x00000001,0x0004002b,
-        0x00000006,0x00000019,0x3f000000,0x0004002b,
-        0x00000006,0x0000001c,0x3f800000,0x00040017,
-        0x0000001f,0x00000006,0x00000004,0x00040015,
-        0x00000020,0x00000020,0x00000000,0x0004002b,
-        0x00000020,0x00000021,0x00000001,0x0004001c,
-        0x00000022,0x00000006,0x00000021,0x0006001e,
-        0x00000023,0x0000001f,0x00000006,0x00000022,
-        0x00000022,0x00040020,0x00000024,0x00000003,
-        0x00000023,0x0004003b,0x00000024,0x00000025,
-        0x00000003,0x0004002b,0x00000020,0x00000026,
-        0x00000000,0x00040020,0x00000027,0x00000007,
-        0x00000006,0x0004002b,0x00000006,0x0000002c,
-        0x00000000,0x00040020,0x0000002e,0x00000003,
-        0x0000001f,0x0004003b,0x0000002e,0x00000030,
-        0x00000003,0x00040020,0x00000031,0x00000001,
-        0x0000001f,0x0004003b,0x00000031,0x00000032,
+        0x00000008,0x00000007,0x00000007,0x00040017,
+        0x0000000a,0x00000006,0x00000003,0x00040020,
+        0x0000000b,0x00000001,0x0000000a,0x0004003b,
+        0x0000000b,0x0000000c,0x00000001,0x0004001e,
+        0x0000000f,0x00000007,0x00000007,0x00040020,
+        0x00000010,0x00000009,0x0000000f,0x0004003b,
+        0x00000010,0x00000011,0x00000009,0x00040015,
+        0x00000012,0x00000020,0x00000001,0x0004002b,
+        0x00000012,0x00000013,0x00000000,0x00040020,
+        0x00000014,0x00000009,0x00000007,0x0004002b,
+        0x00000012,0x00000018,0x00000001,0x0004002b,
+        0x00000006,0x0000001b,0x3f000000,0x0004002b,
+        0x00000006,0x0000001e,0x3f800000,0x00040017,
+        0x00000021,0x00000006,0x00000004,0x00040015,
+        0x00000022,0x00000020,0x00000000,0x0004002b,
+        0x00000022,0x00000023,0x00000001,0x0004001c,
+        0x00000024,0x00000006,0x00000023,0x0006001e,
+        0x00000025,0x00000021,0x00000006,0x00000024,
+        0x00000024,0x00040020,0x00000026,0x00000003,
+        0x00000025,0x0004003b,0x00000026,0x00000027,
+        0x00000003,0x0004002b,0x00000022,0x00000028,
+        0x00000000,0x00040020,0x00000029,0x00000007,
+        0x00000006,0x0004002b,0x00000022,0x0000002e,
+        0x00000002,0x00040020,0x0000002f,0x00000001,
+        0x00000006,0x00040020,0x00000033,0x00000003,
+        0x00000021,0x0004003b,0x00000033,0x00000035,
+        0x00000003,0x00040020,0x00000036,0x00000001,
+        0x00000021,0x0004003b,0x00000036,0x00000037,
         0x00000001,0x00050036,0x00000002,0x00000004,
         0x00000000,0x00000003,0x000200f8,0x00000005,
         0x0004003b,0x00000008,0x00000009,0x00000007,
-        0x0004003d,0x00000007,0x0000000c,0x0000000b,
-        0x00050041,0x00000012,0x00000013,0x0000000f,
-        0x00000011,0x0004003d,0x00000007,0x00000014,
-        0x00000013,0x00050081,0x00000007,0x00000015,
-        0x0000000c,0x00000014,0x00050041,0x00000012,
-        0x00000017,0x0000000f,0x00000016,0x0004003d,
-        0x00000007,0x00000018,0x00000017,0x0005008e,
-        0x00000007,0x0000001a,0x00000018,0x00000019,
-        0x00050088,0x00000007,0x0000001b,0x00000015,
-        0x0000001a,0x00050050,0x00000007,0x0000001d,
-        0x0000001c,0x0000001c,0x00050083,0x00000007,
-        0x0000001e,0x0000001b,0x0000001d,0x0003003e,
-        0x00000009,0x0000001e,0x00050041,0x00000027,
-        0x00000028,0x00000009,0x00000026,0x0004003d,
-        0x00000006,0x00000029,0x00000028,0x00050041,
-        0x00000027,0x0000002a,0x00000009,0x00000021,
-        0x0004003d,0x00000006,0x0000002b,0x0000002a,
-        0x00070050,0x0000001f,0x0000002d,0x00000029,
-        0x0000002b,0x0000002c,0x0000001c,0x00050041,
-        0x0000002e,0x0000002f,0x00000025,0x00000011,
-        0x0003003e,0x0000002f,0x0000002d,0x0004003d,
-        0x0000001f,0x00000033,0x00000032,0x0003003e,
-        0x00000030,0x00000033,0x000100fd,0x00010038
+        0x0004003d,0x0000000a,0x0000000d,0x0000000c,
+        0x0007004f,0x00000007,0x0000000e,0x0000000d,
+        0x0000000d,0x00000000,0x00000001,0x00050041,
+        0x00000014,0x00000015,0x00000011,0x00000013,
+        0x0004003d,0x00000007,0x00000016,0x00000015,
+        0x00050081,0x00000007,0x00000017,0x0000000e,
+        0x00000016,0x00050041,0x00000014,0x00000019,
+        0x00000011,0x00000018,0x0004003d,0x00000007,
+        0x0000001a,0x00000019,0x0005008e,0x00000007,
+        0x0000001c,0x0000001a,0x0000001b,0x00050088,
+        0x00000007,0x0000001d,0x00000017,0x0000001c,
+        0x00050050,0x00000007,0x0000001f,0x0000001e,
+        0x0000001e,0x00050083,0x00000007,0x00000020,
+        0x0000001d,0x0000001f,0x0003003e,0x00000009,
+        0x00000020,0x00050041,0x00000029,0x0000002a,
+        0x00000009,0x00000028,0x0004003d,0x00000006,
+        0x0000002b,0x0000002a,0x00050041,0x00000029,
+        0x0000002c,0x00000009,0x00000023,0x0004003d,
+        0x00000006,0x0000002d,0x0000002c,0x00050041,
+        0x0000002f,0x00000030,0x0000000c,0x0000002e,
+        0x0004003d,0x00000006,0x00000031,0x00000030,
+        0x00070050,0x00000021,0x00000032,0x0000002b,
+        0x0000002d,0x00000031,0x0000001e,0x00050041,
+        0x00000033,0x00000034,0x00000027,0x00000013,
+        0x0003003e,0x00000034,0x00000032,0x0004003d,
+        0x00000021,0x00000038,0x00000037,0x0003003e,
+        0x00000035,0x00000038,0x000100fd,0x00010038
     };
     VkShaderModuleCreateInfo vertInfo = {
         .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
@@ -480,7 +558,7 @@ void qgpuCreate(int width, int height, const char* title, void (*initFunc)(), vo
         .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
         .depthTestEnable = VK_TRUE,
         .depthWriteEnable = VK_TRUE,
-        .depthCompareOp = VK_COMPARE_OP_LESS,
+        .depthCompareOp = VK_COMPARE_OP_GREATER_OR_EQUAL,
         .depthBoundsTestEnable = VK_FALSE,
         .stencilTestEnable = VK_FALSE
     };
@@ -526,11 +604,12 @@ void qgpuCreate(int width, int height, const char* title, void (*initFunc)(), vo
     vkDestroyShaderModule(g_ctx.device, vertModule, NULL);
     g_ctx.swapchainFramebuffers = malloc(sizeof(VkFramebuffer) * g_ctx.imageCount);
     for (uint32_t i = 0; i < g_ctx.imageCount; i++) {
+        VkImageView attachments[2] = { g_ctx.swapchainImageViews[i], g_ctx.depthImageView };
         VkFramebufferCreateInfo fbInfo = {
             .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
             .renderPass = g_ctx.renderPass,
-            .attachmentCount = 1,
-            .pAttachments = &g_ctx.swapchainImageViews[i],
+            .attachmentCount = 2,
+            .pAttachments = attachments,
             .width = (uint32_t)fbW,
             .height = (uint32_t)fbH,
             .layers = 1
@@ -582,14 +661,17 @@ void qgpuCreate(int width, int height, const char* title, void (*initFunc)(), vo
             .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT
         };
         vkBeginCommandBuffer(g_ctx.currentCmd, &beginInfo);
-        VkClearValue clearColor = {{{0.1f, 0.1f, 0.1f, 1.0f}}};
+        VkClearValue clearValues[2] = {
+            {{{backgroundR, backgroundG, backgroundB, 1.0f}}},
+            {.depthStencil = {0, 0}}
+        };
         VkRenderPassBeginInfo renderPassInfo = {
             .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
             .renderPass = g_ctx.renderPass,
             .framebuffer = g_ctx.swapchainFramebuffers[imageIndex],
             .renderArea = {{0, 0}, {(uint32_t)width, (uint32_t)height}},
-            .clearValueCount = 1,
-            .pClearValues = &clearColor
+            .clearValueCount = 2,
+            .pClearValues = clearValues
         };
         vkCmdBeginRenderPass(g_ctx.currentCmd, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
         vkCmdBindPipeline(g_ctx.currentCmd, VK_PIPELINE_BIND_POINT_GRAPHICS, g_ctx.graphicsPipeline);
@@ -648,6 +730,9 @@ void qgpuCreate(int width, int height, const char* title, void (*initFunc)(), vo
     vkDestroyPipelineLayout(g_ctx.device, g_ctx.pipelineLayout, NULL);
     vkDestroyRenderPass(g_ctx.device, g_ctx.renderPass, NULL);
     vkDestroySwapchainKHR(g_ctx.device, g_ctx.swapchain, NULL);
+    vkDestroyImageView(g_ctx.device, g_ctx.depthImageView, NULL);
+    vkDestroyImage(g_ctx.device, g_ctx.depthImage, NULL);
+    vkFreeMemory(g_ctx.device, g_ctx.depthImageMemory, NULL);
     vkDestroyDevice(g_ctx.device, NULL);
     vkDestroySurfaceKHR(g_ctx.instance, g_ctx.surface, NULL);
     vkDestroyInstance(g_ctx.instance, NULL);
@@ -657,6 +742,11 @@ void qgpuCreate(int width, int height, const char* title, void (*initFunc)(), vo
 // ========================================================================================================================================================================
 // ========================================================================================================================================================================
 // ========================================================================================================================================================================
+void qgpuSetBackground(float r, float g, float b) {
+    backgroundR = r;
+    backgroundG = g;
+    backgroundB = b;
+}
 uint32_t addVertex(float x, float y, float layer, float r, float g, float b, float a) {
     if (g_ctx.currentVOffset >= MAX_VERTICES) return -1;
     QGPU_Vertex* vDst = (QGPU_Vertex*)g_ctx.mappedVertexBuffer + g_ctx.currentVOffset;
