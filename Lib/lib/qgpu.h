@@ -1,13 +1,89 @@
 #ifndef QGPU_H
 #define QGPU_H
-// = = = > COLORS
-// ANSI escape code using 8-bit color depth
+
+#include <stdint.h>
+
+#define MAX_VERTICES 65536 // (2^16) Max vertices in one frame ( Change if objects disappear :P )
+// !===== Structs ==================================================!
+typedef struct { float pos[2]; float color[4]; } QGPU_Vertex;
+// !===== Console ==================================================!
+#define QGPU_SHOW_BANNER          0
+#define QGPU_SHOW_MADE_WITH_QGPU  1
+#define QGPU_SHOW_INFO            2
+#define QGPU_SHOW_COLORS          3
+#define QGPU_SHOW_LOGS            4
+void setColor(int color);
+void restoreColor();
+void setStyle(int style);
+void print(const char* format, ...);
+void qlog(const char* format, ...);
+void qgpuSetShow(int shower, int state);
+// !===== Init ==================================================!
+void qgpuCreate(int width, int height, const char* title, void (*initFunc)(), void (*updateFunc)());
+// !===== Drawing ==================================================!
+uint32_t addVertex(float x, float y, float r, float g, float b, float a);
+void addIndex(uint32_t index);
+void addGeometry(QGPU_Vertex* verts, uint32_t vCount, uint32_t* indices, uint32_t iCount);
+// !===== Screen ==================================================!
+int getWidth();
+int getHeight();
+// !===== Keyboard / Mouse ==================================================!
+int getKey(int key);
+int onKey(int key);
+int getMouse(int button);
+int onMouse(int button);
+void getMousePos(double* x, double* y);
+// ===== Keys ========================================
+#define LMB             0
+#define RMB             1
+#define QKEY_A          65
+#define QKEY_B          66
+#define QKEY_C          67
+#define QKEY_D          68
+#define QKEY_E          69
+#define QKEY_F          70
+#define QKEY_G          71
+#define QKEY_H          72
+#define QKEY_I          73
+#define QKEY_J          74
+#define QKEY_K          75
+#define QKEY_L          76
+#define QKEY_M          77
+#define QKEY_N          78
+#define QKEY_O          79
+#define QKEY_P          80
+#define QKEY_Q          81
+#define QKEY_R          82
+#define QKEY_S          83
+#define QKEY_T          84
+#define QKEY_U          85
+#define QKEY_V          86
+#define QKEY_W          87
+#define QKEY_X          88
+#define QKEY_Y          89
+#define QKEY_Z          90
+#define QKEY_SPACE      32
+#define QKEY_ESCAPE     256
+#define QKEY_ENTER      257
+#define QKEY_BACKSPACE  259
+#define QKEY_LSHIFT     340
+#define QKEY_LCTRL      341
+#define QKEY_RIGHT      262
+#define QKEY_LEFT       263
+#define QKEY_DOWN       264
+#define QKEY_UP         265
+
+#ifdef QGPU_COLORS
+
+void printc(int color, const char* format, ...);
+// !===== QPrint ==================================================!
+// ANSI escape code using 8-bit color
 #define RST     "\033[0m"
 #define REGULAR       0
 #define BOLD          1
 #define BLACK         16
 #define WHITE         15
-// = > LIGHT
+// ===== Light ========================================
 #define LIGHT_GRAY    252
 #define LIGHT_RED     211
 #define LIGHT_GREEN   120
@@ -16,7 +92,7 @@
 #define LIGHT_BLUE    75
 #define LIGHT_MAGENTA 207
 #define LIGHT_CYAN    51
-// = > NORMAL
+// ===== Normal ========================================
 #define GRAY          244
 #define RED           160
 #define GREEN         2
@@ -25,7 +101,7 @@
 #define BLUE          27
 #define MAGENTA       200
 #define CYAN          81
-// = > DARK
+// ===== Dark ========================================
 #define DARK_GRAY     241
 #define DARK_RED      88
 #define DARK_GREEN    22
@@ -34,30 +110,7 @@
 #define DARK_BLUE     19
 #define DARK_MAGENTA  128
 #define DARK_CYAN     68
-// QPrint
-void setColor(int color);
-void restoreColor();
-void setStyle(int style);
-void print(const char* format, ...);
-void printc(int color, const char* format, ...);
-void qlog(const char* format, ...);
 
-typedef struct {
-	const char* title;
-	const char* appName;
-	int width,
-	height,
-	resizable,
-	fullscreen;
-} qgpuWindow;
-
-// QGPU
-#define Q_SHOW_BANNER          0
-#define Q_SHOW_MADE_WITH_QGPU  1
-#define Q_SHOW_INFO            2
-#define Q_SHOW_COLORS          3
-#define Q_SHOW_LOGS            4
-void qgpuSetShow(int shower, int state);
-int qgpuInit(const char* title, int width, int height);
+#endif
 
 #endif
