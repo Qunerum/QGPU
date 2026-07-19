@@ -9,11 +9,10 @@
 #define QGPU_COLORS
 #include "qgpu.h"
 
-#define QGPU_VERSION_MAJOR 0
+#define QGPU_VERSION_MAJOR 1
 #define QGPU_VERSION_MINOR 0
-#define QGPU_VERSION_PATCH 80
+#define QGPU_VERSION_PATCH 0
 
-#define PI 3.14159265359f
 // ==========================================
 typedef struct {
     GLFWwindow* window;
@@ -441,7 +440,7 @@ void qgpuCreate(int width, int height, const char* title, void (*initFunc)(), vo
         {
             .binding = 0,
             .location = 0,
-            .format = VK_FORMAT_R32G32_SFLOAT,
+            .format = VK_FORMAT_R32G32B32_SFLOAT,
             .offset = offsetof(QGPU_Vertex, pos)
         },
         {
@@ -477,6 +476,14 @@ void qgpuCreate(int width, int height, const char* title, void (*initFunc)(), vo
         .sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
         .rasterizationSamples = VK_SAMPLE_COUNT_1_BIT
     };
+    VkPipelineDepthStencilStateCreateInfo depthStencil = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
+        .depthTestEnable = VK_TRUE,
+        .depthWriteEnable = VK_TRUE,
+        .depthCompareOp = VK_COMPARE_OP_LESS,
+        .depthBoundsTestEnable = VK_FALSE,
+        .stencilTestEnable = VK_FALSE
+    };
     VkPipelineColorBlendAttachmentState colorBlendAttachment = {
         .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
         .blendEnable = VK_TRUE,
@@ -507,6 +514,7 @@ void qgpuCreate(int width, int height, const char* title, void (*initFunc)(), vo
         .pViewportState = &viewportState,
         .pRasterizationState = &rasterizer,
         .pMultisampleState = &multisampling,
+        .pDepthStencilState = &depthStencil,
         .pColorBlendState = &colorBlending,
         .pDynamicState = &dynamicState,
         .layout = g_ctx.pipelineLayout,
@@ -649,11 +657,12 @@ void qgpuCreate(int width, int height, const char* title, void (*initFunc)(), vo
 // ========================================================================================================================================================================
 // ========================================================================================================================================================================
 // ========================================================================================================================================================================
-uint32_t addVertex(float x, float y, float r, float g, float b, float a) {
+uint32_t addVertex(float x, float y, float layer, float r, float g, float b, float a) {
     if (g_ctx.currentVOffset >= MAX_VERTICES) return -1;
     QGPU_Vertex* vDst = (QGPU_Vertex*)g_ctx.mappedVertexBuffer + g_ctx.currentVOffset;
     vDst->pos[0] = x;
     vDst->pos[1] = -y;
+    vDst->pos[2] = layer;
     vDst->color[0] = r;
     vDst->color[1] = g;
     vDst->color[2] = b;
@@ -670,7 +679,7 @@ void addIndex(uint32_t index) {
 void addGeometry(QGPU_Vertex* verts, uint32_t vCount, uint32_t* indices, uint32_t iCount) {
     if (vCount == 0 || iCount == 0) return;
     uint32_t baseVertexOffset = g_ctx.currentVOffset;
-    for (uint32_t i = 0; i < vCount; i++) addVertex(verts[i].pos[0], verts[i].pos[1], verts[i].color[0], verts[i].color[1], verts[i].color[2], verts[i].color[3]);
+    for (uint32_t i = 0; i < vCount; i++) addVertex(verts[i].pos[0], verts[i].pos[1], verts[i].pos[2], verts[i].color[0], verts[i].color[1], verts[i].color[2], verts[i].color[3]);
     for (uint32_t i = 0; i < iCount; i++) addIndex(indices[i] + baseVertexOffset);
 }
 // ========================================================================================================================================================================

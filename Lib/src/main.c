@@ -5,9 +5,9 @@ void Init() {
 }
 void Update() {
     uint32_t vs[] = {
-        addVertex(-100, -86.602, 1, 0, 0, 1),
-        addVertex(0, 86.602, 0, 1, 0, 1),
-        addVertex(100, -86.602, 0, 0, 1, 1)
+        addVertex(-100, -86.602, 0, 1, 0, 0, 1),
+        addVertex(0, 86.602, 0, 0, 1, 0, 1),
+        addVertex(100, -86.602, 0, 0, 0, 1, 1)
     };
     for (int i = 0; i < (int)(sizeof(vs)/sizeof(uint32_t)); i++) {
         addIndex(vs[i]);

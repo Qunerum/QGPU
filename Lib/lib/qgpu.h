@@ -5,7 +5,7 @@
 
 #define MAX_VERTICES 65536 // (2^16) Max vertices in one frame ( Change if objects disappear :P )
 // !===== Structs ==================================================!
-typedef struct { float pos[2]; float color[4]; } QGPU_Vertex;
+typedef struct { float pos[3]; float color[4]; } QGPU_Vertex;
 // !===== Console ==================================================!
 #define QGPU_SHOW_BANNER          0
 #define QGPU_SHOW_MADE_WITH_QGPU  1
@@ -21,7 +21,7 @@ void qgpuSetShow(int shower, int state);
 // !===== Init ==================================================!
 void qgpuCreate(int width, int height, const char* title, void (*initFunc)(), void (*updateFunc)());
 // !===== Drawing ==================================================!
-uint32_t addVertex(float x, float y, float r, float g, float b, float a);
+uint32_t addVertex(float x, float y, float layer, float r, float g, float b, float a);
 void addIndex(uint32_t index);
 void addGeometry(QGPU_Vertex* verts, uint32_t vCount, uint32_t* indices, uint32_t iCount);
 // !===== Screen ==================================================!
