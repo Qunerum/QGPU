@@ -60,36 +60,43 @@ static void vprintc(int color, const char* format, va_list args) {
     vprintf(format, args);
     printf("\033[0m");
 }
-void setColor(int color) {
+void qgSetColor(int color) {
     oldClr = actClr;
     actClr = qclamp(color, 0, 255);
 }
-void restoreColor() {
+void qgRestoreColor() {
     int x = actClr;
     actClr = oldClr;
     oldClr = x;
 }
-void setStyle(int style) { actStyle = qclamp(style, 0, 1); }
-void printc(int color, const char* format, ...) {
+void qgSetStyle(int style) { actStyle = qclamp(style, 0, 1); }
+void qgPrintc(int color, const char* format, ...) {
     va_list args;
     va_start(args, format);
     vprintc(color, format, args);
     va_end(args);
 }
-void print(const char* format, ...) {
+void qgPrint(const char* format, ...) {
     va_list args;
     va_start(args, format);
     vprintc(actClr, format, args);
     va_end(args);
 }
-void qlog(const char* format, ...) {
+void qgLog(const char* format, ...) {
     if (_showLogs) return;
     va_list args;
     va_start(args, format);
     vprintc(DARK_GRAY, format, args);
     va_end(args);
 }
-void qgpuSetShow(int shower, int state) {
+void qgWarn(const char* format, ...) {
+    if (_showLogs) return;
+    va_list args;
+    va_start(args, format);
+    vprintc(DARK_GRAY, format, args);
+    va_end(args);
+}
+void qgSetShow(int shower, int state) {
     switch (shower) {
         case QGPU_SHOW_BANNER: _showBanner = state; break;
         case QGPU_SHOW_MADE_WITH_QGPU: _madeWith = state; break;
@@ -99,30 +106,30 @@ void qgpuSetShow(int shower, int state) {
     }
 }
 static void printBanner() {
-    printc(165, "╔═════╗ ╔═════╗ ╔═════╗ ╔═╗ ╔═╗\n");
-    printc(164, "║ ╔═╗ ║ ║ ╔═══╝ ║ ╔═╗ ║ ║ ║ ║ ║\n");
-    printc(163, "║ ║ ║ ║ ║ ║ ╔═╗ ║ ╚═╝ ║ ║ ║ ║ ║\n");
-    printc(162, "║ ╚═╝ ║ ║ ╚═╝ ║ ║ ╔═══╝ ║ ╚═╝ ║\n");
-    printc(161, "╚═══╗ ║ ╚═════╝ ╚═╝     ╚═════╝\n");
-    printc(160, "    ╚═╝\n");
+    qgPrintc(165, "╔═════╗ ╔═════╗ ╔═════╗ ╔═╗ ╔═╗\n");
+    qgPrintc(164, "║ ╔═╗ ║ ║ ╔═══╝ ║ ╔═╗ ║ ║ ║ ║ ║\n");
+    qgPrintc(163, "║ ║ ║ ║ ║ ║ ╔═╗ ║ ╚═╝ ║ ║ ║ ║ ║\n");
+    qgPrintc(162, "║ ╚═╝ ║ ║ ╚═╝ ║ ║ ╔═══╝ ║ ╚═╝ ║\n");
+    qgPrintc(161, "╚═══╗ ║ ╚═════╝ ╚═╝     ╚═════╝\n");
+    qgPrintc(160, "    ╚═╝\n");
 }
-static void printMadeWith() { printc(ORANGE, "The application was made with the "); printc(qgpuClr, "QGPU"); printc(ORANGE, " library.\n"); }
+static void printMadeWith() { qgPrintc(ORANGE, "The application was made with the "); qgPrintc(qgpuClr, "QGPU"); qgPrintc(ORANGE, " library.\n"); }
 static void printInfo() {
-    printc(frame, "╔═╣   "); printc(title, "Info"); printc(frame, "   ╠═══════════╦╗\n");
-    printc(frame, "║ Name: "); printc(qgpuClr, "QGPU"); printc(frame, "             ╚╝\n");
-    printc(frame, "║ Version: "); printc(qgpuClr, "%i.%i.%i\n", QGPU_VERSION_MAJOR, QGPU_VERSION_MINOR, QGPU_VERSION_PATCH);
-    printc(frame, "║ Creator: "); printc(creator, "Qunerum"); printc(frame, "       ╔╗\n");
-    printc(frame, "╚════════════════════════╩╝\n");
+    qgPrintc(frame, "╔═╣   "); qgPrintc(title, "Info"); qgPrintc(frame, "   ╠═══════════╦╗\n");
+    qgPrintc(frame, "║ Name: "); qgPrintc(qgpuClr, "QGPU"); qgPrintc(frame, "             ╚╝\n");
+    qgPrintc(frame, "║ Version: "); qgPrintc(qgpuClr, "%i.%i.%i\n", QGPU_VERSION_MAJOR, QGPU_VERSION_MINOR, QGPU_VERSION_PATCH);
+    qgPrintc(frame, "║ Creator: "); qgPrintc(creator, "Qunerum"); qgPrintc(frame, "       ╔╗\n");
+    qgPrintc(frame, "╚════════════════════════╩╝\n");
 }
 static void c(int v) { printf("\033[0;38;5;%im██ ", v); }
 static void printColors() {
-    printc(frame,"╔═╣  "); printc(title, "Colors"); printc(frame, "  ╠═╗  ╔═══════╗\n");
-    printc(frame,"╚═╦══════════╦═╝  ║ "); c(WHITE); c(BLACK); printc(frame,"║\n");
-    printc(frame,"╔═╩══════════╩════╩═══════╣\n");
-    printc(frame,"║ "); c(LIGHT_GRAY); c(LIGHT_RED); c(LIGHT_GREEN); c(LIGHT_YELLOW); c(LIGHT_ORANGE); c(LIGHT_BLUE); c(LIGHT_MAGENTA); c(LIGHT_CYAN); printc(frame,"║\n");
-    printc(frame,"║ "); c(GRAY);       c(RED);       c(GREEN);       c(YELLOW);       c(ORANGE);       c(BLUE);       c(MAGENTA);       c(CYAN);       printc(frame,"║\n");
-    printc(frame,"║ "); c(DARK_GRAY);  c(DARK_RED);  c(DARK_GREEN);  c(DARK_YELLOW);  c(DARK_ORANGE);  c(DARK_BLUE);  c(DARK_MAGENTA);  c(DARK_CYAN);  printc(frame,"║\n");
-    printc(frame,"╚═════════════════════════╝\n");
+    qgPrintc(frame,"╔═╣  "); qgPrintc(title, "Colors"); qgPrintc(frame, "  ╠═╗  ╔═══════╗\n");
+    qgPrintc(frame,"╚═╦══════════╦═╝  ║ "); c(WHITE); c(BLACK); qgPrintc(frame,"║\n");
+    qgPrintc(frame,"╔═╩══════════╩════╩═══════╣\n");
+    qgPrintc(frame,"║ "); c(LIGHT_GRAY); c(LIGHT_RED); c(LIGHT_GREEN); c(LIGHT_YELLOW); c(LIGHT_ORANGE); c(LIGHT_BLUE); c(LIGHT_MAGENTA); c(LIGHT_CYAN); qgPrintc(frame,"║\n");
+    qgPrintc(frame,"║ "); c(GRAY);       c(RED);       c(GREEN);       c(YELLOW);       c(ORANGE);       c(BLUE);       c(MAGENTA);       c(CYAN);       qgPrintc(frame,"║\n");
+    qgPrintc(frame,"║ "); c(DARK_GRAY);  c(DARK_RED);  c(DARK_GREEN);  c(DARK_YELLOW);  c(DARK_ORANGE);  c(DARK_BLUE);  c(DARK_MAGENTA);  c(DARK_CYAN);  qgPrintc(frame,"║\n");
+    qgPrintc(frame,"╚═════════════════════════╝\n");
 }
 // ==========================================
 static uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
@@ -638,12 +645,12 @@ void qgpuCreate(int width, int height, const char* title, void (*initFunc)(), vo
     vkCreateSemaphore(g_ctx.device, &semaphoreInfo, NULL, &g_ctx.renderFinishedSemaphore);
     memset(g_ctx.lastKeyState, 0, sizeof(g_ctx.lastKeyState));
     memset(g_ctx.lastMouseState, 0, sizeof(g_ctx.lastMouseState));
-    setStyle(BOLD);
+    qgSetStyle(BOLD);
     if (_showBanner) printBanner();
     if (_madeWith) printMadeWith();
     if (_showInfo) printInfo();
     if (_showColors) printColors();
-    setStyle(REGULAR);
+    qgSetStyle(REGULAR);
     printf("\n");
     if (initFunc) initFunc();
     while (!glfwWindowShouldClose(g_ctx.window)) {
@@ -742,12 +749,12 @@ void qgpuCreate(int width, int height, const char* title, void (*initFunc)(), vo
 // ========================================================================================================================================================================
 // ========================================================================================================================================================================
 // ========================================================================================================================================================================
-void qgpuSetBackground(float r, float g, float b) {
+void qgSetBackground(float r, float g, float b) {
     backgroundR = r;
     backgroundG = g;
     backgroundB = b;
 }
-uint32_t addVertex(float x, float y, float layer, float r, float g, float b, float a) {
+uint32_t qgAddVertex(float x, float y, float layer, float r, float g, float b, float a) {
     if (g_ctx.currentVOffset >= MAX_VERTICES) return -1;
     QGPU_Vertex* vDst = (QGPU_Vertex*)g_ctx.mappedVertexBuffer + g_ctx.currentVOffset;
     vDst->pos[0] = x;
@@ -760,53 +767,53 @@ uint32_t addVertex(float x, float y, float layer, float r, float g, float b, flo
     g_ctx.currentVOffset++;
     return g_ctx.currentVOffset-1;
 }
-void addIndex(uint32_t index) {
+void qgAddIndex(uint32_t index) {
     if (g_ctx.currentIOffset >= (uint32_t)(MAX_VERTICES * 3)) return;
     uint32_t* iDst = (uint32_t*)g_ctx.mappedIndexBuffer + g_ctx.currentIOffset;
     *iDst = index;
     g_ctx.currentIOffset++;
 }
-void addGeometry(QGPU_Vertex* verts, uint32_t vCount, uint32_t* indices, uint32_t iCount) {
+void qgAddGeometry(QGPU_Vertex* verts, uint32_t vCount, uint32_t* indices, uint32_t iCount) {
     if (vCount == 0 || iCount == 0) return;
     uint32_t baseVertexOffset = g_ctx.currentVOffset;
-    for (uint32_t i = 0; i < vCount; i++) addVertex(verts[i].pos[0], verts[i].pos[1], verts[i].pos[2], verts[i].color[0], verts[i].color[1], verts[i].color[2], verts[i].color[3]);
-    for (uint32_t i = 0; i < iCount; i++) addIndex(indices[i] + baseVertexOffset);
+    for (uint32_t i = 0; i < vCount; i++) qgAddVertex(verts[i].pos[0], verts[i].pos[1], verts[i].pos[2], verts[i].color[0], verts[i].color[1], verts[i].color[2], verts[i].color[3]);
+    for (uint32_t i = 0; i < iCount; i++) qgAddIndex(indices[i] + baseVertexOffset);
 }
 // ========================================================================================================================================================================
 // ========================================================================================================================================================================
 // ========================================================================================================================================================================
-int getKey(int key) {
+int qgGetKey(int key) {
     if (!g_ctx.window || key < 0 || key >= GLFW_KEY_LAST) return 0;
     return glfwGetKey(g_ctx.window, key) == GLFW_PRESS;
 }
-int onKey(int key) {
+int qgOnKey(int key) {
     if (!g_ctx.window || key < 0 || key >= GLFW_KEY_LAST) return 0;
     int current = glfwGetKey(g_ctx.window, key), last = g_ctx.lastKeyState[key];
     return (current == GLFW_PRESS && last == GLFW_RELEASE);
 }
-int getMouse(int button) {
+int qgGetMouse(int button) {
     if (!g_ctx.window || button < 0 || button >= GLFW_MOUSE_BUTTON_LAST) return 0;
     return glfwGetMouseButton(g_ctx.window, button) == GLFW_PRESS;
 }
-int onMouse(int button) {
+int qgOnMouse(int button) {
     if (!g_ctx.window || button < 0 || button >= GLFW_MOUSE_BUTTON_LAST) return 0;
     int current = glfwGetMouseButton(g_ctx.window, button), last = g_ctx.lastMouseState[button];
     return (current == GLFW_PRESS && last == GLFW_RELEASE);
 }
-void getMousePos(double* x, double* y) {
+void qgGetMousePos(double* x, double* y) {
     if (!g_ctx.window || !x || !y) return;
     double lx = 0, ly = 0;
     glfwGetCursorPos(g_ctx.window, &lx, &ly);
-    *x = lx - (double)getWidth() / 2;
-    *y = -(ly - (double)getHeight() / 2);
+    *x = lx - (double)qgGetWidth() / 2;
+    *y = -(ly - (double)qgGetHeight() / 2);
 }
-int getWidth() {
+int qgGetWidth() {
     if (!g_ctx.window) return 0;
     int w, h;
     glfwGetWindowSize(g_ctx.window, &w, &h);
     return w;
 }
-int getHeight() {
+int qgGetHeight() {
     if (!g_ctx.window) return 0;
     int w, h;
     glfwGetWindowSize(g_ctx.window, &w, &h);

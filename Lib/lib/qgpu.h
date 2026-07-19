@@ -12,28 +12,28 @@ typedef struct { float pos[3]; float color[4]; } QGPU_Vertex;
 #define QGPU_SHOW_INFO            2
 #define QGPU_SHOW_COLORS          3
 #define QGPU_SHOW_LOGS            4
-void setColor(int color);
-void restoreColor();
-void setStyle(int style);
-void print(const char* format, ...);
-void qlog(const char* format, ...);
-void qgpuSetShow(int shower, int state);
+void qgSetColor(int color);
+void qgRestoreColor();
+void qgSetStyle(int style);
+void qgPrint(const char* format, ...);
+void qgLog(const char* format, ...);
+void qgSetShow(int shower, int state);
 // !===== Init ==================================================!
 void qgpuCreate(int width, int height, const char* title, void (*initFunc)(), void (*updateFunc)());
 // !===== Drawing ==================================================!
-void qgpuSetBackground(float r, float g, float b);
-uint32_t addVertex(float x, float y, float layer, float r, float g, float b, float a);
-void addIndex(uint32_t index);
-void addGeometry(QGPU_Vertex* verts, uint32_t vCount, uint32_t* indices, uint32_t iCount);
+void qgSetBackground(float r, float g, float b);
+uint32_t qgAddVertex(float x, float y, float layer, float r, float g, float b, float a);
+void qgAddIndex(uint32_t index);
+void qgAddGeometry(QGPU_Vertex* verts, uint32_t vCount, uint32_t* indices, uint32_t iCount);
 // !===== Screen ==================================================!
-int getWidth();
-int getHeight();
+int qgGetWidth();
+int qgGetHeight();
 // !===== Keyboard / Mouse ==================================================!
-int getKey(int key);
-int onKey(int key);
-int getMouse(int button);
-int onMouse(int button);
-void getMousePos(double* x, double* y);
+int qgGetKey(int key);
+int qgOnKey(int key);
+int qgGetMouse(int button);
+int qgOnMouse(int button);
+void qgGetMousePos(double* x, double* y);
 // ===== Keys ========================================
 #define LMB             0
 #define RMB             1
@@ -76,7 +76,7 @@ void getMousePos(double* x, double* y);
 
 #ifdef QGPU_COLORS
 
-void printc(int color, const char* format, ...);
+void qgPrintc(int color, const char* format, ...);
 // !===== QPrint ==================================================!
 // ANSI escape code using 8-bit color
 #define RST     "\033[0m"
