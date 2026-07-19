@@ -12,7 +12,7 @@
 
 #define QGPU_VERSION_MAJOR 1
 #define QGPU_VERSION_MINOR 0
-#define QGPU_VERSION_PATCH 0
+#define QGPU_VERSION_PATCH 1
 
 // ==========================================
 typedef struct {
