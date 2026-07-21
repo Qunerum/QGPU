@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
+
 #include <vulkan/vulkan_core.h>
 
 #define GLFW_INCLUDE_VULKAN
@@ -90,10 +91,9 @@ void qgLog(const char* format, ...) {
     va_end(args);
 }
 void qgWarn(const char* format, ...) {
-    if (_showLogs) return;
     va_list args;
     va_start(args, format);
-    vprintc(DARK_GRAY, format, args);
+    vprintc(YELLOW, format, args);
     va_end(args);
 }
 void qgSetShow(int shower, int state) {
