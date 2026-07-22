@@ -25,6 +25,8 @@ void qgSetBackground(float r, float g, float b);
 uint32_t qgAddVertex(float x, float y, float layer, float r, float g, float b, float a);
 void qgAddIndex(uint32_t index);
 void qgAddGeometry(QGPU_Vertex* verts, uint32_t vCount, uint32_t* indices, uint32_t iCount);
+
+void qgAddCircle(float px, float py, float layer, int segments, float radius, float r, float g, float b, float a);
 // !===== Screen ==================================================!
 int qgGetWidth();
 int qgGetHeight();

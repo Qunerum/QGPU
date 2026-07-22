@@ -10,6 +10,8 @@ void Update() {
         qgAddVertex(100, -86.602,  0,  0, 0, 1, 1),
     };
     for (int i = 0; i < (int)(sizeof(vs)/sizeof(uint32_t)); i++) qgAddIndex(vs[i]);
+
+    qgAddCircle(100, 0, 1, 10, 100, 0.5f, 0, 0, 1);
 }
 
 int main() {
