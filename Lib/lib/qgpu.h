@@ -22,10 +22,16 @@ void qgSetShow(int shower, int state);
 void qgpuCreate(int width, int height, const char* title, void (*initFunc)(), void (*updateFunc)());
 // !===== Drawing ==================================================!
 void qgSetBackground(float r, float g, float b);
+
+void qgSetRotationPivot(float x, float y, float z);
+void qgSetRotation(float rx, float ry, float rz);
+void qgResetRotation();
+
 uint32_t qgAddVertex(float x, float y, float layer, float r, float g, float b, float a);
 void qgAddIndex(uint32_t index);
 void qgAddGeometry(QGPU_Vertex* verts, uint32_t vCount, uint32_t* indices, uint32_t iCount);
 
+void qgAddRect(float px, float py, float pz, float sx, float sy, float r, float g, float b, float a);
 void qgAddCircle(float px, float py, float layer, int segments, float radius, float r, float g, float b, float a);
 // !===== Screen ==================================================!
 int qgGetWidth();

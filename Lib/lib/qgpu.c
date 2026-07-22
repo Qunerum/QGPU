@@ -46,6 +46,9 @@ typedef struct {
 	VkImage depthImage;
 	VkDeviceMemory depthImageMemory;
 	VkImageView depthImageView;
+
+	float pivotX, pivotY, pivotZ, rotX, rotY, rotZ;
+	int hasRotation;
 } InternalContext;
 static InternalContext g_ctx;
 static float backgroundR, backgroundG, backgroundB;
@@ -65,6 +68,7 @@ static float fltTo01(float val) {
 }
 static int qclamp(int v, int min, int max) { return v < min ? min : v > max ? max : v; }
 static float qpow(float v, float exp) {
+	if (exp == 0) return 1;
 	float r = 1;
 	for (int i = 0; i < exp; i++) r *= v;
 	return r;
@@ -75,19 +79,19 @@ static unsigned long long factorial(int n) {
 	return result;
 }
 float toRad(float degrees) { return degrees * (PI / 180.0f); }
-static float qSin(float degrees) {
-	float x = toRad(degrees), sum = 0.0f;
+static float qSin(float rad) {
+	float sum = 0.0f;
 	for (int i = 0; i < 10; i++) {
 		int sign = (i % 2 == 0) ? 1 : -1, power_exp = 2 * i + 1;
-		sum += sign * (qpow(x, power_exp) / (float)factorial(power_exp));
+		sum += sign * (qpow(rad, power_exp) / (float)factorial(power_exp));
 	}
 	return sum;
 }
-float qCos(float degrees) {
-	float x = toRad(degrees), sum = 0.0f;
+static float qCos(float rad) {
+	float sum = 0.0f;
 	for (int i = 0; i < 10; i++) {
 		int sign = (i % 2 == 0) ? 1 : -1, power_exp = 2 * i;
-		sum += sign * (qpow(x, power_exp) / (float)factorial(power_exp));
+		sum += sign * (qpow(rad, power_exp) / (float)factorial(power_exp));
 	}
 	return sum;
 }
@@ -785,8 +789,54 @@ void qgSetBackground(float r, float g, float b) {
 	backgroundG = g;
 	backgroundB = b;
 }
+void qgSetRotationPivot(float x, float y, float z) {
+	g_ctx.pivotX = x;
+	g_ctx.pivotY = y;
+	g_ctx.pivotZ = z;
+}
+static float rndToNrm(float v) { return v - ((int)(v / 360.0f) * 360.0f); }
+void qgSetRotation(float rx, float ry, float rz) {
+	g_ctx.rotX = rndToNrm(rx);
+	g_ctx.rotY = rndToNrm(ry);
+	g_ctx.rotZ = rndToNrm(rz);
+	g_ctx.hasRotation = 1;
+}
+void qgResetRotation() {
+	g_ctx.pivotX = 0.0f;
+	g_ctx.pivotY = 0.0f;
+	g_ctx.pivotZ = 0.0f;
+	g_ctx.rotX = 0.0f;
+	g_ctx.rotY = 0.0f;
+	g_ctx.rotZ = 0.0f;
+	g_ctx.hasRotation = 0;
+}
+static void transformPoint(float* x, float* y, float* z) {
+	if (!g_ctx.hasRotation) return;
+	float px = *x - g_ctx.pivotX;
+	float py = *y - g_ctx.pivotY;
+	float pz = *z - g_ctx.pivotZ;
+	float radX = g_ctx.rotX * (3.1415926535f / 180.0f);
+	float radY = g_ctx.rotY * (3.1415926535f / 180.0f);
+	float radZ = g_ctx.rotZ * (3.1415926535f / 180.0f);
+	float cx = qCos(radX), sx = qSin(radX);
+	float cy = qCos(radY), sy = qSin(radY);
+	float cz = qCos(radZ), sz = qSin(radZ);
+	float y1 = py * cx - pz * sx;
+	float z1 = py * sx + pz * cx;
+	float x1 = px;
+	float x2 = x1 * cy + z1 * sy;
+	float z2 = -x1 * sy + z1 * cy;
+	float y2 = y1;
+	float x3 = x2 * cz - y2 * sz;
+	float y3 = x2 * sz + y2 * cz;
+	float z3 = z2;
+	*x = x3 + g_ctx.pivotX;
+	*y = y3 + g_ctx.pivotY;
+	*z = z3 + g_ctx.pivotZ;
+}
 uint32_t qgAddVertex(float x, float y, float z, float r, float g, float b, float a) {
 	if (g_ctx.currentVOffset >= MAX_VERTICES) return -1;
+	transformPoint(&x, &y, &z);
 	QGPU_Vertex* vDst = (QGPU_Vertex*)g_ctx.mappedVertexBuffer + g_ctx.currentVOffset;
 	vDst->pos[0] = x;
 	vDst->pos[1] = -y;
