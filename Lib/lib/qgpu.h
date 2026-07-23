@@ -3,7 +3,8 @@
 
 #include <stdint.h>
 
-#define MAX_VERTICES 65536 // (2^16) Max vertices in one frame ( Change if objects disappear :P )
+#define MAX_VERTICES 65536 // (2^16) Max vertices in one frame
+#define MAX_LIGHTS   1024  // (2^10) Max lights in one frame
 // !===== Structs ==================================================!
 typedef struct { float pos[3]; float color[4]; } QGPU_Vertex;
 // !===== Console ==================================================!
@@ -31,8 +32,13 @@ uint32_t qgAddVertex(float x, float y, float layer, float r, float g, float b, f
 void qgAddIndex(uint32_t index);
 void qgAddGeometry(QGPU_Vertex* verts, uint32_t vCount, uint32_t* indices, uint32_t iCount);
 
+
+void qgAddTriangle(float p1x, float p1y, float p1z, float p2x, float p2y, float p2z, float p3x, float p3y, float p3z, float r, float g, float b, float a);
 void qgAddRect(float px, float py, float pz, float sx, float sy, float r, float g, float b, float a);
 void qgAddCircle(float px, float py, float layer, int segments, float radius, float r, float g, float b, float a);
+
+void qgAddBox(float px, float py, float pz, float sx, float sy, float sz, float r, float g, float b, float a);
+void qgAddSphere(float px, float py, float pz, float radius, int rings, int sectors, float r, float g, float b, float a);
 // !===== Screen ==================================================!
 int qgGetWidth();
 int qgGetHeight();

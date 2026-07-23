@@ -52,20 +52,12 @@ typedef struct {
 } InternalContext;
 static InternalContext g_ctx;
 static float backgroundR, backgroundG, backgroundB;
+typedef struct { float x, y, z, range, intense; } QGPU_Light;
+static int lightCount;
+static QGPU_Light lights[MAX_LIGHTS];
 // ==========================================
 static int _showBanner = 1, _madeWith = 1, _showInfo = 1, _showColors = 1, _showLogs = 1, qgpuClr = MAGENTA, creator = LIGHT_RED, title = YELLOW, frame = GRAY;
-// ═ ║ ╬
-// ╔ ╗ ╚ ╝
-// ╠ ╣ ╦ ╩
 static float PI = 3.14159265358979323846f;
-static float fltTo01(float val) {
-	union {
-		float f;
-		uint32_t u;
-	} pun;
-	pun.f = val;
-	return (float)pun.u / 4294967295.0f;
-}
 static int qclamp(int v, int min, int max) { return v < min ? min : v > max ? max : v; }
 static float qpow(float v, float exp) {
 	if (exp == 0) return 1;
@@ -94,6 +86,22 @@ static float qCos(float rad) {
 		sum += sign * (qpow(rad, power_exp) / (float)factorial(power_exp));
 	}
 	return sum;
+}
+static void transformPoint(float* x, float* y, float* z) {
+	if (!g_ctx.hasRotation) return;
+	float px = *x - g_ctx.pivotX, py = *y - g_ctx.pivotY, pz = *z - g_ctx.pivotZ, radX = g_ctx.rotX * (PI / 180.0f), radY = g_ctx.rotY * (PI / 180.0f), radZ = g_ctx.rotZ * (PI / 180.0f),
+	cx = qCos(radX), sx = qSin(radX), cy = qCos(radY), sy = qSin(radY), cz = qCos(radZ), sz = qSin(radZ),
+	y1 = py * cx - pz * sx, z1 = py * sx + pz * cx, x1 = px, x2 = x1 * cy + z1 * sy, z2 = -x1 * sy + z1 * cy, y2 = y1, x3 = x2 * cz - y2 * sz, y3 = x2 * sz + y2 * cz, z3 = z2;
+	*x = x3 + g_ctx.pivotX;
+	*y = y3 + g_ctx.pivotY;
+	*z = z3 + g_ctx.pivotZ;
+}
+static float getLight(float x, float y, float z) {
+	float m = 0;
+	for (int i = 0; i < lightCount; i++) {
+
+	}
+	return m > 1 ? 1 : m;
 }
 // = = = QPrint
 static int oldClr = 255, actClr = 255, actStyle = 0; // White , Regular text
@@ -387,13 +395,13 @@ void qgpuCreate(int width, int height, const char* title, void (*initFunc)(), vo
 	};
 	vkCreatePipelineLayout(g_ctx.device, &pipelineLayoutInfo, NULL, &g_ctx.pipelineLayout);
 	const uint32_t vert_code[] = {
-		0x07230203,0x00010000,0x000d000b,0x00000039,
+		0x07230203,0x00010000,0x000d000b,0x00000040,
 		0x00000000,0x00020011,0x00000001,0x0006000b,
 		0x00000001,0x4c534c47,0x6474732e,0x3035342e,
 		0x00000000,0x0003000e,0x00000000,0x00000001,
 		0x0009000f,0x00000000,0x00000004,0x6e69616d,
-		0x00000000,0x0000000c,0x00000027,0x00000035,
-		0x00000037,0x00030003,0x00000002,0x000001c2,
+		0x00000000,0x0000000c,0x00000032,0x0000003c,
+		0x0000003e,0x00030003,0x00000002,0x000001c2,
 		0x000a0004,0x475f4c47,0x4c474f4f,0x70635f45,
 		0x74735f70,0x5f656c79,0x656e696c,0x7269645f,
 		0x69746365,0x00006576,0x00080004,0x475f4c47,
@@ -406,91 +414,103 @@ void qgpuCreate(int width, int height, const char* title, void (*initFunc)(), vo
 		0x0000000f,0x00000000,0x7366666f,0x00007465,
 		0x00060006,0x0000000f,0x00000001,0x65726373,
 		0x65526e65,0x00000073,0x00040005,0x00000011,
-		0x68737570,0x00000000,0x00060005,0x00000025,
-		0x505f6c67,0x65567265,0x78657472,0x00000000,
-		0x00060006,0x00000025,0x00000000,0x505f6c67,
-		0x7469736f,0x006e6f69,0x00070006,0x00000025,
-		0x00000001,0x505f6c67,0x746e696f,0x657a6953,
-		0x00000000,0x00070006,0x00000025,0x00000002,
-		0x435f6c67,0x4470696c,0x61747369,0x0065636e,
-		0x00070006,0x00000025,0x00000003,0x435f6c67,
-		0x446c6c75,0x61747369,0x0065636e,0x00030005,
-		0x00000027,0x00000000,0x00050005,0x00000035,
-		0x67617266,0x6f6c6f43,0x00000072,0x00040005,
-		0x00000037,0x6f436e69,0x00726f6c,0x00040047,
-		0x0000000c,0x0000001e,0x00000000,0x00030047,
-		0x0000000f,0x00000002,0x00050048,0x0000000f,
-		0x00000000,0x00000023,0x00000000,0x00050048,
-		0x0000000f,0x00000001,0x00000023,0x00000008,
-		0x00030047,0x00000025,0x00000002,0x00050048,
-		0x00000025,0x00000000,0x0000000b,0x00000000,
-		0x00050048,0x00000025,0x00000001,0x0000000b,
-		0x00000001,0x00050048,0x00000025,0x00000002,
-		0x0000000b,0x00000003,0x00050048,0x00000025,
-		0x00000003,0x0000000b,0x00000004,0x00040047,
-		0x00000035,0x0000001e,0x00000000,0x00040047,
-		0x00000037,0x0000001e,0x00000001,0x00020013,
-		0x00000002,0x00030021,0x00000003,0x00000002,
-		0x00030016,0x00000006,0x00000020,0x00040017,
-		0x00000007,0x00000006,0x00000002,0x00040020,
-		0x00000008,0x00000007,0x00000007,0x00040017,
-		0x0000000a,0x00000006,0x00000003,0x00040020,
-		0x0000000b,0x00000001,0x0000000a,0x0004003b,
-		0x0000000b,0x0000000c,0x00000001,0x0004001e,
-		0x0000000f,0x00000007,0x00000007,0x00040020,
-		0x00000010,0x00000009,0x0000000f,0x0004003b,
-		0x00000010,0x00000011,0x00000009,0x00040015,
-		0x00000012,0x00000020,0x00000001,0x0004002b,
-		0x00000012,0x00000013,0x00000000,0x00040020,
-		0x00000014,0x00000009,0x00000007,0x0004002b,
-		0x00000012,0x00000018,0x00000001,0x0004002b,
-		0x00000006,0x0000001b,0x3f000000,0x0004002b,
-		0x00000006,0x0000001e,0x3f800000,0x00040017,
-		0x00000021,0x00000006,0x00000004,0x00040015,
-		0x00000022,0x00000020,0x00000000,0x0004002b,
-		0x00000022,0x00000023,0x00000001,0x0004001c,
-		0x00000024,0x00000006,0x00000023,0x0006001e,
-		0x00000025,0x00000021,0x00000006,0x00000024,
-		0x00000024,0x00040020,0x00000026,0x00000003,
-		0x00000025,0x0004003b,0x00000026,0x00000027,
-		0x00000003,0x0004002b,0x00000022,0x00000028,
-		0x00000000,0x00040020,0x00000029,0x00000007,
-		0x00000006,0x0004002b,0x00000022,0x0000002e,
-		0x00000002,0x00040020,0x0000002f,0x00000001,
-		0x00000006,0x00040020,0x00000033,0x00000003,
-		0x00000021,0x0004003b,0x00000033,0x00000035,
-		0x00000003,0x00040020,0x00000036,0x00000001,
-		0x00000021,0x0004003b,0x00000036,0x00000037,
-		0x00000001,0x00050036,0x00000002,0x00000004,
-		0x00000000,0x00000003,0x000200f8,0x00000005,
-		0x0004003b,0x00000008,0x00000009,0x00000007,
-		0x0004003d,0x0000000a,0x0000000d,0x0000000c,
-		0x0007004f,0x00000007,0x0000000e,0x0000000d,
-		0x0000000d,0x00000000,0x00000001,0x00050041,
-		0x00000014,0x00000015,0x00000011,0x00000013,
-		0x0004003d,0x00000007,0x00000016,0x00000015,
-		0x00050081,0x00000007,0x00000017,0x0000000e,
-		0x00000016,0x00050041,0x00000014,0x00000019,
-		0x00000011,0x00000018,0x0004003d,0x00000007,
-		0x0000001a,0x00000019,0x0005008e,0x00000007,
-		0x0000001c,0x0000001a,0x0000001b,0x00050088,
-		0x00000007,0x0000001d,0x00000017,0x0000001c,
-		0x00050050,0x00000007,0x0000001f,0x0000001e,
-		0x0000001e,0x00050083,0x00000007,0x00000020,
-		0x0000001d,0x0000001f,0x0003003e,0x00000009,
-		0x00000020,0x00050041,0x00000029,0x0000002a,
-		0x00000009,0x00000028,0x0004003d,0x00000006,
-		0x0000002b,0x0000002a,0x00050041,0x00000029,
-		0x0000002c,0x00000009,0x00000023,0x0004003d,
-		0x00000006,0x0000002d,0x0000002c,0x00050041,
-		0x0000002f,0x00000030,0x0000000c,0x0000002e,
-		0x0004003d,0x00000006,0x00000031,0x00000030,
-		0x00070050,0x00000021,0x00000032,0x0000002b,
-		0x0000002d,0x00000031,0x0000001e,0x00050041,
-		0x00000033,0x00000034,0x00000027,0x00000013,
-		0x0003003e,0x00000034,0x00000032,0x0004003d,
-		0x00000021,0x00000038,0x00000037,0x0003003e,
-		0x00000035,0x00000038,0x000100fd,0x00010038
+		0x68737570,0x00000000,0x00060005,0x00000022,
+		0x6d726f6e,0x7a696c61,0x65446465,0x00687470,
+		0x00060005,0x00000030,0x505f6c67,0x65567265,
+		0x78657472,0x00000000,0x00060006,0x00000030,
+		0x00000000,0x505f6c67,0x7469736f,0x006e6f69,
+		0x00070006,0x00000030,0x00000001,0x505f6c67,
+		0x746e696f,0x657a6953,0x00000000,0x00070006,
+		0x00000030,0x00000002,0x435f6c67,0x4470696c,
+		0x61747369,0x0065636e,0x00070006,0x00000030,
+		0x00000003,0x435f6c67,0x446c6c75,0x61747369,
+		0x0065636e,0x00030005,0x00000032,0x00000000,
+		0x00050005,0x0000003c,0x67617266,0x6f6c6f43,
+		0x00000072,0x00040005,0x0000003e,0x6f436e69,
+		0x00726f6c,0x00040047,0x0000000c,0x0000001e,
+		0x00000000,0x00030047,0x0000000f,0x00000002,
+		0x00050048,0x0000000f,0x00000000,0x00000023,
+		0x00000000,0x00050048,0x0000000f,0x00000001,
+		0x00000023,0x00000008,0x00030047,0x00000030,
+		0x00000002,0x00050048,0x00000030,0x00000000,
+		0x0000000b,0x00000000,0x00050048,0x00000030,
+		0x00000001,0x0000000b,0x00000001,0x00050048,
+		0x00000030,0x00000002,0x0000000b,0x00000003,
+		0x00050048,0x00000030,0x00000003,0x0000000b,
+		0x00000004,0x00040047,0x0000003c,0x0000001e,
+		0x00000000,0x00040047,0x0000003e,0x0000001e,
+		0x00000001,0x00020013,0x00000002,0x00030021,
+		0x00000003,0x00000002,0x00030016,0x00000006,
+		0x00000020,0x00040017,0x00000007,0x00000006,
+		0x00000002,0x00040020,0x00000008,0x00000007,
+		0x00000007,0x00040017,0x0000000a,0x00000006,
+		0x00000003,0x00040020,0x0000000b,0x00000001,
+		0x0000000a,0x0004003b,0x0000000b,0x0000000c,
+		0x00000001,0x0004001e,0x0000000f,0x00000007,
+		0x00000007,0x00040020,0x00000010,0x00000009,
+		0x0000000f,0x0004003b,0x00000010,0x00000011,
+		0x00000009,0x00040015,0x00000012,0x00000020,
+		0x00000001,0x0004002b,0x00000012,0x00000013,
+		0x00000000,0x00040020,0x00000014,0x00000009,
+		0x00000007,0x0004002b,0x00000012,0x00000018,
+		0x00000001,0x0004002b,0x00000006,0x0000001b,
+		0x3f000000,0x0004002b,0x00000006,0x0000001e,
+		0x3f800000,0x00040020,0x00000021,0x00000007,
+		0x00000006,0x00040015,0x00000023,0x00000020,
+		0x00000000,0x0004002b,0x00000023,0x00000024,
+		0x00000002,0x00040020,0x00000025,0x00000001,
+		0x00000006,0x0004002b,0x00000006,0x00000028,
+		0x447a0000,0x0004002b,0x00000006,0x0000002b,
+		0x00000000,0x00040017,0x0000002d,0x00000006,
+		0x00000004,0x0004002b,0x00000023,0x0000002e,
+		0x00000001,0x0004001c,0x0000002f,0x00000006,
+		0x0000002e,0x0006001e,0x00000030,0x0000002d,
+		0x00000006,0x0000002f,0x0000002f,0x00040020,
+		0x00000031,0x00000003,0x00000030,0x0004003b,
+		0x00000031,0x00000032,0x00000003,0x0004002b,
+		0x00000023,0x00000033,0x00000000,0x00040020,
+		0x0000003a,0x00000003,0x0000002d,0x0004003b,
+		0x0000003a,0x0000003c,0x00000003,0x00040020,
+		0x0000003d,0x00000001,0x0000002d,0x0004003b,
+		0x0000003d,0x0000003e,0x00000001,0x00050036,
+		0x00000002,0x00000004,0x00000000,0x00000003,
+		0x000200f8,0x00000005,0x0004003b,0x00000008,
+		0x00000009,0x00000007,0x0004003b,0x00000021,
+		0x00000022,0x00000007,0x0004003d,0x0000000a,
+		0x0000000d,0x0000000c,0x0007004f,0x00000007,
+		0x0000000e,0x0000000d,0x0000000d,0x00000000,
+		0x00000001,0x00050041,0x00000014,0x00000015,
+		0x00000011,0x00000013,0x0004003d,0x00000007,
+		0x00000016,0x00000015,0x00050081,0x00000007,
+		0x00000017,0x0000000e,0x00000016,0x00050041,
+		0x00000014,0x00000019,0x00000011,0x00000018,
+		0x0004003d,0x00000007,0x0000001a,0x00000019,
+		0x0005008e,0x00000007,0x0000001c,0x0000001a,
+		0x0000001b,0x00050088,0x00000007,0x0000001d,
+		0x00000017,0x0000001c,0x00050050,0x00000007,
+		0x0000001f,0x0000001e,0x0000001e,0x00050083,
+		0x00000007,0x00000020,0x0000001d,0x0000001f,
+		0x0003003e,0x00000009,0x00000020,0x00050041,
+		0x00000025,0x00000026,0x0000000c,0x00000024,
+		0x0004003d,0x00000006,0x00000027,0x00000026,
+		0x00050088,0x00000006,0x00000029,0x00000027,
+		0x00000028,0x0003003e,0x00000022,0x00000029,
+		0x0004003d,0x00000006,0x0000002a,0x00000022,
+		0x0008000c,0x00000006,0x0000002c,0x00000001,
+		0x0000002b,0x0000002a,0x0000002b,0x0000001e,
+		0x0003003e,0x00000022,0x0000002c,0x00050041,
+		0x00000021,0x00000034,0x00000009,0x00000033,
+		0x0004003d,0x00000006,0x00000035,0x00000034,
+		0x00050041,0x00000021,0x00000036,0x00000009,
+		0x0000002e,0x0004003d,0x00000006,0x00000037,
+		0x00000036,0x0004003d,0x00000006,0x00000038,
+		0x00000022,0x00070050,0x0000002d,0x00000039,
+		0x00000035,0x00000037,0x00000038,0x0000001e,
+		0x00050041,0x0000003a,0x0000003b,0x00000032,
+		0x00000013,0x0003003e,0x0000003b,0x00000039,
+		0x0004003d,0x0000002d,0x0000003f,0x0000003e,
+		0x0003003e,0x0000003c,0x0000003f,0x000100fd,
+		0x00010038
 	};
 	VkShaderModuleCreateInfo vertInfo = {
 		.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
@@ -810,40 +830,17 @@ void qgResetRotation() {
 	g_ctx.rotZ = 0.0f;
 	g_ctx.hasRotation = 0;
 }
-static void transformPoint(float* x, float* y, float* z) {
-	if (!g_ctx.hasRotation) return;
-	float px = *x - g_ctx.pivotX;
-	float py = *y - g_ctx.pivotY;
-	float pz = *z - g_ctx.pivotZ;
-	float radX = g_ctx.rotX * (3.1415926535f / 180.0f);
-	float radY = g_ctx.rotY * (3.1415926535f / 180.0f);
-	float radZ = g_ctx.rotZ * (3.1415926535f / 180.0f);
-	float cx = qCos(radX), sx = qSin(radX);
-	float cy = qCos(radY), sy = qSin(radY);
-	float cz = qCos(radZ), sz = qSin(radZ);
-	float y1 = py * cx - pz * sx;
-	float z1 = py * sx + pz * cx;
-	float x1 = px;
-	float x2 = x1 * cy + z1 * sy;
-	float z2 = -x1 * sy + z1 * cy;
-	float y2 = y1;
-	float x3 = x2 * cz - y2 * sz;
-	float y3 = x2 * sz + y2 * cz;
-	float z3 = z2;
-	*x = x3 + g_ctx.pivotX;
-	*y = y3 + g_ctx.pivotY;
-	*z = z3 + g_ctx.pivotZ;
-}
 uint32_t qgAddVertex(float x, float y, float z, float r, float g, float b, float a) {
 	if (g_ctx.currentVOffset >= MAX_VERTICES) return -1;
 	transformPoint(&x, &y, &z);
 	QGPU_Vertex* vDst = (QGPU_Vertex*)g_ctx.mappedVertexBuffer + g_ctx.currentVOffset;
+	float m = getLight(x, y, z);
 	vDst->pos[0] = x;
 	vDst->pos[1] = -y;
-	vDst->pos[2] = fltTo01(z);
-	vDst->color[0] = r;
-	vDst->color[1] = g;
-	vDst->color[2] = b;
+	vDst->pos[2] = z;
+	vDst->color[0] = r*m;
+	vDst->color[1] = g*m;
+	vDst->color[2] = b*m;
 	vDst->color[3] = a;
 	g_ctx.currentVOffset++;
 	return g_ctx.currentVOffset-1;
@@ -860,14 +857,19 @@ void qgAddGeometry(QGPU_Vertex* verts, uint32_t vCount, uint32_t* indices, uint3
 	for (uint32_t i = 0; i < vCount; i++) qgAddVertex(verts[i].pos[0], verts[i].pos[1], verts[i].pos[2], verts[i].color[0], verts[i].color[1], verts[i].color[2], verts[i].color[3]);
 	for (uint32_t i = 0; i < iCount; i++) qgAddIndex(indices[i] + baseVertexOffset);
 }
+void qgAddLight(float x, float y, float z, float range, float intense) {
+	//
+}
 // ========================================================================================================================================================================
-void qgAddTriangle(float p1x, float p1y, float p2x, float p2y, float p3x, float p3y, float z, float r, float g, float b, float a) {
-	qgAddIndex(qgAddVertex(p1x, p1y, z, r, g, b, a));
-	qgAddIndex(qgAddVertex(p2x, p2y, z, r, g, b, a));
-	qgAddIndex(qgAddVertex(p3x, p3y, z, r, g, b, a));
+// ========================================== 2D
+void qgAddTriangle(float p1x, float p1y, float p1z, float p2x, float p2y, float p2z, float p3x, float p3y, float p3z, float r, float g, float b, float a) {
+	qgAddIndex(qgAddVertex(p1x, p1y, p1z, r, g, b, a));
+	qgAddIndex(qgAddVertex(p2x, p2y, p2z, r, g, b, a));
+	qgAddIndex(qgAddVertex(p3x, p3y, p3z, r, g, b, a));
 }
 void qgAddRect(float px, float py, float pz, float sx, float sy, float r, float g, float b, float a) {
 	if (pz == 0.0f) return;
+	px = -px;
 	float x = sx / 2, y = sy / 2;
 	uint32_t v1 = qgAddVertex((px-x)/pz, (py+y)/pz, pz, r, g, b, a), v2 = qgAddVertex((px+x)/pz, (py+y)/pz, pz, r, g, b, a),
 	v4 = qgAddVertex((px-x)/pz, (py-y)/pz, pz, r, g, b, a), v3 = qgAddVertex((px+x)/pz, (py-y)/pz, pz, r, g, b, a);
@@ -875,14 +877,15 @@ void qgAddRect(float px, float py, float pz, float sx, float sy, float r, float 
 	qgAddIndex(v1); qgAddIndex(v3); qgAddIndex(v4);
 }
 void qgAddCircle(float px, float py, float pz, int segments, float radius, float r, float g, float b, float a) {
-	if (pz == 0.0f || segments < 3) return;
-	float s = 360.0f / segments;
-	uint32_t center = qgAddVertex(px/pz, py/pz, pz, r, g, b, a);
-	uint32_t first = qgAddVertex((px + radius)/pz, py/pz, pz, r, g, b, a), last = first;
+	if (segments < 3) return;
+	float angleStep = (2.0f * PI) / segments;
+	uint32_t center = qgAddVertex(px, py, pz, r, g, b, a),
+	first = qgAddVertex(px + radius, py, pz, r, g, b, a),
+	last = first;
 	for (int i = 1; i < segments; i++) {
-		float cx = qCos(s * i) * radius, cy = qSin(s * i) * radius;
+		float currentAngle = angleStep * i, cx = qCos(currentAngle) * radius, cy = qSin(currentAngle) * radius;
 		qgAddIndex(center);
-		uint32_t v = qgAddVertex((px + cx)/pz, (py + cy)/pz, pz, r, g, b, a);
+		uint32_t v = qgAddVertex(px + cx, py + cy, pz, r, g, b, a);
 		qgAddIndex(v);
 		qgAddIndex(last);
 		last = v;
@@ -890,6 +893,63 @@ void qgAddCircle(float px, float py, float pz, int segments, float radius, float
 	qgAddIndex(center);
 	qgAddIndex(first);
 	qgAddIndex(last);
+}
+// ========================================== 3D
+void qgAddBox(float px, float py, float pz, float sx, float sy, float sz, float r, float g, float b, float a) {
+	float x = sx / 2, y = sy / 2, z = sz / 2, v[24] = {
+		px-x, py+y, pz+z,
+		px+x, py+y, pz+z,
+		px+x, py-y, pz+z,
+		px-x, py-y, pz+z,
+		px-x, py+y, pz-z,
+		px+x, py+y, pz-z,
+		px+x, py-y, pz-z,
+		px-x, py-y, pz-z
+	};
+	qgAddTriangle(v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7], v[8], r, g, b, a);
+	qgAddTriangle(v[0], v[1], v[2], v[6], v[7], v[8], v[9], v[10], v[11], r, g, b, a);
+	qgAddTriangle(v[15], v[16], v[17], v[12], v[13], v[14], v[21], v[22], v[23], r, g, b, a);
+	qgAddTriangle(v[15], v[16], v[17], v[21], v[22], v[23], v[18], v[19], v[20], r, g, b, a);
+	qgAddTriangle(v[3], v[4], v[5], v[15], v[16], v[17], v[18], v[19], v[20], r, g, b, a);
+	qgAddTriangle(v[3], v[4], v[5], v[18], v[19], v[20], v[6], v[7], v[8], r, g, b, a);
+	qgAddTriangle(v[12], v[13], v[14], v[0], v[1], v[2], v[9], v[10], v[11], r, g, b, a);
+	qgAddTriangle(v[12], v[13], v[14], v[9], v[10], v[11], v[21], v[22], v[23], r, g, b, a);
+	qgAddTriangle(v[12], v[13], v[14], v[15], v[16], v[17], v[3], v[4], v[5], r, g, b, a);
+	qgAddTriangle(v[12], v[13], v[14], v[3], v[4], v[5], v[0], v[1], v[2], r, g, b, a);
+	qgAddTriangle(v[9], v[10], v[11], v[6], v[7], v[8], v[18], v[19], v[20], r, g, b, a);
+	qgAddTriangle(v[9], v[10], v[11], v[18], v[19], v[20], v[21], v[22], v[23], r, g, b, a);
+}
+void qgAddSphere(float px, float py, float pz, float radius, int rings, int sectors, float r, float g, float b, float a) {
+	if (rings < 2 || sectors < 3) return;
+	uint32_t* vertexIndices = malloc(sizeof(uint32_t) * (rings + 1) * (sectors + 1));
+	if (!vertexIndices) return;
+	for (int i = 0; i <= rings; ++i) {
+		float v = (float)i / (float)rings;
+		float phi = v * PI;
+		float yCost = qCos(phi);
+		float ySint = qSin(phi);
+		for (int j = 0; j <= sectors; ++j) {
+			float u = (float)j / (float)sectors;
+			float theta = u * (2.0f * PI);
+			float x = px + radius * ySint * qCos(theta);
+			float y = py + radius * yCost;
+			float z = pz + radius * ySint * qSin(theta);
+			vertexIndices[i * (sectors + 1) + j] = qgAddVertex(x, y, z, r, g, b, a);
+		}
+	}
+	for (int i = 0; i < rings; ++i) {
+		for (int j = 0; j < sectors; ++j) {
+			uint32_t first = i * (sectors + 1) + j;
+			uint32_t second = first + sectors + 1;
+			qgAddIndex(vertexIndices[first]);
+			qgAddIndex(vertexIndices[second]);
+			qgAddIndex(vertexIndices[first + 1]);
+			qgAddIndex(vertexIndices[first + 1]);
+			qgAddIndex(vertexIndices[second]);
+			qgAddIndex(vertexIndices[second + 1]);
+		}
+	}
+	free(vertexIndices);
 }
 // ========================================================================================================================================================================
 // ========================================================================================================================================================================
