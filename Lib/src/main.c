@@ -11,20 +11,25 @@ void Update() {
     };
     for (int i = 0; i < (int)(sizeof(vs)/sizeof(uint32_t)); i++) qgAddIndex(vs[i]);
     */
-    static float x, y, z, s = 1;
-    if (qgGetKey(QKEY_SPACE)) { x += s; y += s; z += s; if (x > 360) { x = 0; y = 0; z = 0; } }
+    static float x, y, z, r, p, s = 1;
+    if (qgGetKey(QKEY_S)) z += s;
+    if (qgGetKey(QKEY_W)) z -= s;
+    if (qgGetKey(QKEY_D)) x += s;
+    if (qgGetKey(QKEY_A)) x -= s;
+    if (qgGetKey(QKEY_E)) y += s;
+    if (qgGetKey(QKEY_Q)) y -= s;
+    if (qgGetKey(QKEY_UP)) r += s;
+    if (qgGetKey(QKEY_DOWN)) r -= s;
+    if (qgGetKey(QKEY_RIGHT)) p += s;
+    if (qgGetKey(QKEY_LEFT)) p -= s;
 
-    if (qgGetKey(QKEY_W)) x += s;
-    if (qgGetKey(QKEY_S)) x -= s;
-    if (qgGetKey(QKEY_A)) y += s;
-    if (qgGetKey(QKEY_D)) y -= s;
-    if (qgGetKey(QKEY_Q)) z += s;
-    if (qgGetKey(QKEY_E)) z -= s;
-    qgSetRotation(x, y, z);
-    qgPrint("Rot: (%f, %f, %f)\n", x, y, z);
+    qgPrint("FPS: %.1f Light pos: (%03.1f, %03.1f, %03.1f) Range: %03.1f Power: %03.1f\n", qgGetFPS(), x, y, z, r, p);
 
     // qgAddBox(0, 0, 0, 50, 25, 100, 0.5f, 0.5f, 0, 1);
-    qgAddSphere(0, 0, 0, 25, 5, 9, .5f, .5f, 0, 1);
+    qgAddLight(x, y, z, r, p);
+    qgAddSphere(x, y, z, 10, 3, 3, .5f, .5f, .5f, 1);
+
+    qgAddSphere(0, 0, 0, 60, 16, 32, .5f, .5f, 0, 1);
 
     // qgSetRotationPivot(-100, 0, -1);
     // qgAddRect(-100, 0, -1, 100, 100, .5f, 0, 0, 1);

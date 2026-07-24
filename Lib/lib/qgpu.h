@@ -3,8 +3,10 @@
 
 #include <stdint.h>
 
+// !===== Configuration ==================================================!
 #define MAX_VERTICES 65536 // (2^16) Max vertices in one frame
 #define MAX_LIGHTS   1024  // (2^10) Max lights in one frame
+#define VSYNC 0
 // !===== Structs ==================================================!
 typedef struct { float pos[3]; float color[4]; } QGPU_Vertex;
 // !===== Console ==================================================!
@@ -18,10 +20,13 @@ void qgRestoreColor();
 void qgSetStyle(int style);
 void qgPrint(const char* format, ...);
 void qgLog(const char* format, ...);
+void qgWarn(const char* format, ...);
+void qgError(const char* format, ...);
 void qgSetShow(int shower, int state);
 // !===== Init ==================================================!
 void qgpuCreate(int width, int height, const char* title, void (*initFunc)(), void (*updateFunc)());
 // !===== Drawing ==================================================!
+float qgGetFPS();
 void qgSetBackground(float r, float g, float b);
 
 void qgSetRotationPivot(float x, float y, float z);
@@ -31,7 +36,7 @@ void qgResetRotation();
 uint32_t qgAddVertex(float x, float y, float layer, float r, float g, float b, float a);
 void qgAddIndex(uint32_t index);
 void qgAddGeometry(QGPU_Vertex* verts, uint32_t vCount, uint32_t* indices, uint32_t iCount);
-
+void qgAddLight(float x, float y, float z, float range, float intense);
 
 void qgAddTriangle(float p1x, float p1y, float p1z, float p2x, float p2y, float p2z, float p3x, float p3y, float p3z, float r, float g, float b, float a);
 void qgAddRect(float px, float py, float pz, float sx, float sy, float r, float g, float b, float a);

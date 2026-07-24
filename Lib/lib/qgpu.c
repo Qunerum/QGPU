@@ -52,18 +52,25 @@ typedef struct {
 } InternalContext;
 static InternalContext g_ctx;
 static float backgroundR, backgroundG, backgroundB;
-typedef struct { float x, y, z, range, intense; } QGPU_Light;
-static int lightCount;
-static QGPU_Light lights[MAX_LIGHTS];
+static int lightCount, frameCount;
+static float lights[MAX_LIGHTS * 5], currentFPS; // x y z range intense
+static double lastTime = 0;
 // ==========================================
 static int _showBanner = 1, _madeWith = 1, _showInfo = 1, _showColors = 1, _showLogs = 1, qgpuClr = MAGENTA, creator = LIGHT_RED, title = YELLOW, frame = GRAY;
 static float PI = 3.14159265358979323846f;
 static int qclamp(int v, int min, int max) { return v < min ? min : v > max ? max : v; }
+static float qclampf(float v, float min, float max) { return v < min ? min : v > max ? max : v; }
 static float qpow(float v, float exp) {
 	if (exp == 0) return 1;
 	float r = 1;
 	for (int i = 0; i < exp; i++) r *= v;
 	return r;
+}
+static float qsqrt(float number) {
+	if (number <= 0.0f) return 0.0f;
+	float x = number * 0.5f;
+	for (int i = 0; i < 4; i++) x = 0.5f * (x + number / x);
+	return x;
 }
 static unsigned long long factorial(int n) {
 	unsigned long long result = 1;
@@ -97,15 +104,20 @@ static void transformPoint(float* x, float* y, float* z) {
 	*z = z3 + g_ctx.pivotZ;
 }
 static float getLight(float x, float y, float z) {
-	float m = 0;
+	float totalLight = 0.1f;
 	for (int i = 0; i < lightCount; i++) {
-
+		float lx = lights[i*5], ly = lights[i*5+1], lz = lights[i*5+2], rng = lights[i*5+3], pow = lights[i*5+4];
+		if (rng == 0 || pow == 0) continue;
+		float dis = qsqrt(qpow(lx - x, 2) + qpow(ly - y, 2) + qpow(lz - z, 2));
+		if (dis > rng) continue;
+		float attenuation = 1.0f - (dis / rng);
+		totalLight += pow * attenuation;
 	}
-	return m > 1 ? 1 : m;
+	return totalLight;
 }
 // = = = QPrint
 static int oldClr = 255, actClr = 255, actStyle = 0; // White , Regular text
-void vprintc(int color, const char* format, va_list args) {
+void qgVprintc(int color, const char* format, va_list args) {
 	printf("\033[%i;38;5;%im", actStyle, color);
 	vprintf(format, args);
 	printf("\033[0m");
@@ -123,20 +135,32 @@ void qgSetStyle(int style) { actStyle = qclamp(style, 0, 1); }
 void qgPrintc(int color, const char* format, ...) {
 	va_list args;
 	va_start(args, format);
-	vprintc(color, format, args);
+	qgVprintc(color, format, args);
 	va_end(args);
 }
 void qgPrint(const char* format, ...) {
 	va_list args;
 	va_start(args, format);
-	vprintc(actClr, format, args);
+	qgVprintc(actClr, format, args);
 	va_end(args);
 }
 void qgLog(const char* format, ...) {
 	if (_showLogs) return;
 	va_list args;
 	va_start(args, format);
-	vprintc(DARK_GRAY, format, args);
+	qgVprintc(DARK_GRAY, format, args);
+	va_end(args);
+}
+void qgWarn(const char* format, ...) {
+	va_list args;
+	va_start(args, format);
+	qgVprintc(DARK_YELLOW, format, args);
+	va_end(args);
+}
+void qgError(const char* format, ...) {
+	va_list args;
+	va_start(args, format);
+	qgVprintc(DARK_RED, format, args);
 	va_end(args);
 }
 void qgSetShow(int shower, int state) {
@@ -253,6 +277,7 @@ void qgpuCreate(int width, int height, const char* title, void (*initFunc)(), vo
 	if (!glfwInit()) return;
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	g_ctx.window = glfwCreateWindow(width, height, title, NULL, NULL);
+	glfwSwapInterval(0);
 	uint32_t glfwExtensionCount = 0;
 	const char** glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
 	VkInstanceCreateInfo instanceInfo = { .
@@ -692,7 +717,7 @@ void qgpuCreate(int width, int height, const char* title, void (*initFunc)(), vo
 	};
 	vkAllocateCommandBuffers(g_ctx.device, &allocInfo, &g_ctx.currentCmd);
 	createBuffer(sizeof(QGPU_Vertex) * MAX_VERTICES, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &g_ctx.vertexBuffer, &g_ctx.vertexBufferMemory);
-	createBuffer(sizeof(uint32_t) * MAX_VERTICES * 1.5f, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &g_ctx.indexBuffer, &g_ctx.indexBufferMemory);
+	createBuffer(sizeof(uint32_t) * MAX_VERTICES * 3, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &g_ctx.indexBuffer, &g_ctx.indexBufferMemory);
 	vkMapMemory(g_ctx.device, g_ctx.vertexBufferMemory, 0, sizeof(QGPU_Vertex) * MAX_VERTICES, 0, &g_ctx.mappedVertexBuffer);
 	vkMapMemory(g_ctx.device, g_ctx.indexBufferMemory, 0, sizeof(uint32_t) * (uint32_t)(MAX_VERTICES * 1.5f), 0, &g_ctx.mappedIndexBuffer);
 	VkSemaphoreCreateInfo semaphoreInfo = { .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
@@ -709,6 +734,7 @@ void qgpuCreate(int width, int height, const char* title, void (*initFunc)(), vo
 	printf("\n");
 	if (initFunc) initFunc();
 	while (!glfwWindowShouldClose(g_ctx.window)) {
+		double timeStart = glfwGetTime();
 		for (int i = 0; i < GLFW_KEY_LAST; i++) g_ctx.lastKeyState[i] = glfwGetKey(g_ctx.window, i);
 		for (int i = 0; i < GLFW_MOUSE_BUTTON_LAST; i++) g_ctx.lastMouseState[i] = glfwGetMouseButton(g_ctx.window, i);
 		glfwPollEvents();
@@ -717,6 +743,8 @@ void qgpuCreate(int width, int height, const char* title, void (*initFunc)(), vo
 		if (result == VK_ERROR_OUT_OF_DATE_KHR) { continue; } else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) { continue; }
 		g_ctx.currentVOffset = 0;
 		g_ctx.currentIOffset = 0;
+		lightCount = 0;
+		qgResetRotation();
 		vkResetCommandBuffer(g_ctx.currentCmd, 0);
 		VkCommandBufferBeginInfo beginInfo = {
 			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
@@ -770,6 +798,14 @@ void qgpuCreate(int width, int height, const char* title, void (*initFunc)(), vo
 		};
 		vkQueuePresentKHR(g_ctx.graphicsQueue, &presentInfo);
 		vkDeviceWaitIdle(g_ctx.device);
+
+		double currentTime = glfwGetTime();
+		frameCount++;
+		if (currentTime - lastTime >= 0.5) {
+			currentFPS = (float)frameCount / (float)(currentTime - lastTime);
+			frameCount = 0;
+			lastTime = currentTime;
+		}
 	}
 	vkDeviceWaitIdle(g_ctx.device);
 	vkUnmapMemory(g_ctx.device, g_ctx.vertexBufferMemory);
@@ -804,6 +840,7 @@ void qgpuCreate(int width, int height, const char* title, void (*initFunc)(), vo
 // ========================================================================================================================================================================
 // ========================================================================================================================================================================
 // ========================================================================================================================================================================
+float qgGetFPS() { return currentFPS; }
 void qgSetBackground(float r, float g, float b) {
 	backgroundR = r;
 	backgroundG = g;
@@ -831,34 +868,41 @@ void qgResetRotation() {
 	g_ctx.hasRotation = 0;
 }
 uint32_t qgAddVertex(float x, float y, float z, float r, float g, float b, float a) {
-	if (g_ctx.currentVOffset >= MAX_VERTICES) return -1;
+	if (g_ctx.currentVOffset >= MAX_VERTICES) { qgWarn("Cannot add new vertex\n"); return -1; }
 	transformPoint(&x, &y, &z);
 	QGPU_Vertex* vDst = (QGPU_Vertex*)g_ctx.mappedVertexBuffer + g_ctx.currentVOffset;
 	float m = getLight(x, y, z);
 	vDst->pos[0] = x;
 	vDst->pos[1] = -y;
 	vDst->pos[2] = z;
-	vDst->color[0] = r*m;
-	vDst->color[1] = g*m;
-	vDst->color[2] = b*m;
-	vDst->color[3] = a;
+	vDst->color[0] = qclampf(r*m, 0, 1);
+	vDst->color[1] = qclampf(g*m, 0, 1);
+	vDst->color[2] = qclampf(b*m, 0, 1);
+	vDst->color[3] = qclampf(a, 0, 1);
 	g_ctx.currentVOffset++;
 	return g_ctx.currentVOffset-1;
 }
 void qgAddIndex(uint32_t index) {
-	if (g_ctx.currentIOffset >= (uint32_t)(MAX_VERTICES * 3)) return;
+	if (g_ctx.currentIOffset >= (uint32_t)(MAX_VERTICES * 3)) { qgWarn("Cannot add new index\n"); return; }
 	uint32_t* iDst = (uint32_t*)g_ctx.mappedIndexBuffer + g_ctx.currentIOffset;
 	*iDst = index;
 	g_ctx.currentIOffset++;
 }
 void qgAddGeometry(QGPU_Vertex* verts, uint32_t vCount, uint32_t* indices, uint32_t iCount) {
-	if (vCount == 0 || iCount == 0) return;
+	if (vCount <= 0 || iCount <= 0) { qgWarn("The number of vertices or indices is less than or equal to 0\n"); return; }
 	uint32_t baseVertexOffset = g_ctx.currentVOffset;
 	for (uint32_t i = 0; i < vCount; i++) qgAddVertex(verts[i].pos[0], verts[i].pos[1], verts[i].pos[2], verts[i].color[0], verts[i].color[1], verts[i].color[2], verts[i].color[3]);
 	for (uint32_t i = 0; i < iCount; i++) qgAddIndex(indices[i] + baseVertexOffset);
 }
 void qgAddLight(float x, float y, float z, float range, float intense) {
-	//
+	if (lightCount >= MAX_LIGHTS) { qgWarn("Cannot add new light\n"); return; }
+	int l = lightCount * 5;
+	lights[ l ] = x;
+	lights[l+1] = y;
+	lights[l+2] = z;
+	lights[l+3] = range;
+	lights[l+4] = intense;
+	lightCount++;
 }
 // ========================================================================================================================================================================
 // ========================================== 2D
