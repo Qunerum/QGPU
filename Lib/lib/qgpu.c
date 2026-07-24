@@ -3,20 +3,19 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
-
 #include <vulkan/vulkan_core.h>
-
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
-
 #define QGPU_COLORS
 #include "qgpu.h"
 
 #define QGPU_VERSION_MAJOR 1
 #define QGPU_VERSION_MINOR 0
-#define QGPU_VERSION_PATCH 2
+#define QGPU_VERSION_PATCH 6
 
-// ==========================================
+// ========================================================================================================================================================================
+// ===== QGPU =============================================================================================================================================================
+// ========================================================================================================================================================================
 typedef struct {
 	GLFWwindow* window;
 	VkInstance instance;
@@ -46,17 +45,16 @@ typedef struct {
 	VkImage depthImage;
 	VkDeviceMemory depthImageMemory;
 	VkImageView depthImageView;
-
 	float pivotX, pivotY, pivotZ, rotX, rotY, rotZ;
 	int hasRotation;
 } InternalContext;
 static InternalContext g_ctx;
-static float backgroundR, backgroundG, backgroundB;
-static int lightCount, frameCount;
-static float lights[MAX_LIGHTS * 5], currentFPS; // x y z range intense
 static double lastTime = 0;
-// ==========================================
-static int _showBanner = 1, _madeWith = 1, _showInfo = 1, _showColors = 1, _showLogs = 1, qgpuClr = MAGENTA, creator = LIGHT_RED, title = YELLOW, frame = GRAY;
+static float backgroundR, backgroundG, backgroundB, lights[MAX_LIGHTS * 5], currentFPS;
+static int lightCount, frameCount;
+// ========================================================================================================================================================================
+// ===== TOOLS ============================================================================================================================================================
+// ========================================================================================================================================================================
 static float PI = 3.14159265358979323846f;
 static int qclamp(int v, int min, int max) { return v < min ? min : v > max ? max : v; }
 static float qclampf(float v, float min, float max) { return v < min ? min : v > max ? max : v; }
@@ -115,7 +113,12 @@ static float getLight(float x, float y, float z) {
 	}
 	return totalLight;
 }
-// = = = QPrint
+// ========================================================================================================================================================================
+// ===== VISUAL ===========================================================================================================================================================
+// ========================================================================================================================================================================
+// ===== Configuration
+static int _showBanner = 1, _madeWith = 1, _showInfo = 1, _showColors = 1, _showLogs = 1, qgpuClr = MAGENTA, creator = LIGHT_RED, title = YELLOW, frame = GRAY;
+// ===== QPrint
 static int oldClr = 255, actClr = 255, actStyle = 0; // White , Regular text
 void qgVprintc(int color, const char* format, va_list args) {
 	printf("\033[%i;38;5;%im", actStyle, color);
@@ -198,7 +201,9 @@ static void printColors() {
 	qgPrintc(frame,"║ "); c(DARK_GRAY);  c(DARK_RED);  c(DARK_GREEN);  c(DARK_YELLOW);  c(DARK_ORANGE);  c(DARK_BLUE);  c(DARK_MAGENTA);  c(DARK_CYAN);  qgPrintc(frame,"║\n");
 	qgPrintc(frame,"╚═════════════════════════╝\n");
 }
-// ==========================================
+// ========================================================================================================================================================================
+// ===== UTILITY ==========================================================================================================================================================
+// ========================================================================================================================================================================
 static uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
 	VkPhysicalDeviceMemoryProperties memProperties;
 	vkGetPhysicalDeviceMemoryProperties(g_ctx.physicalDevice, &memProperties);
@@ -272,7 +277,9 @@ void render() {
 		vkCmdDrawIndexed(g_ctx.currentCmd, g_ctx.currentIOffset, 1, 0, 0, 0);
 	}
 }
-// ==========================================
+// ========================================================================================================================================================================
+// ===== INIT =============================================================================================================================================================
+// ========================================================================================================================================================================
 void qgpuCreate(int width, int height, const char* title, void (*initFunc)(), void (*updateFunc)()) {
 	if (!glfwInit()) return;
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
@@ -837,15 +844,16 @@ void qgpuCreate(int width, int height, const char* title, void (*initFunc)(), vo
 	glfwDestroyWindow(g_ctx.window);
 	glfwTerminate();
 }
-// ========================================================================================================================================================================
-// ========================================================================================================================================================================
-// ========================================================================================================================================================================
 float qgGetFPS() { return currentFPS; }
+// ========================================================================================================================================================================
+// ===== RENDERING ========================================================================================================================================================
+// ========================================================================================================================================================================
 void qgSetBackground(float r, float g, float b) {
 	backgroundR = r;
 	backgroundG = g;
 	backgroundB = b;
 }
+// ===== ROTATION
 void qgSetRotationPivot(float x, float y, float z) {
 	g_ctx.pivotX = x;
 	g_ctx.pivotY = y;
@@ -867,6 +875,7 @@ void qgResetRotation() {
 	g_ctx.rotZ = 0.0f;
 	g_ctx.hasRotation = 0;
 }
+// ===== VERTICES & INDICES ===============================================================================================================================================
 uint32_t qgAddVertex(float x, float y, float z, float r, float g, float b, float a) {
 	if (g_ctx.currentVOffset >= MAX_VERTICES) { qgWarn("Cannot add new vertex\n"); return -1; }
 	transformPoint(&x, &y, &z);
@@ -894,6 +903,7 @@ void qgAddGeometry(QGPU_Vertex* verts, uint32_t vCount, uint32_t* indices, uint3
 	for (uint32_t i = 0; i < vCount; i++) qgAddVertex(verts[i].pos[0], verts[i].pos[1], verts[i].pos[2], verts[i].color[0], verts[i].color[1], verts[i].color[2], verts[i].color[3]);
 	for (uint32_t i = 0; i < iCount; i++) qgAddIndex(indices[i] + baseVertexOffset);
 }
+// ===== LIGHTS ===========================================================================================================================================================
 void qgAddLight(float x, float y, float z, float range, float intense) {
 	if (lightCount >= MAX_LIGHTS) { qgWarn("Cannot add new light\n"); return; }
 	int l = lightCount * 5;
@@ -904,8 +914,7 @@ void qgAddLight(float x, float y, float z, float range, float intense) {
 	lights[l+4] = intense;
 	lightCount++;
 }
-// ========================================================================================================================================================================
-// ========================================== 2D
+// ===== READY 2D ==========================================================================================================================================================
 void qgAddTriangle(float p1x, float p1y, float p1z, float p2x, float p2y, float p2z, float p3x, float p3y, float p3z, float r, float g, float b, float a) {
 	qgAddIndex(qgAddVertex(p1x, p1y, p1z, r, g, b, a));
 	qgAddIndex(qgAddVertex(p2x, p2y, p2z, r, g, b, a));
@@ -938,7 +947,7 @@ void qgAddCircle(float px, float py, float pz, int segments, float radius, float
 	qgAddIndex(first);
 	qgAddIndex(last);
 }
-// ========================================== 3D
+// ===== READY 3D ==========================================================================================================================================================
 void qgAddBox(float px, float py, float pz, float sx, float sy, float sz, float r, float g, float b, float a) {
 	float x = sx / 2, y = sy / 2, z = sz / 2, v[24] = {
 		px-x, py+y, pz+z,
@@ -995,8 +1004,22 @@ void qgAddSphere(float px, float py, float pz, float radius, int rings, int sect
 	}
 	free(vertexIndices);
 }
+// ===== TEXT =============================================================================================================================================================
+static float qFontSize = 16, qFontR = 1, qFontG = 1, qFontB = 1, qFontA = 1;
+static int qFontStyle = QGPU_FONT_STYLE_REGULAR;
+void qgSetFontData(float fontSize, int style, float r, float g, float b, float a) {
+	qFontSize = fontSize;
+	qFontStyle = style;
+	qFontR = r;
+	qFontG = g;
+	qFontB = b;
+	qFontA = a;
+}
+void qgAddChar(float px, float py, float pz, char c) {
+
+}
 // ========================================================================================================================================================================
-// ========================================================================================================================================================================
+// ===== INPUT ============================================================================================================================================================
 // ========================================================================================================================================================================
 int qgGetKey(int key) {
 	if (!g_ctx.window || key < 0 || key >= GLFW_KEY_LAST) return 0;

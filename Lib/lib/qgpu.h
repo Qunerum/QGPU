@@ -53,6 +53,11 @@ int qgOnKey(int key);
 int qgGetMouse(int button);
 int qgOnMouse(int button);
 void qgGetMousePos(double* x, double* y);
+// text
+#define QGPU_FONT_STYLE_REGULAR 0
+#define QGPU_FONT_STYLE_BOLD 1
+#define QGPU_FONT_STYLE_ITALIC 2
+#define QGPU_FONT_STYLE_BOLD_ITALIC 3
 // ===== Keys ========================================
 #define LMB             0
 #define RMB             1
