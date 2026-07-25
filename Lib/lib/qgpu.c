@@ -11,7 +11,7 @@
 
 #define QGPU_VERSION_MAJOR 1
 #define QGPU_VERSION_MINOR 1
-#define QGPU_VERSION_PATCH 0
+#define QGPU_VERSION_PATCH 1
 
 // ========================================================================================================================================================================
 // ===== QGPU =============================================================================================================================================================
@@ -52,6 +52,7 @@ static InternalContext g_ctx;
 static double lastTime = 0;
 static float backgroundR, backgroundG, backgroundB, lights[MAX_LIGHTS * 5], currentFPS;
 static int lightCount, frameCount;
+uint32_t* sphereVertexIndices;
 // ========================================================================================================================================================================
 // ===== TOOLS ============================================================================================================================================================
 // ========================================================================================================================================================================
@@ -148,11 +149,21 @@ void qgPrint(const char* format, ...) {
 	va_end(args);
 }
 void qgLog(const char* format, ...) {
-	if (_showLogs) return;
+	if (!_showLogs) return;
 	va_list args;
 	va_start(args, format);
 	qgVprintc(DARK_GRAY, format, args);
 	va_end(args);
+}
+void qgLogVertices() {
+	if (!_showLogs) return;
+	float p = ((float)g_ctx.currentVOffset / MAX_VERTICES) * 100;
+	if (p > 95) qgPrintc(LIGHT_RED, "%i/%i (%.0f%%)\n", g_ctx.currentVOffset, MAX_VERTICES, p);
+	else if (p > 75) qgPrintc(RED, "%i/%i (%.0f%%)\n", g_ctx.currentVOffset, MAX_VERTICES, p);
+	else if (p > 50) qgPrintc(ORANGE, "%i/%i (%.0f%%)\n", g_ctx.currentVOffset, MAX_VERTICES, p);
+	else if (p > 25) qgPrintc(YELLOW, "%i/%i (%.0f%%)\n", g_ctx.currentVOffset, MAX_VERTICES, p);
+	else if (p > 10) qgPrintc(DARK_YELLOW, "%i/%i (%.0f%%)\n", g_ctx.currentVOffset, MAX_VERTICES, p);
+	else qgPrintc(GREEN, "%i/%i (%.0f%%)\n", g_ctx.currentVOffset, MAX_VERTICES, p);
 }
 void qgWarn(const char* format, ...) {
 	va_list args;
@@ -282,6 +293,7 @@ void render() {
 // ========================================================================================================================================================================
 void qgpuCreate(int width, int height, const char* title, void (*initFunc)(), void (*updateFunc)()) {
 	if (!glfwInit()) return;
+	sphereVertexIndices = malloc(sizeof(uint32_t) * (MAX_SPHERE_RINGS + 1) * (MAX_SPHERE_SECTORS + 1));
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	g_ctx.window = glfwCreateWindow(width, height, title, NULL, NULL);
 	glfwSwapInterval(0);
@@ -696,7 +708,6 @@ void qgpuCreate(int width, int height, const char* title, void (*initFunc)(), vo
 		};
 		vkQueuePresentKHR(g_ctx.graphicsQueue, &presentInfo);
 		vkDeviceWaitIdle(g_ctx.device);
-
 		double currentTime = glfwGetTime();
 		frameCount++;
 		if (currentTime - lastTime >= 0.5) {
@@ -705,6 +716,7 @@ void qgpuCreate(int width, int height, const char* title, void (*initFunc)(), vo
 			lastTime = currentTime;
 		}
 	}
+	free(sphereVertexIndices);
 	vkDeviceWaitIdle(g_ctx.device);
 	vkUnmapMemory(g_ctx.device, g_ctx.vertexBufferMemory);
 	vkUnmapMemory(g_ctx.device, g_ctx.indexBufferMemory);
@@ -871,8 +883,7 @@ void qgAddBox(float px, float py, float pz, float sx, float sy, float sz, float 
 }
 void qgAddSphere(float px, float py, float pz, float radius, int rings, int sectors, float r, float g, float b, float a) {
 	if (rings < 2 || sectors < 3) return;
-	uint32_t* vertexIndices = malloc(sizeof(uint32_t) * (rings + 1) * (sectors + 1));
-	if (!vertexIndices) return;
+	if (!sphereVertexIndices) return;
 	for (int i = 0; i <= rings; ++i) {
 		float v = (float)i / (float)rings;
 		float phi = v * PI;
@@ -884,22 +895,21 @@ void qgAddSphere(float px, float py, float pz, float radius, int rings, int sect
 			float x = px + radius * ySint * qCos(theta);
 			float y = py + radius * yCost;
 			float z = pz + radius * ySint * qSin(theta);
-			vertexIndices[i * (sectors + 1) + j] = qgAddVertex(x, y, z, r, g, b, a);
+			sphereVertexIndices[i * (sectors + 1) + j] = qgAddVertex(x, y, z, r, g, b, a);
 		}
 	}
 	for (int i = 0; i < rings; ++i) {
 		for (int j = 0; j < sectors; ++j) {
 			uint32_t first = i * (sectors + 1) + j;
 			uint32_t second = first + sectors + 1;
-			qgAddIndex(vertexIndices[first]);
-			qgAddIndex(vertexIndices[second]);
-			qgAddIndex(vertexIndices[first + 1]);
-			qgAddIndex(vertexIndices[first + 1]);
-			qgAddIndex(vertexIndices[second]);
-			qgAddIndex(vertexIndices[second + 1]);
+			qgAddIndex(sphereVertexIndices[first]);
+			qgAddIndex(sphereVertexIndices[second]);
+			qgAddIndex(sphereVertexIndices[first + 1]);
+			qgAddIndex(sphereVertexIndices[first + 1]);
+			qgAddIndex(sphereVertexIndices[second]);
+			qgAddIndex(sphereVertexIndices[second + 1]);
 		}
 	}
-	free(vertexIndices);
 }
 // ===== TEXT =============================================================================================================================================================
 static float qFontSize = 16, qFontR = 1, qFontG = 1, qFontB = 1, qFontA = 1;

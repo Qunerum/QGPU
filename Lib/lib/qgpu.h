@@ -6,6 +6,8 @@
 #define MAX_VERTICES 65536 // (2^16) Max vertices in one frame
 #define MAX_LIGHTS   1024  // (2^10) Max lights in one frame
 #define VSYNC 0
+#define MAX_SPHERE_RINGS 32
+#define MAX_SPHERE_SECTORS 32
 // !===== Structs ========================================================================================================================================================!
 typedef struct { float pos[3]; float color[4]; } QGPU_Vertex;
 // !===== Console ========================================================================================================================================================!
@@ -19,6 +21,7 @@ void qgRestoreColor();
 void qgSetStyle(int style);
 void qgPrint(const char* format, ...);
 void qgLog(const char* format, ...);
+void qgLogVertices();
 void qgWarn(const char* format, ...);
 void qgError(const char* format, ...);
 void qgSetShow(int shower, int state);
