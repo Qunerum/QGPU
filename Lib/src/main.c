@@ -12,7 +12,7 @@ void Update() {
 
     qgSetFontData(2.5f, QGPU_FONT_STYLE_REGULAR, 1, 1, 1, 1);
 
-    qgAddText(-300, 50, 0, "\x80\n`1234567890-= []\\ ;' ,./\n~!@#$%^&*()_+ {}| :\" <>?\nABCDEFGHIJKLMNOPQRSTUVWXYZ");
+    qgAddText(-300, 50, 0, "\x80 \x81 \x82 \x83 \x84 \x85\n`1234567890-= []\\ ;' ,./\n~!@#$%^&*()_+ {}| :\" <>?\nABCDEFGHIJKLMNOPQRSTUVWXYZ\nabcdefghijklmnopqrstuvwxyz");
 }
 
 int main() {
