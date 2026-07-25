@@ -11,7 +11,7 @@
 
 #define QGPU_VERSION_MAJOR 1
 #define QGPU_VERSION_MINOR 0
-#define QGPU_VERSION_PATCH 6
+#define QGPU_VERSION_PATCH 7
 
 // ========================================================================================================================================================================
 // ===== QGPU =============================================================================================================================================================
@@ -846,7 +846,7 @@ void qgpuCreate(int width, int height, const char* title, void (*initFunc)(), vo
 }
 float qgGetFPS() { return currentFPS; }
 // ========================================================================================================================================================================
-// ===== RENDERING ========================================================================================================================================================
+// ===== DRAWING ==========================================================================================================================================================
 // ========================================================================================================================================================================
 void qgSetBackground(float r, float g, float b) {
 	backgroundR = r;
@@ -876,11 +876,18 @@ void qgResetRotation() {
 	g_ctx.hasRotation = 0;
 }
 // ===== VERTICES & INDICES ===============================================================================================================================================
+static int qLightOn = 1;
+void qgSetRenderType(int type) {
+	switch (type) {
+		case QGPU_RENDER_TYPE_NO_LIGHT: qLightOn = 0; break;
+		case QGPU_RENDER_TYPE_LIGHT: qLightOn = 1; break;
+	}
+}
 uint32_t qgAddVertex(float x, float y, float z, float r, float g, float b, float a) {
 	if (g_ctx.currentVOffset >= MAX_VERTICES) { qgWarn("Cannot add new vertex\n"); return -1; }
 	transformPoint(&x, &y, &z);
 	QGPU_Vertex* vDst = (QGPU_Vertex*)g_ctx.mappedVertexBuffer + g_ctx.currentVOffset;
-	float m = getLight(x, y, z);
+	float m = qLightOn ? getLight(x, y, z) : 1;
 	vDst->pos[0] = x;
 	vDst->pos[1] = -y;
 	vDst->pos[2] = z;
@@ -921,13 +928,12 @@ void qgAddTriangle(float p1x, float p1y, float p1z, float p2x, float p2y, float 
 	qgAddIndex(qgAddVertex(p3x, p3y, p3z, r, g, b, a));
 }
 void qgAddRect(float px, float py, float pz, float sx, float sy, float r, float g, float b, float a) {
-	if (pz == 0.0f) return;
-	px = -px;
-	float x = sx / 2, y = sy / 2;
-	uint32_t v1 = qgAddVertex((px-x)/pz, (py+y)/pz, pz, r, g, b, a), v2 = qgAddVertex((px+x)/pz, (py+y)/pz, pz, r, g, b, a),
-	v4 = qgAddVertex((px-x)/pz, (py-y)/pz, pz, r, g, b, a), v3 = qgAddVertex((px+x)/pz, (py-y)/pz, pz, r, g, b, a);
-	qgAddIndex(v1); qgAddIndex(v2); qgAddIndex(v3);
-	qgAddIndex(v1); qgAddIndex(v3); qgAddIndex(v4);
+	float x = sx / 2, y = sy / 2, v[4] = {
+		px - x, px + x,
+		py - y, py + y
+	};
+	qgAddTriangle(v[0], v[3], pz, v[1], v[3], pz, v[1], v[2], pz, r, g, b, a);
+	qgAddTriangle(v[0], v[3], pz, v[1], v[2], pz, v[0], v[2], pz, r, g, b, a);
 }
 void qgAddCircle(float px, float py, float pz, int segments, float radius, float r, float g, float b, float a) {
 	if (segments < 3) return;
@@ -1015,8 +1021,185 @@ void qgSetFontData(float fontSize, int style, float r, float g, float b, float a
 	qFontB = b;
 	qFontA = a;
 }
-void qgAddChar(float px, float py, float pz, char c) {
+// 1-8 empty | 11-18 fill
+static int8_t qFont[134][9][4] = {
+	[128] = {{-18}, {-18}, {-18}, {-18}, {-18}, {-18}, {-18}, {-18}, {-18}}, // Full block | \x80
 
+	['!'] = {{0}, {3, -12}, {3, -12}, {3, -12}, {3, -12}, {3, -12}, {0}, {3, -12}, {0}},
+	['"'] = {{0}, {1, 12, 2, -12}, {1, 12, 2, -12}, {1, 12, 2, -12}, {0}, {0}, {0}, {0}, {0}},
+	['#'] = {{0}, {2, 11, 2, -11}, {2, 11, 2, -11}, {1, -16}, {2, 11, 2, -11}, {1, -16}, {2, 11, 2, -11}, {2, 11, 2, -11}, {0}},
+	['$'] = {{0}, {3, -12}, {2, -15}, {1, -12}, {2, -14}, {5, -12}, {1, -15}, {3, -12}, {0}},
+	['%'] = {{0}, {1, 12, 3, -11}, {1, 12, 2, -12}, {4, -12}, {3, -12}, {2, -12}, {1, 12, 2, -12}, {1, 11, 3, -12}, {0}},
+	['&'] = {
+		{0},
+		{0},
+		{0},
+		{0},
+		{0},
+		{0},
+		{0},
+		{0},
+		{0}
+	},
+	['\''] = {
+		{0},
+		{0},
+		{0},
+		{0},
+		{0},
+		{0},
+		{0},
+		{0},
+		{0}
+	},
+	['('] = {
+		{0},
+		{0},
+		{0},
+		{0},
+		{0},
+		{0},
+		{0},
+		{0},
+		{0}
+	},
+	[')'] = {
+		{0},
+		{0},
+		{0},
+		{0},
+		{0},
+		{0},
+		{0},
+		{0},
+		{0}
+	},
+	['*'] = {
+		{0},
+		{0},
+		{0},
+		{0},
+		{0},
+		{0},
+		{0},
+		{0},
+		{0}
+	},
+	['+'] = {
+		{0},
+		{0},
+		{0},
+		{0},
+		{0},
+		{0},
+		{0},
+		{0},
+		{0}
+	},
+	[','] = {
+		{0},
+		{0},
+		{0},
+		{0},
+		{0},
+		{0},
+		{0},
+		{0},
+		{0}
+	},
+	['-'] = {
+		{0},
+		{0},
+		{0},
+		{0},
+		{0},
+		{0},
+		{0},
+		{0},
+		{0}
+	},
+	['.'] = {
+		{0},
+		{0},
+		{0},
+		{0},
+		{0},
+		{0},
+		{0},
+		{0},
+		{0}
+	},
+	['/'] = {
+		{0},
+		{0},
+		{0},
+		{0},
+		{0},
+		{0},
+		{0},
+		{0},
+		{0}
+	},
+
+	['A'] = {{0}, {3, -12}, {2, -14}, {1, 12, 2, -12}, {1, 12, 2, -12}, {1, -16}, {1, 12, 2, -12}, {1, 12, 2, -12}, {0}},
+	['B'] = {{0}, {1, -15}, {1, 12, 2, -12}, {1, 12, 2, -12}, {1, -15}, {1, 12, 2, -12}, {1, 12, 2, -12}, {1, -15}, {0}},
+	['C'] = {{0}, {2, -14}, {1, 12, 2, -12}, {1, -12}, {1, -12}, {1, -12}, {1, 12, 2, -12}, {2, -14}, {0}},
+	['D'] = {{0}, {1, -14}, {1, 12, 1, -12}, {1, 12, 2, -12}, {1, 12, 2, -12}, {1, 12, 2, -12}, {1, 12, 1, -12}, {1, -14}, {0}},
+	['E'] = {
+		{0},
+		{0},
+		{0},
+		{0},
+		{0},
+		{0},
+		{0},
+		{0},
+		{0}
+	},
+};
+void qgAddChar(float px, float py, float pz, unsigned char c) {
+	for (int ly = 0; ly < 9; ly++) {
+		int x = 0;
+		for (int lx = 0; lx < 4; lx++) {
+			int8_t v = qFont[c][ly][lx];
+			if (v == 0) break;
+			int isEnd = v < 0;
+			if (isEnd) v = -v;
+			if (v > 10) {
+				int width_units = v - 10;
+				float center_offset = x + (width_units * 0.5f),
+				nx = px + (center_offset * qFontSize),
+				ny = py - (ly * qFontSize);
+				qgAddRect(nx, ny, pz, width_units * qFontSize, qFontSize, qFontR, qFontG, qFontB, qFontA);
+				x += width_units;
+			} else x += v;
+			if (isEnd) break;
+		}
+	}
+}
+void qgAddText(float px, float py, float pz, const char* text) {
+	int x = 0, y = 0;
+	while (*text != '\0') {
+		if (*text == '\n') {
+			x = 0;
+			y++;
+			text++;
+			continue;
+		}
+		if (*text == ' ') {
+			x++;
+			text++;
+			continue;
+		}
+		if (*text == '\t') {
+			x += 4;
+			text++;
+			continue;
+		}
+		qgAddChar(px + (x * qFontSize * 8), py - (y * qFontSize * 9), pz, *text);
+		x++;
+		text++;
+	}
 }
 // ========================================================================================================================================================================
 // ===== INPUT ============================================================================================================================================================
