@@ -1,57 +1,72 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
-    <meta charset="UTF-8">
-    <title>Dokumentacja QGPU</title>
-    <link rel="stylesheet" href="style.css">
+	<meta charset="UTF-8">
+	<title>QGPU</title>
+	<link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <header class="topbar">
-        <div class="logo">Dokumentacja QGPU</div>
-    </header>
+	<header class="topbar">
+		<div class="lang-en logo">QGPU Documentation</div> <div class="lang-pl logo">Dokumentacja QGPU</div>
+		<button class="lang-switcher" onclick="toggleLanguage()">
+			<span class="lang-pl">English 🇬🇧</span>
+			<span class="lang-en">Polski 🇵🇱</span>
+		</button>
+	</header>
 
-    <div class="layout">
-        <main class="content">
-            <h1>Dokumentacja QGPU</h1>
-            <p>...</p>
-            <h2>1. ...</h2>
-            <table class="cmd-table">
-                <thead>
-                    <tr>
-                        <th>...</th>
-                        <th>...</th>
-                        <th>...</th>
-                        <th>...</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr class="void">
-                        <td data-tooltip="..."><code>...</code></td>
-                        <td data-tooltip="...">...</td>
-                        <td><code>...</code></td>
-                        <td>...</td>
-                    </tr>
-                </tbody>
-            </table>
+	<div class="layout">
+		<main class="content">
+			<h1>Dokumentacja QGPU</h1>
+			<p>...</p>
+			<h2>1. ...</h2>
+			<table class="cmd-table">
+				<thead>
+					<tr>
+						<th>...</th>
+						<th>...</th>
+						<th>...</th>
+						<th>...</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr class="void">
+						<td data-tooltip="..."><code>...</code></td>
+						<td data-tooltip="...">...</td>
+						<td><code>...</code></td>
+						<td>...</td>
+					</tr>
+				</tbody>
+			</table>
 
-            <h2>2. Podstawowe definicje</h2>
-            <table class="cmd-table">
-                <thead>
-                    <tr>
-                        <th>Nazwa</th>
-                        <th>Domyślna wartość</th>
-                        <th>Opis</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr class="def">
-                        <td data-tooltip="char*"><code>...</code></td>
-                        <td data-tooltip="..."><code>...</code></td>
-                        <td>...</td>
-                    </tr>
-                </tbody>
-            </table>
-        </main>
-    </div>
+			<h2>2. Podstawowe definicje</h2>
+			<table class="cmd-table">
+				<thead>
+					<tr>
+						<th>Nazwa</th>
+						<th>Domyślna wartość</th>
+						<th>Opis</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr class="def">
+						<td data-tooltip="char*"><code>...</code></td>
+						<td data-tooltip="..."><code>...</code></td>
+						<td>...</td>
+					</tr>
+				</tbody>
+			</table>
+		</main>
+	</div>
+
+	<script>
+		const savedLang = localStorage.getItem('qgpu_lang') || 'en';
+		document.body.setAttribute('data-lang', savedLang);
+		function toggleLanguage() {
+			const currentLang = document.body.getAttribute('data-lang');
+			const newLang = currentLang === 'pl' ? 'en' : 'pl';
+			document.body.setAttribute('data-lang', newLang);
+			localStorage.setItem('qgpu_lang', newLang);
+		}
+	</script>
 </body>
 </html>
