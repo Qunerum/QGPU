@@ -11,7 +11,14 @@ void Update() {
     qgAddIndex(qgAddVertex(100, -86.602,  0,  0, 0, 1, 1));
     */
 
-    qgAddText(-400, 50, 0, "\x80 \x81 \x82 \x83 \x84 \x85\n`1234567890-= []\\ ;' ,./\n~!@#$%^&*()_+ {}| :\" <>?\nABCDEFGHIJKLMNOPQRSTUVWXYZ\nabcdefghijklmnopqrstuvwxyz");
+    qgAddText(-400, 200, 0, "\
+\x80 \x81 \x82 \x83 \x84 \x85\n \
+`1234567890-= []\\ ;' ,./\n\
+~!@#$%^&*()_+ {}| :\" <>?\n\
+ABCDEFGHIJKLMNOPQRSTUVWXYZ\n\
+abcdefghijklmnopqrstuvwxyz\n\
+\x86 \x87 \x88 \x89 \x8A \x8B \x8C \x8D \x8E\n\
+\x8F \x90 \x91 \x92 \x93 \x94 \x95 \x96 \x97");
 }
 
 int main() {
