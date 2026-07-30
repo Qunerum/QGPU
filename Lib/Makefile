@@ -28,7 +28,7 @@ $(APP): $(OBJS)
 	@$(CC) -o $@ $(OBJS) $(LDFLAGS)
 
 run: all
-	@clear && cd $(BUILD) && ./$(APP_NAME)
+	@clear && ./$(BUILD)/$(APP_NAME)
 
 clean:
 	@echo "Cleaning..."
