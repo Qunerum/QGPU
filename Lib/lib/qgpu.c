@@ -10,8 +10,8 @@
 #include "qgpu.h"
 
 #define QGPU_VERSION_MAJOR 1
-#define QGPU_VERSION_MINOR 1
-#define QGPU_VERSION_PATCH 4
+#define QGPU_VERSION_MINOR 2
+#define QGPU_VERSION_PATCH 0
 
 // ========================================================================================================================================================================
 // ===== QGPU =============================================================================================================================================================
@@ -53,9 +53,19 @@ static double lastTime = 0;
 static float backgroundR, backgroundG, backgroundB, lights[MAX_LIGHTS * 5], currentFPS;
 static int lightCount, frameCount;
 uint32_t* sphereVertexIndices;
+#define qFontX 8
+#define qFontY 11
+#define qFontMax 6
+typedef struct {
+	uint16_t code;
+	int8_t data[qFontY][qFontMax];
+} qgChar;
+qgChar* newChars;
+uint16_t newCharCount = 0;
 // ========================================================================================================================================================================
 // ===== TOOLS ============================================================================================================================================================
 // ========================================================================================================================================================================
+static int len(const char* t) { int x = 0; while (t[x] != '\0') x++; return x; }
 static float PI = 3.14159265358979323846f;
 static int qclamp(int v, int min, int max) { return v < min ? min : v > max ? max : v; }
 static float qclampf(float v, float min, float max) { return v < min ? min : v > max ? max : v; }
@@ -176,6 +186,7 @@ void qgError(const char* format, ...) {
 	va_start(args, format);
 	qgVprintc(DARK_RED, format, args);
 	va_end(args);
+	exit(1);
 }
 void qgSetShow(int shower, int state) {
 	switch (shower) {
@@ -919,17 +930,86 @@ void qgAddSphere(float px, float py, float pz, float radius, int rings, int sect
 // ========================================================================================================================================================================
 static float qFontSize = 16, qFontR = 1, qFontG = 1, qFontB = 1, qFontA = 1;
 static int qFontStyle = QGPU_FONT_STYLE_REGULAR;
-#define qFontX 8
-#define qFontY 11
-#define qFontMax 6
-typedef struct {
-	uint8_t code;
-	int8_t data[qFontY][qFontMax];
-} qgChar;
-void qgLoadFont(const char* path) {
-	//
+static uint8_t cti(char c) {
+	switch (c) {
+		case '0': return 0;
+		case '1': return 1;
+		case '2': return 2;
+		case '3': return 3;
+		case '4': return 4;
+		case '5': return 5;
+		case '6': return 6;
+		case '7': return 7;
+		case '8': return 8;
+		case 'A': return 11;
+		case 'B': return 12;
+		case 'C': return 13;
+		case 'D': return 14;
+		case 'E': return 15;
+		case 'F': return 16;
+		case 'G': return 17;
+		case 'H': return 18;
+	}
+	return 0;
 }
-
+void qgConvertFont(const char* pathQFR, const char* pathQF) {
+	if (!inInit) { qgWarn("Couldn't convert font in Update function! Please convert it in Init function.\n"); return; }
+	int l = len(pathQFR) - 1;
+	if (l < 4) return;
+	if (pathQFR[l - 3] != '.' || pathQFR[l - 2] != 'q' || pathQFR[l - 1] != 'f' || pathQFR[l] != 'r') qgError("The file does not have the .qfr extension!\n");
+	l = len(pathQF) - 1;
+	if (l < 3) return;
+	if (pathQF[l - 2] != '.' || pathQF[l - 1] != 'q' || pathQF[l] != 'f') qgError("The file does not have the .qf extension!\n");
+	FILE *qfr = fopen(pathQFR, "r");
+	if (!qfr) qgError("Failed to open qfr file! (%s)\n", pathQFR);
+	FILE *qf = fopen(pathQF, "wb");
+	if (!qf) qgError("Failed to create qf file! (%s)\n", pathQF);
+	char line[84];
+	uint16_t len = 0;
+	fwrite(&len, sizeof(uint16_t), 1, qf);
+	while (fgets(line, sizeof(line), qfr)) {
+		if (line[81] == '\n') line[81] = '\0';
+		if (line[0] == '/') continue;
+		const char code[4] = {line[0], line[1], line[2], line[3]};
+		uint16_t c = (uint16_t)strtol(code, NULL, 16);
+		fwrite(&c, sizeof(uint16_t), 1, qf);
+		int8_t l[qFontY][qFontMax];
+		for (int i = 0; i < qFontY; i++) {
+			for (int j = 0; j < qFontMax; j++) {
+				uint8_t x = cti(line[5+(7*i)+j]);
+				if (x == 0 && j != 0) l[i][j - 1] = -l[i][j - 1];
+				l[i][j] = x;
+			}
+		}
+		fwrite(l, sizeof(int8_t), qFontY * qFontMax, qf);
+		len++;
+	}
+	fseek(qf, 0, SEEK_SET);
+	fwrite(&len, sizeof(uint16_t), 1, qf);
+	fclose(qfr);
+	fclose(qf);
+}
+void qgLoadFont(const char* path) {
+	if (!inInit) { qgWarn("Couldn't load font in Update function! Please load it in Init function.\n"); return; }
+	int l = len(path) - 1;
+	if (l < 3) return;
+	if (path[l - 2] != '.' || path[l - 1] != 'q' || path[l] != 'f') qgError("The file does not have the .qf extension!\n");
+	FILE *qf = fopen(path, "rb");
+	if (!qf) qgError("Failed to create qf file! (%s)\n", path);
+	uint16_t len = 0;
+	fread(&len, sizeof(uint16_t), 1, qf);
+	if (len == 0) return;
+	qgChar *tmp = realloc(newChars, (newCharCount + len) * sizeof(qgChar));
+	if (!tmp) qgError("Memory error!\n");
+	newChars = tmp;
+	for (uint16_t i = 0; i < len; i++) {
+		fread(&newChars[newCharCount].code, sizeof(uint16_t), 1, qf);
+		fread(newChars[newCharCount].data, sizeof(int8_t), qFontY * qFontMax, qf);
+		newCharCount++;
+	}
+	qgLog("Added a %i new chars!\n", len);
+	fclose(qf);
+}
 void qgSetFontData(float fontSize, int style, float r, float g, float b, float a) {
 	qFontSize = fontSize;
 	qFontStyle = style;
@@ -1039,52 +1119,21 @@ static qgChar qFont[] = {
 	(qgChar){.code = 'w', .data = {{0}, {0}, {0}, {0}, {0}, {12, 3, -12}, {12, 1, 11, 1, -12}, {12, 1, 11, 1, -12},{1, -15}, {1, 12, 1, -12}, {0}}},
 	(qgChar){.code = 'x', .data = {{0}, {0}, {0}, {0}, {0}, {1, 12, 2, -12}, {2, 11, 2, -11}, {3, -12}, {2, 11, 2, -11}, {1, 12, 2, -12}, {0}}},
 	(qgChar){.code = 'y', .data = {{0}, {0}, {0}, {0}, {0}, {1, 12, 2, -12}, {1, 12, 2, -12}, {1, 12, 2, -12}, {2, -15}, {5, -12}, {1, -15}}},
-	(qgChar){.code = 'z', .data = {{0}, {0}, {0}, {0}, {0}, {1, -16}, {4, -12}, {3, -12}, {2, -12}, {1, -16}, {0}}},
-// ===== Symbols (128 - 177) ==============================================================================================================================================
-	(qgChar){.code = 128, .data = {{-18}, {-18}, {-18}, {-18}, {-18}, {-18}, {-18}, {-18}, {-18}, {-18}, {-18}}}, // Full block | \x80
-	(qgChar){.code = 129, .data = {{0}, {0}, {0}, {0}, {2, 11, 2, -11}, {1, -16}, {1, -16}, {1, -16}, {2, -14}, {3, -12}, {0}}}, // Heart | \x81
-	(qgChar){.code = 130, .data = {{0}, {0}, {0}, {3, -12}, {2, -14}, {1, 11, 1, 12, 1, -11}, {11, 2, 12, 2, -11}, {3, -12}, {3, -12}, {3, -12}, {0}}}, // Arrow Up | \x82
-	(qgChar){.code = 131, .data = {{0}, {0}, {0}, {3, -12}, {3, -12}, {3, -12}, {11, 2, 12, 2, -11}, {1, 11, 1, 12, 1, -11}, {2, -14}, {3, -12}, {0}}}, // Arrow Down | \x83
-	(qgChar){.code = 132, .data = {{0}, {0}, {0}, {3, -11}, {2, -12}, {1, -12}, {-18}, {1, -12}, {2, -12}, {3, -11}, {0}}}, // Arrow Left | \x84
-	(qgChar){.code = 133, .data = {{0}, {0}, {0}, {4, -11}, {4, -12}, {5, -12}, {-18}, {5, -12}, {4, -12}, {4, -11}, {0}}}, // Arrow Right | \x85
-	(qgChar){.code = 134, .data = {{0}, {0}, {0}, {2, -14}, {1, -16}, {1, -16}, {1, -16}, {1, -16}, {2, -14}, {0}, {0}}}, // Dot | \x86
-	(qgChar){.code = 135, .data = {{0}, {0}, {0}, {1, -16}, {1, 11, 4, -11}, {1, 11, 4, -11}, {1, 11, 4, -11}, {1, 11, 4, -11}, {1, -16}, {0}, {0}}}, // Square with a border | \x87
-	(qgChar){.code = 136, .data = {{0}, {0}, {0}, {1, -16}, {1, -16}, {1, -16}, {1, -16}, {1, -16}, {1, -16}, {0}, {0}}}, // Square filled | \x88
-	(qgChar){.code = 137, .data = {{0}, {0}, {0}, {3, -12}, {3, -12}, {2, -14}, {2, -14}, {1, -16}, {1, -16}, {0}, {0}}}, // Triangle Up | \x89
-	(qgChar){.code = 138, .data = {{0}, {0}, {0}, {1, -16}, {1, -16}, {2, -14}, {2, -14}, {3, -12}, {3, -12}, {0}, {0}}}, // Triangle Down | \x8A
-	(qgChar){.code = 139, .data = {{0}, {0}, {0}, {5, -12}, {3, -14}, {1, -16}, {1, -16}, {3, -14}, {5, -12}, {0}, {0}}}, // Triangle Left | \x8B
-	(qgChar){.code = 140, .data = {{0}, {0}, {0}, {1, -12}, {1, -14}, {1, -16}, {1, -16}, {1, -14}, {1, -12}, {0}, {0}}}, // Triangle Right | \x8C
-// ===== Polish characters (178 - 196) ====================================================================================================================================
-// ===== Ą Ć Ę Ł Ń Ó Ś Ź Ż ================================================================================================================================================
-	(qgChar){.code = 179, .data = {{0}, {0}, {0}, {3, -12}, {2, -14}, {1, 12, 2, -12}, {1, 12, 2, -12}, {1, -16}, {1, 12, 2, -12}, {1, 12, 2, -12}, {6, -12}}}, // Ą | \xB3
-	(qgChar){.code = 180, .data = {{4, -12}, {3, -12}, {0}, {2, -14}, {1, 12, 2, -12}, {1, -12}, {1, -12}, {1, -12}, {1, 12, 2, -12}, {2, -14}, {0}}}, // Ć | \xB4
-	(qgChar){.code = 181, .data = {{0}, {0}, {0}, {1, -16}, {1, -12}, {1, -12}, {1, -15}, {1, -12}, {1, -12}, {1, -16}, {6, -12}}}, // Ę | \xB5
-	(qgChar){.code = 182, .data = {{0}, {0}, {0}, {2, -12}, {2, -12}, {2, 14}, {1, -14}, {-14}, {2, -12}, {2, -15}, {0}}}, // Ł | \xB6
-	(qgChar){.code = 183, .data = {{4, -12}, {3, -12}, {0}, {1, 12, 2, -12}, {1, 13, 1, -12}, {1, -16}, {1, 12, 1, -13}, {1, 12, 2, -12}, {1, 12, 2, -12}, {1, 12, 2, -12}, {0}}}, // Ń | \xB7
-	(qgChar){.code = 184, .data = {{4, -12}, {3, -12}, {0}, {2, -14}, {1, 12, 2, -12}, {1, 12, 2, -12}, {1, 12, 2, -12}, {1, 12, 2, -12}, {1, 12, 2, -12}, {2, -14}, {0}}}, // Ó | \xB8
-	(qgChar){.code = 185, .data = {{4, -12}, {3, -12}, {0}, {2, -14}, {1, 12, 2, -12}, {1, -12}, {2, -14}, {5, -12}, {1, 12, 2, -12}, {2, -14}, {0}}}, // Ś | \xB9
-	(qgChar){.code = 186, .data = {{4, -12}, {3, -12}, {0}, {1, -16}, {5, -12}, {4, -12}, {3, -12}, {2, -12}, {1, -12}, {1, -16}, {0}}}, // Ź | \xBA
-	(qgChar){.code = 187, .data = {{3, -12}, {3, -12}, {0}, {1, -16}, {5, -12}, {4, -12}, {3, -12}, {2, -12}, {1, -12}, {1, -16}, {0}}}, // Ż | \xBB
-// ===== ą ć ę ł ń ó ś ź ż ================================================================================================================================================
-	(qgChar){.code = 188, .data = {{0}, {0}, {0}, {0}, {0}, {2, -14}, {5, -12}, {2, -15}, {1, 12, 2, -12}, {2, -15}, {6, -12}}}, // ą | \xBC
-	(qgChar){.code = 189, .data = {{0}, {0}, {4, -12}, {3, -12}, {0}, {2, -14}, {1, -12}, {1, -12}, {1, -12}, {2, -14}, {0}}}, // ć | \xBD
-	(qgChar){.code = 190, .data = {{0}, {0}, {0}, {0}, {0}, {2, -14}, {1, 12, 2, -12}, {1, -16}, {1, -12}, {2, -14}, {5, -12}}}, // ę | \xBE
-	(qgChar){.code = 191, .data = {{0}, {0}, {0}, {2, -13}, {3, -12}, {3, -13}, {2, -14}, {2, -13}, {3, -12}, {2, -14}, {0}}}, // ł | \xBF
-	(qgChar){.code = 192, .data = {{0}, {0}, {4, -12}, {3, -12}, {0}, {1, -15}, {1, 12, 2, -12}, {1, 12, 2, -12}, {1, 12, 2, -12}, {1, 12, 2, -12}, {0}}}, // ń | \xC0
-	(qgChar){.code = 193, .data = {{0}, {0}, {4, -12}, {3, -12}, {0}, {2, -14}, {1, 12, 2, -12}, {1, 12, 2, -12}, {1, 12, 2, -12}, {2, -14}, {0}}}, // ó | \xC1
-	(qgChar){.code = 194, .data = {{0}, {0}, {4, -12}, {3, -12}, {0}, {2, -15}, {1, -12}, {2, -14}, {5, -12}, {1, -15}, {0}}}, // ś | \xC2
-	(qgChar){.code = 195, .data = {{0}, {0}, {4, -12}, {3, -12}, {0}, {1, -16}, {4, -12}, {3, -12}, {2, -12}, {1, -16}, {0}}}, // ź | \xC3
-	(qgChar){.code = 196, .data = {{0}, {0}, {3, -12}, {3, -12}, {0}, {1, -16}, {4, -12}, {3, -12}, {2, -12}, {1, -16}, {0}}}, // ż | \xC4
+	(qgChar){.code = 'z', .data = {{0}, {0}, {0}, {0}, {0}, {1, -16}, {4, -12}, {3, -12}, {2, -12}, {1, -16}, {0}}}
 };
 static int qFontCharsCount = sizeof(qFont) / sizeof(qgChar);
-void qgAddChar(float px, float py, float pz, unsigned char c) {
-	int id = -1;
-	for (int i = 0; i < qFontCharsCount; i++) if (qFont[i].code == c) { id = i; break; }
-	if (id < 0) return;
+void qgAddChar(float px, float py, float pz, uint16_t c) {
+	int founded = 0;
+	qgChar qc = {0};
+	for (int i = 0; i < qFontCharsCount + newCharCount; i++) {
+		if (i < qFontCharsCount && qFont[i].code == c) { qc = qFont[i]; founded = 1; break; }
+		else if (i >= qFontCharsCount && newChars[i - qFontCharsCount].code == c) { qc = newChars[i - qFontCharsCount]; founded = 1; break; }
+	}
+	if (!founded) return;
 	for (int ly = 0; ly < qFontY; ly++) {
 		int x = 0;
 		for (int lx = 0; lx < qFontMax; lx++) {
-			int8_t v = qFont[id].data[ly][lx];
+			int8_t v = qc.data[ly][lx];
 			if (v == 0) break;
 			int isEnd = v < 0;
 			if (isEnd) v = -v;
@@ -1119,7 +1168,7 @@ void qgAddText(float px, float py, float pz, const char* text) {
 			text++;
 			continue;
 		}
-		qgAddChar(px + (x * qFontSize * qFontX), py - (y * qFontSize * qFontY), pz, *text);
+		qgAddChar(px + (x * qFontSize * qFontX), py - (y * qFontSize * qFontY), pz, (unsigned char)*text);
 		x++;
 		text++;
 	}
