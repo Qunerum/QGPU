@@ -11,7 +11,7 @@
 
 #define QGPU_VERSION_MAJOR 1
 #define QGPU_VERSION_MINOR 2
-#define QGPU_VERSION_PATCH 1
+#define QGPU_VERSION_PATCH 2
 
 // ========================================================================================================================================================================
 // ===== QGPU =============================================================================================================================================================
@@ -1149,28 +1149,35 @@ void qgAddChar(float px, float py, float pz, uint16_t c) {
 		}
 	}
 }
+int ih(char c) { return (c >= '0' && c <= '9') || (c >= 'A' && c <= 'F'); }
 void qgAddText(float px, float py, float pz, const char* text) {
-	int x = 0, y = 0;
-	while (*text != '\0') {
-		if (*text == '\n') {
+	int x = 0, y = 0, i = 0, l = len(text);
+	while (text[i] != '\0') {
+		if (text[i] == '\n') {
 			x = 0;
 			y++;
-			text++;
+			i++;
 			continue;
 		}
-		if (*text == ' ') {
+		if (text[i] == ' ') {
 			x++;
-			text++;
+			i++;
 			continue;
 		}
-		if (*text == '\t') {
+		if (text[i] == '\t') {
 			x += 4;
-			text++;
+			i++;
 			continue;
 		}
-		qgAddChar(px + (x * qFontSize * qFontX), py - (y * qFontSize * qFontY), pz, (unsigned char)*text);
+		uint16_t c = (unsigned char)text[i];
+		if (l - i > 6 && text[i] == 'q' && text[i+1] == ';' && ih(text[i+2])  && ih(text[i+3])  && ih(text[i+4])  && ih(text[i+5]) && text[i+6] == ';') {
+			char code[4] = {text[i+2], text[i+3], text[i+4], text[i+5]};
+			c = (uint16_t)strtol(code, NULL, 16);
+			i += 6;
+		}
+		qgAddChar(px + (x * qFontSize * qFontX), py - (y * qFontSize * qFontY), pz, c);
 		x++;
-		text++;
+		i++;
 	}
 }
 // ========================================================================================================================================================================

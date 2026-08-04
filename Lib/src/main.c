@@ -4,29 +4,20 @@ void Init() {
     qgSetRenderType(QGPU_RENDER_TYPE_NO_LIGHT);
     qgSetFontData(3, QGPU_FONT_STYLE_REGULAR, 1, 1, 1, 1);
 
-    qgConvertFont("fontsReadable/symbols.qfr", "fonts/symbols.qf");
     qgLoadFont("fonts/polish.qf");
     qgLoadFont("fonts/symbols.qf");
 }
 void Update() {
 
-    /*
-    qgAddIndex(qgAddVertex(-100, -86.602, 0,  1, 0, 0, 1));
-    qgAddIndex(qgAddVertex(0, 86.602,     0,  0, 1, 0, 1));
-    qgAddIndex(qgAddVertex(100, -86.602,  0,  0, 0, 1, 1));
-    */
-
     qgAddText(-qgGetWidth() / 2.0f + 10, qgGetHeight() / 2.0f - 10, 0, "\
 `1234567890-= []\\ ;' ,./\n\
 ~!@#$%^&*()_+ {}| :\" <>?\n\
 ABCDEFGHIJKLMNOPQRSTUVWXYZ\n\
-abcdefghijklmnopqrstuvwxyz\n\
-\n\
-\x80 \x81 \x82 \x83 \x84 \x85 \x86 \x87 \x88 \x89 \x8A \x8B \x8C\n\
-\x8D \x8E \x8F \x90 \x91 \x92 \x93 \x94 \x95 \x96 \x97 \x98 \x99\n\
-\n\
-\xB3 \xB4 \xB5 \xB6 \xB7 \xB8 \xB9 \xBA \xBB\n\
-\xBC \xBD \xBE \xBF \xC0 \xC1 \xC2 \xC3 \xC4");
+abcdefghijklmnopqrstuvwxyz\n\n\
+q;0080; q;0081; q;0082; q;0083; q;0084; q;0085; q;0086; q;0087; q;0088; q;0089; q;008A; q;008B; q;008C;\n\
+q;008D; q;008E; q;008F; q;0090; q;0091; q;0092; q;0093; q;0094; q;0095; q;0096; q;0097; q;0098; q;0099;\n\n\
+q;00B3; q;00B4; q;00B5; q;00B6; q;00B7; q;00B8; q;00B9; q;00BA; q;00BB;\n\
+q;00BC; q;00BD; q;00BE; q;00BF; q;00C0; q;00C1; q;00C2; q;00C3; q;00C4;");
 }
 
 int main() {
