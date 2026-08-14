@@ -966,7 +966,7 @@ void qgConvertFont(const char* pathQFR, const char* pathQF) {
 	while (fgets(line, sizeof(line), qfr)) {
 		if (line[81] == '\n') line[81] = '\0';
 		if (line[0] == '/') continue;
-		const char code[4] = {line[0], line[1], line[2], line[3]};
+		const char code[5] = {line[0], line[1], line[2], line[3], '\0'};
 		uint16_t c = (uint16_t)strtol(code, NULL, 16);
 		fwrite(&c, sizeof(uint16_t), 1, qf);
 		int8_t l[qFontY][qFontMax];
@@ -1114,7 +1114,6 @@ static qgChar qFont[128] = {
 	['y'] = (qgChar){.data = {{0}, {0}, {0}, {0}, {0}, {1, 12, 2, -12}, {1, 12, 2, -12}, {1, 12, 2, -12}, {2, -15}, {5, -12}, {1, -15}}},
 	['z'] = (qgChar){.data = {{0}, {0}, {0}, {0}, {0}, {1, -16}, {4, -12}, {3, -12}, {2, -12}, {1, -16}, {0}}}
 };
-static int qFontCharsCount = sizeof(qFont) / sizeof(qgChar);
 void qgAddChar(float px, float py, float pz, uint16_t c) {
 	qgChar qc = newChars[c];
 	if (c < 128) qc = qFont[c];
