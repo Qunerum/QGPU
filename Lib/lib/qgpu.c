@@ -11,7 +11,7 @@
 
 #define QGPU_VERSION_MAJOR 1
 #define QGPU_VERSION_MINOR 2
-#define QGPU_VERSION_PATCH 4
+#define QGPU_VERSION_PATCH 5
 
 // ========================================================================================================================================================================
 // ===== QGPU =============================================================================================================================================================
@@ -1189,7 +1189,7 @@ int qgOnMouse(int button) {
 	int current = glfwGetMouseButton(g_ctx.window, button), last = g_ctx.lastMouseState[button];
 	return (current == GLFW_PRESS && last == GLFW_RELEASE);
 }
-void qgGetMousePos(double* x, double* y) {
+void qgGetMousePos(float* x, float* y) {
 	if (!g_ctx.window || !x || !y) return;
 	double lx = 0, ly = 0;
 	glfwGetCursorPos(g_ctx.window, &lx, &ly);
