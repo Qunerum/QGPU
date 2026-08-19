@@ -11,7 +11,7 @@
 
 #define QGPU_VERSION_MAJOR 1
 #define QGPU_VERSION_MINOR 2
-#define QGPU_VERSION_PATCH 6
+#define QGPU_VERSION_PATCH 7
 
 // ========================================================================================================================================================================
 // ===== QGPU =============================================================================================================================================================
@@ -1171,20 +1171,20 @@ void qgAddText(const float px, const float py, const float pz, const char* text)
 // ===== INPUT ============================================================================================================================================================
 // ========================================================================================================================================================================
 uint8_t qgGetKey(const unsigned int key) {
-	if (!g_ctx.window || key < 0 || key >= GLFW_KEY_LAST) return 0;
+	if (!g_ctx.window || key >= GLFW_KEY_LAST) return 0;
 	return glfwGetKey(g_ctx.window, key) == GLFW_PRESS;
 }
 uint8_t qgOnKey(const unsigned int key) {
-	if (!g_ctx.window || key < 0 || key >= GLFW_KEY_LAST) return 0;
+	if (!g_ctx.window || key >= GLFW_KEY_LAST) return 0;
 	int current = glfwGetKey(g_ctx.window, key), last = g_ctx.lastKeyState[key];
 	return (current == GLFW_PRESS && last == GLFW_RELEASE);
 }
 uint8_t qgGetMouse(const unsigned int button) {
-	if (!g_ctx.window || button < 0 || button >= GLFW_MOUSE_BUTTON_LAST) return 0;
+	if (!g_ctx.window || button >= GLFW_MOUSE_BUTTON_LAST) return 0;
 	return glfwGetMouseButton(g_ctx.window, button) == GLFW_PRESS;
 }
 uint8_t qgOnMouse(const unsigned int button) {
-	if (!g_ctx.window || button < 0 || button >= GLFW_MOUSE_BUTTON_LAST) return 0;
+	if (!g_ctx.window || button >= GLFW_MOUSE_BUTTON_LAST) return 0;
 	int current = glfwGetMouseButton(g_ctx.window, button), last = g_ctx.lastMouseState[button];
 	return (current == GLFW_PRESS && last == GLFW_RELEASE);
 }
