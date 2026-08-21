@@ -11,7 +11,7 @@ void Init() {
     qgLoadFont("fonts/polish.qf");
 }
 void Update() {
-    qgAddText(-qgGetWidth() / 2.0f + 10, qgGetHeight() / 2.0f - 10, 0, "\
+    qgAddText(-(float)qgGetWidth() / 2.0f + 10, (float)qgGetHeight() / 2.0f - 10, 0, "\
 `1234567890-= []\\ ;' ,./\n\
 ~!@#$%^&*()_+ {}| :\" <>?\n\
 ABCDEFGHIJKLMNOPQRSTUVWXYZ\n\
@@ -24,6 +24,12 @@ q;00C5; q;00C6; q;00C7; q;00C8; q;00C9; q;009A; q;009B; q;009C; q;009D; \n\
 \n\
 \n\
 ");
+    static float x = 0, y = 0;
+    if (qgGetKey(QKEY_W)) y++;
+    if (qgGetKey(QKEY_S)) y--;
+    if (qgGetKey(QKEY_A)) x--;
+    if (qgGetKey(QKEY_D)) x++;
+    qgAddLine(0, 340, 0, x, y, 0, 10, 0.7f, 0.7f, 0.7f, 1);
 }
 
 int main() {
