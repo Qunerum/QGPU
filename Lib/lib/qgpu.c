@@ -11,7 +11,7 @@
 
 #define QGPU_VERSION_MAJOR 1
 #define QGPU_VERSION_MINOR 2
-#define QGPU_VERSION_PATCH 8
+#define QGPU_VERSION_PATCH 9
 
 // ========================================================================================================================================================================
 // ===== QGPU =============================================================================================================================================================
@@ -82,7 +82,7 @@ static unsigned long long factorial(const int n) {
 	for (int i = 1; i <= n; i++) result *= i;
 	return result;
 }
-float toRad(const float degrees) { return degrees * (PI / 180.0f); }
+static float toRad(const float degrees) { return degrees * (PI / 180.0f); }
 static float qSin(const float rad) {
 	float sum = 0.0f;
 	for (int i = 0; i < 10; i++) {
@@ -230,7 +230,7 @@ static uint32_t findMemoryType(const uint32_t typeFilter, const VkMemoryProperty
 	return 0;
 }
 void createDepthResources(const uint width, const uint height) {
-	VkImageCreateInfo imageInfo = {
+	const VkImageCreateInfo imageInfo = {
 		.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
 		.imageType = VK_IMAGE_TYPE_2D,
 		.extent.width = width,
@@ -248,14 +248,14 @@ void createDepthResources(const uint width, const uint height) {
 	if (vkCreateImage(g_ctx.device, &imageInfo, NULL, &g_ctx.depthImage) != VK_SUCCESS) { }
 	VkMemoryRequirements memRequirements;
 	vkGetImageMemoryRequirements(g_ctx.device, g_ctx.depthImage, &memRequirements);
-	VkMemoryAllocateInfo allocInfo = {
+	const VkMemoryAllocateInfo allocInfo = {
 		.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
 		.allocationSize = memRequirements.size,
 		.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
 	};
 	if (vkAllocateMemory(g_ctx.device, &allocInfo, NULL, &g_ctx.depthImageMemory) != VK_SUCCESS) { }
 	vkBindImageMemory(g_ctx.device, g_ctx.depthImage, g_ctx.depthImageMemory, 0);
-	VkImageViewCreateInfo viewInfo = {
+	const VkImageViewCreateInfo viewInfo = {
 		.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
 		.image = g_ctx.depthImage,
 		.viewType = VK_IMAGE_VIEW_TYPE_2D,
@@ -269,7 +269,7 @@ void createDepthResources(const uint width, const uint height) {
 	if (vkCreateImageView(g_ctx.device, &viewInfo, NULL, &g_ctx.depthImageView) != VK_SUCCESS) { }
 }
 static void createBuffer(const VkDeviceSize size, const VkBufferUsageFlags usage, const VkMemoryPropertyFlags properties, VkBuffer* buffer, VkDeviceMemory* bufferMemory) {
-	VkBufferCreateInfo bufferInfo = {
+	const VkBufferCreateInfo bufferInfo = {
 		.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
 		.size = size,
 		.usage = usage,
@@ -278,7 +278,7 @@ static void createBuffer(const VkDeviceSize size, const VkBufferUsageFlags usage
 	vkCreateBuffer(g_ctx.device, &bufferInfo, NULL, buffer);
 	VkMemoryRequirements memReqs;
 	vkGetBufferMemoryRequirements(g_ctx.device, *buffer, &memReqs);
-	VkMemoryAllocateInfo allocInfo = {
+	const VkMemoryAllocateInfo allocInfo = {
 		.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
 		.allocationSize = memReqs.size,
 		.memoryTypeIndex = findMemoryType(memReqs.memoryTypeBits, properties)
@@ -298,7 +298,7 @@ void render() {
 // ========================================================================================================================================================================
 // ===== INIT =============================================================================================================================================================
 // ========================================================================================================================================================================
-static int inInit = 0;
+static uint8_t inInit = 0;
 void qgpuCreate(const uint width, const uint height, const char* title, void (*initFunc)(), void (*updateFunc)()) {
 	if (!glfwInit()) return;
 	sphereVertexIndices = malloc(sizeof(uint32_t) * (MAX_SPHERE_RINGS + 1) * (MAX_SPHERE_SECTORS + 1));
@@ -1117,7 +1117,7 @@ void qgAddChar(const float px, const float py, const float pz, const uint16_t c)
 	qgChar qc = newChars[c];
 	if (c < 128) qc = qFont[c];
 	for (uint ly = 0; ly < qFontY; ly++) {
-		int x = 0;
+		uint x = 0;
 		for (uint lx = 0; lx < qFontMax; lx++) {
 			int8_t v = qc.data[ly][lx];
 			if (v == 0) break;
