@@ -115,21 +115,15 @@ static void transformPoint(float* x, float* y, float* z) {
 	*z = z3 + g_ctx.pivotZ;
 }
 static float getLight(const float x, const float y, const float z) {
-	// Bazowe światło otoczenia uwzględniające Ambient Occlusion
 	float totalLight = g_settings.ambientOcclusion ? 0.05f : 0.2f;
-
 	for (uint i = 0; i < lightCount; i++) {
 		float lx = lights[i*5], ly = lights[i*5+1], lz = lights[i*5+2], rng = lights[i*5+3], pow = lights[i*5+4];
 		if (rng == 0 || pow == 0) continue;
-
 		float dis = qsqrt(qpow(lx - x, 2) + qpow(ly - y, 2) + qpow(lz - z, 2));
 		if (dis > rng) continue;
-
 		float attenuation = 1.0f - (dis / rng);
-
-		// Prosta symulacja cieni (Shadows): jeśli włączone, punkty dalej od źródła lub pod specyficznym kątem tracą dodatkowo na jasności
 		if (g_settings.shadows) {
-			float shadowFactor = 1.0f - (dis / rng) * 0.3f; // delikatne tłumienie cienia
+			float shadowFactor = 1.0f - (dis / rng) * 0.3f;
 			if (shadowFactor < 0.0f) shadowFactor = 0.0f;
 			attenuation *= shadowFactor;
 		}
