@@ -1,7 +1,13 @@
 #include "../lib/qgpu.h"
-
+uint8_t ao = 1, msaa = 8, shadows = 1;
+void set() {
+    qgSetGraphicsSetting(QGPU_SETTINGS_AMBIENT_OCCLUSION, ao);
+    qgSetGraphicsSetting(QGPU_SETTINGS_MSAA_LEVEL, msaa);
+    qgSetGraphicsSetting(QGPU_SETTINGS_SHADOWS, shadows);
+    qgPrint("AO: %i | MSAA: %i | Shadows: %i\n", ao, msaa, shadows);
+}
 void Init() {
-    qgSetRenderType(QGPU_RENDER_TYPE_NO_LIGHT);
+    qgSetRenderType(QGPU_RENDER_TYPE_LIGHT);
     qgSetFontData(3, QGPU_FONT_STYLE_REGULAR, 1, 1, 1, 1);
 
     qgConvertFont("fontsReadable/symbols.qfr", "fonts/symbols.qf");
@@ -9,8 +15,11 @@ void Init() {
 
     qgLoadFont("fonts/symbols.qf");
     qgLoadFont("fonts/polish.qf");
+
+    set();
 }
 void Update() {
+    /*
     qgAddText(-(float)qgGetWidth() / 2.0f + 10, (float)qgGetHeight() / 2.0f - 10, 0, "\
 `1234567890-= []\\ ;' ,./\n\
 ~!@#$%^&*()_+ {}| :\" <>?\n\
@@ -24,12 +33,22 @@ q;00C5; q;00C6; q;00C7; q;00C8; q;00C9; q;009A; q;009B; q;009C; q;009D; \n\
 \n\
 \n\
 ");
-    static float x = 0, y = 0;
-    if (qgGetKey(QKEY_W)) y++;
-    if (qgGetKey(QKEY_S)) y--;
-    if (qgGetKey(QKEY_A)) x--;
-    if (qgGetKey(QKEY_D)) x++;
-    qgAddLine(0, 340, 0, x, y, 0, 10, 0.7f, 0.7f, 0.7f, 1);
+*/
+    if (qgOnKey(QKEY_Q)) { ao = !ao; set(); }
+    if (qgOnKey(QKEY_E)) { shadows = !shadows; set(); }
+
+    qgAddLight(10, 0, 0, 100, 1);
+    static float x = 0, s = .5f;
+    x += s;
+    static uint rs = 4, ors = 0;
+    if (qgOnKey(QKEY_UP)) rs++;
+    if (qgOnKey(QKEY_DOWN) && rs > 0) rs--;
+    if (ors != rs) {
+        qgPrint("Rings & Sectors: %i\n", rs);
+        ors = rs;
+    }
+    qgSetRotation(x, x, x);
+    qgAddSphere(0, 0, 0, 50, rs, rs, .6f, .6f, .6f, 1);
 }
 
 int main() {

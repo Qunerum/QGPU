@@ -27,6 +27,10 @@ void qgWarn(const char* format, ...);
 void qgError(const char* format, ...);
 void qgSetShow(const int shower, const int state);
 // !===== QGPU ===========================================================================================================================================================!
+#define QGPU_SETTINGS_AMBIENT_OCCLUSION 0
+#define QGPU_SETTINGS_MSAA_LEVEL        1
+#define QGPU_SETTINGS_SHADOWS           2
+void qgSetGraphicsSetting(uint8_t setting, uint8_t value);
 // !===== Init
 void qgpuCreate(const uint width, const uint height, const char* title, void (*initFunc)(), void (*updateFunc)());
 // !===== Window
@@ -50,7 +54,6 @@ void qgAddLight(const float x, const float y, const float z, const float range, 
 void qgAddTriangle(const float p1x, const float p1y, const float p1z, const float p2x, const float p2y, const float p2z, const float p3x, const float p3y, const float p3z, const float r, const float g, const float b, const float a);
 void qgAddRect(const float px, const float py, const float pz, const float sx, const float sy, const float r, const float g, const float b, const float a);
 void qgAddCircle(const float px, const float py, const float pz, const uint segments, const float radius, const float r, const float g, const float b, const float a);
-void qgAddLine(const float p1x, const float p1y, const float p1z, const float p2x, const float p2y, const float p2z, const float thickness, const float r, const float g, const float b, const float a);
 // !===== Ready 3D
 void qgAddBox(const float px, const float py, const float pz, const float sx, const float sy, const float sz, const float r, const float g, const float b, const float a);
 void qgAddSphere(const float px, const float py, const float pz, const float radius, const uint rings, const uint sectors, const float r, const float g, const float b, const float a);

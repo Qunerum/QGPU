@@ -11,7 +11,7 @@
 
 #define QGPU_VERSION_MAJOR 1
 #define QGPU_VERSION_MINOR 2
-#define QGPU_VERSION_PATCH 9
+#define QGPU_VERSION_PATCH 10
 
 // ========================================================================================================================================================================
 // ===== QGPU =============================================================================================================================================================
@@ -48,11 +48,18 @@ typedef struct {
 	float pivotX, pivotY, pivotZ, rotX, rotY, rotZ;
 	int hasRotation;
 } InternalContext;
+typedef struct {
+	uint8_t ambientOcclusion, msaaLevel, shadows;
+} GraphicsSettings;
 static InternalContext g_ctx;
+static GraphicsSettings g_settings = { .ambientOcclusion = 1, .msaaLevel = 4, .shadows = 1 };
 static double lastTime = 0;
 static float backgroundR, backgroundG, backgroundB, lights[MAX_LIGHTS * 5], currentFPS;
 static uint lightCount, frameCount;
 static uint32_t* sphereVertexIndices;
+static VkImage colorImageMSAA;
+static VkDeviceMemory colorImageMSAAMemory;
+static VkImageView colorImageViewMSAA;
 #define qFontX 8
 #define qFontY 11
 #define qFontMax 6
@@ -82,7 +89,6 @@ static unsigned long long factorial(const int n) {
 	for (int i = 1; i <= n; i++) result *= i;
 	return result;
 }
-static float toRad(const float degrees) { return degrees * (PI / 180.0f); }
 static float qSin(const float rad) {
 	float sum = 0.0f;
 	for (int i = 0; i < 10; i++) {
@@ -109,16 +115,29 @@ static void transformPoint(float* x, float* y, float* z) {
 	*z = z3 + g_ctx.pivotZ;
 }
 static float getLight(const float x, const float y, const float z) {
-	float totalLight = 0.1f;
-	for (int i = 0; i < lightCount; i++) {
+	// Bazowe światło otoczenia uwzględniające Ambient Occlusion
+	float totalLight = g_settings.ambientOcclusion ? 0.05f : 0.2f;
+
+	for (uint i = 0; i < lightCount; i++) {
 		float lx = lights[i*5], ly = lights[i*5+1], lz = lights[i*5+2], rng = lights[i*5+3], pow = lights[i*5+4];
 		if (rng == 0 || pow == 0) continue;
+
 		float dis = qsqrt(qpow(lx - x, 2) + qpow(ly - y, 2) + qpow(lz - z, 2));
 		if (dis > rng) continue;
+
 		float attenuation = 1.0f - (dis / rng);
+
+		// Prosta symulacja cieni (Shadows): jeśli włączone, punkty dalej od źródła lub pod specyficznym kątem tracą dodatkowo na jasności
+		if (g_settings.shadows) {
+			float shadowFactor = 1.0f - (dis / rng) * 0.3f; // delikatne tłumienie cienia
+			if (shadowFactor < 0.0f) shadowFactor = 0.0f;
+			attenuation *= shadowFactor;
+		}
+
 		totalLight += pow * attenuation;
 	}
-	return totalLight;
+
+	return qclampf(totalLight, 0.0f, 2.0f);
 }
 // ========================================================================================================================================================================
 // ===== VISUAL ===========================================================================================================================================================
@@ -229,45 +248,6 @@ static uint32_t findMemoryType(const uint32_t typeFilter, const VkMemoryProperty
 		if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) return i;
 	return 0;
 }
-void createDepthResources(const uint width, const uint height) {
-	const VkImageCreateInfo imageInfo = {
-		.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-		.imageType = VK_IMAGE_TYPE_2D,
-		.extent.width = width,
-		.extent.height = height,
-		.extent.depth = 1,
-		.mipLevels = 1,
-		.arrayLayers = 1,
-		.format = VK_FORMAT_D32_SFLOAT,
-		.tiling = VK_IMAGE_TILING_OPTIMAL,
-		.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-		.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-		.samples = VK_SAMPLE_COUNT_1_BIT,
-		.sharingMode = VK_SHARING_MODE_EXCLUSIVE
-	};
-	if (vkCreateImage(g_ctx.device, &imageInfo, NULL, &g_ctx.depthImage) != VK_SUCCESS) { }
-	VkMemoryRequirements memRequirements;
-	vkGetImageMemoryRequirements(g_ctx.device, g_ctx.depthImage, &memRequirements);
-	const VkMemoryAllocateInfo allocInfo = {
-		.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-		.allocationSize = memRequirements.size,
-		.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
-	};
-	if (vkAllocateMemory(g_ctx.device, &allocInfo, NULL, &g_ctx.depthImageMemory) != VK_SUCCESS) { }
-	vkBindImageMemory(g_ctx.device, g_ctx.depthImage, g_ctx.depthImageMemory, 0);
-	const VkImageViewCreateInfo viewInfo = {
-		.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-		.image = g_ctx.depthImage,
-		.viewType = VK_IMAGE_VIEW_TYPE_2D,
-		.format = VK_FORMAT_D32_SFLOAT,
-		.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
-		.subresourceRange.baseMipLevel = 0,
-		.subresourceRange.levelCount = 1,
-		.subresourceRange.baseArrayLayer = 0,
-		.subresourceRange.layerCount = 1
-	};
-	if (vkCreateImageView(g_ctx.device, &viewInfo, NULL, &g_ctx.depthImageView) != VK_SUCCESS) { }
-}
 static void createBuffer(const VkDeviceSize size, const VkBufferUsageFlags usage, const VkMemoryPropertyFlags properties, VkBuffer* buffer, VkDeviceMemory* bufferMemory) {
 	const VkBufferCreateInfo bufferInfo = {
 		.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
@@ -295,10 +275,225 @@ void render() {
 		vkCmdDrawIndexed(g_ctx.currentCmd, g_ctx.currentIOffset, 1, 0, 0, 0);
 	}
 }
+static void createMSAAColorAndDepthResources(const uint width, const uint height, VkSampleCountFlagBits msaaSamples) {
+	if (msaaSamples == 0) msaaSamples = VK_SAMPLE_COUNT_1_BIT;
+	const VkImageCreateInfo colorImageInfo = {
+		.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+		.imageType = VK_IMAGE_TYPE_2D,
+		.extent.width = width,
+		.extent.height = height,
+		.extent.depth = 1,
+		.mipLevels = 1,
+		.arrayLayers = 1,
+		.format = VK_FORMAT_B8G8R8A8_UNORM,
+		.tiling = VK_IMAGE_TILING_OPTIMAL,
+		.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+		.usage = VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+		.samples = msaaSamples,
+		.sharingMode = VK_SHARING_MODE_EXCLUSIVE
+	};
+	vkCreateImage(g_ctx.device, &colorImageInfo, NULL, &colorImageMSAA);
+	VkMemoryRequirements colorMemReqs;
+	vkGetImageMemoryRequirements(g_ctx.device, colorImageMSAA, &colorMemReqs);
+	const VkMemoryAllocateInfo colorAllocInfo = {
+		.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+		.allocationSize = colorMemReqs.size,
+		.memoryTypeIndex = findMemoryType(colorMemReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+	};
+	vkAllocateMemory(g_ctx.device, &colorAllocInfo, NULL, &colorImageMSAAMemory);
+	vkBindImageMemory(g_ctx.device, colorImageMSAA, colorImageMSAAMemory, 0);
+	const VkImageViewCreateInfo colorViewInfo = {
+		.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+		.image = colorImageMSAA,
+		.viewType = VK_IMAGE_VIEW_TYPE_2D,
+		.format = VK_FORMAT_B8G8R8A8_UNORM,
+		.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }
+	};
+	vkCreateImageView(g_ctx.device, &colorViewInfo, NULL, &colorImageViewMSAA);
+	const VkImageCreateInfo depthImageInfo = {
+		.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+		.imageType = VK_IMAGE_TYPE_2D,
+		.extent.width = width,
+		.extent.height = height,
+		.extent.depth = 1,
+		.mipLevels = 1,
+		.arrayLayers = 1,
+		.format = VK_FORMAT_D32_SFLOAT,
+		.tiling = VK_IMAGE_TILING_OPTIMAL,
+		.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+		.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+		.samples = msaaSamples,
+		.sharingMode = VK_SHARING_MODE_EXCLUSIVE
+	};
+	vkCreateImage(g_ctx.device, &depthImageInfo, NULL, &g_ctx.depthImage);
+	VkMemoryRequirements depthMemReqs;
+	vkGetImageMemoryRequirements(g_ctx.device, g_ctx.depthImage, &depthMemReqs);
+	const VkMemoryAllocateInfo depthAllocInfo = {
+		.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+		.allocationSize = depthMemReqs.size,
+		.memoryTypeIndex = findMemoryType(depthMemReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+	};
+	vkAllocateMemory(g_ctx.device, &depthAllocInfo, NULL, &g_ctx.depthImageMemory);
+	vkBindImageMemory(g_ctx.device, g_ctx.depthImage, g_ctx.depthImageMemory, 0);
+	const VkImageViewCreateInfo depthViewInfo = {
+		.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+		.image = g_ctx.depthImage,
+		.viewType = VK_IMAGE_VIEW_TYPE_2D,
+		.format = VK_FORMAT_D32_SFLOAT,
+		.subresourceRange = { VK_IMAGE_ASPECT_DEPTH_BIT, 0, 1, 0, 1 }
+	};
+	vkCreateImageView(g_ctx.device, &depthViewInfo, NULL, &g_ctx.depthImageView);
+}
+static void cleanupMSAAAndDepthResources() {
+	vkDestroyImageView(g_ctx.device, colorImageViewMSAA, NULL);
+	vkDestroyImage(g_ctx.device, colorImageMSAA, NULL);
+	vkFreeMemory(g_ctx.device, colorImageMSAAMemory, NULL);
+	vkDestroyImageView(g_ctx.device, g_ctx.depthImageView, NULL);
+	vkDestroyImage(g_ctx.device, g_ctx.depthImage, NULL);
+	vkFreeMemory(g_ctx.device, g_ctx.depthImageMemory, NULL);
+}
+static void recreateSwapchain() {
+	int width = 0, height = 0;
+	glfwGetFramebufferSize(g_ctx.window, &width, &height);
+	while (width == 0 || height == 0) {
+		glfwGetFramebufferSize(g_ctx.window, &width, &height);
+		glfwWaitEvents();
+	}
+	vkDeviceWaitIdle(g_ctx.device);
+	cleanupMSAAAndDepthResources();
+	for (uint32_t i = 0; i < g_ctx.imageCount; i++) {
+		vkDestroyFramebuffer(g_ctx.device, g_ctx.swapchainFramebuffers[i], NULL);
+		vkDestroyImageView(g_ctx.device, g_ctx.swapchainImageViews[i], NULL);
+	}
+	free(g_ctx.swapchainFramebuffers);
+	free(g_ctx.swapchainImageViews);
+	free(g_ctx.swapchainImages);
+	vkDestroySwapchainKHR(g_ctx.device, g_ctx.swapchain, NULL);
+	int fbW, fbH;
+	glfwGetFramebufferSize(g_ctx.window, &fbW, &fbH);
+	const VkSwapchainCreateInfoKHR swapchainInfo = {
+		.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
+		.surface = g_ctx.surface,
+		.minImageCount = 2,
+		.imageFormat = VK_FORMAT_B8G8R8A8_UNORM,
+		.imageColorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR,
+		.imageExtent = {(uint32_t)fbW, (uint32_t)fbH},
+		.imageArrayLayers = 1,
+		.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+		.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR,
+		.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
+		.presentMode = VK_PRESENT_MODE_FIFO_KHR
+	};
+	vkCreateSwapchainKHR(g_ctx.device, &swapchainInfo, NULL, &g_ctx.swapchain);
+	vkGetSwapchainImagesKHR(g_ctx.device, g_ctx.swapchain, &g_ctx.imageCount, NULL);
+	g_ctx.swapchainImages = malloc(sizeof(VkImage) * g_ctx.imageCount);
+	vkGetSwapchainImagesKHR(g_ctx.device, g_ctx.swapchain, &g_ctx.imageCount, g_ctx.swapchainImages);
+	g_ctx.swapchainImageViews = malloc(sizeof(VkImageView) * g_ctx.imageCount);
+	for (uint32_t i = 0; i < g_ctx.imageCount; i++) {
+		const VkImageViewCreateInfo viewInfo = {
+			.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+			.image = g_ctx.swapchainImages[i],
+			.viewType = VK_IMAGE_VIEW_TYPE_2D,
+			.format = VK_FORMAT_B8G8R8A8_UNORM,
+			.subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1}
+		};
+		vkCreateImageView(g_ctx.device, &viewInfo, NULL, &g_ctx.swapchainImageViews[i]);
+	}
+	createMSAAColorAndDepthResources(fbW, fbH, (VkSampleCountFlagBits)g_settings.msaaLevel);
+	g_ctx.swapchainFramebuffers = malloc(sizeof(VkFramebuffer) * g_ctx.imageCount);
+	for (uint32_t i = 0; i < g_ctx.imageCount; i++) {
+		const VkImageView attachments[3] = { colorImageViewMSAA, g_ctx.depthImageView, g_ctx.swapchainImageViews[i] };
+		const VkFramebufferCreateInfo fbInfo = {
+			.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+			.renderPass = g_ctx.renderPass,
+			.attachmentCount = 3,
+			.pAttachments = attachments,
+			.width = (uint32_t)fbW,
+			.height = (uint32_t)fbH,
+			.layers = 1
+		};
+		vkCreateFramebuffer(g_ctx.device, &fbInfo, NULL, &g_ctx.swapchainFramebuffers[i]);
+	}
+}
+static void rebuildGraphicsPipeline() {
+	vkDeviceWaitIdle(g_ctx.device);
+	vkDestroyPipeline(g_ctx.device, g_ctx.graphicsPipeline, NULL);
+	vkDestroyPipelineLayout(g_ctx.device, g_ctx.pipelineLayout, NULL);
+	cleanupMSAAAndDepthResources();
+	for (uint32_t i = 0; i < g_ctx.imageCount; i++) {
+		vkDestroyFramebuffer(g_ctx.device, g_ctx.swapchainFramebuffers[i], NULL);
+		vkDestroyImageView(g_ctx.device, g_ctx.swapchainImageViews[i], NULL);
+	}
+	free(g_ctx.swapchainFramebuffers);
+	free(g_ctx.swapchainImageViews);
+	free(g_ctx.swapchainImages);
+	vkDestroySwapchainKHR(g_ctx.device, g_ctx.swapchain, NULL);
+	int fbW, fbH;
+	glfwGetFramebufferSize(g_ctx.window, &fbW, &fbH);
+	while (fbW == 0 || fbH == 0) {
+		glfwGetFramebufferSize(g_ctx.window, &fbW, &fbH);
+		glfwWaitEvents();
+	}
+	const VkSwapchainCreateInfoKHR swapchainInfo = {
+		.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
+		.surface = g_ctx.surface,
+		.minImageCount = 2,
+		.imageFormat = VK_FORMAT_B8G8R8A8_UNORM,
+		.imageColorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR,
+		.imageExtent = {(uint32_t)fbW, (uint32_t)fbH},
+		.imageArrayLayers = 1,
+		.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+		.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR,
+		.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
+		.presentMode = VK_PRESENT_MODE_FIFO_KHR
+	};
+	vkCreateSwapchainKHR(g_ctx.device, &swapchainInfo, NULL, &g_ctx.swapchain);
+	vkGetSwapchainImagesKHR(g_ctx.device, g_ctx.swapchain, &g_ctx.imageCount, NULL);
+	g_ctx.swapchainImages = malloc(sizeof(VkImage) * g_ctx.imageCount);
+	vkGetSwapchainImagesKHR(g_ctx.device, g_ctx.swapchain, &g_ctx.imageCount, g_ctx.swapchainImages);
+	g_ctx.swapchainImageViews = malloc(sizeof(VkImageView) * g_ctx.imageCount);
+	for (uint32_t i = 0; i < g_ctx.imageCount; i++) {
+		const VkImageViewCreateInfo viewInfo = {
+			.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+			.image = g_ctx.swapchainImages[i],
+			.viewType = VK_IMAGE_VIEW_TYPE_2D,
+			.format = VK_FORMAT_B8G8R8A8_UNORM,
+			.subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1}
+		};
+		vkCreateImageView(g_ctx.device, &viewInfo, NULL, &g_ctx.swapchainImageViews[i]);
+	}
+	createMSAAColorAndDepthResources(fbW, fbH, (VkSampleCountFlagBits)g_settings.msaaLevel);
+	g_ctx.swapchainFramebuffers = malloc(sizeof(VkFramebuffer) * g_ctx.imageCount);
+	for (uint32_t i = 0; i < g_ctx.imageCount; i++) {
+		const VkImageView attachments[3] = { colorImageViewMSAA, g_ctx.depthImageView, g_ctx.swapchainImageViews[i] };
+		const VkFramebufferCreateInfo fbInfo = {
+			.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+			.renderPass = g_ctx.renderPass,
+			.attachmentCount = 3,
+			.pAttachments = attachments,
+			.width = (uint32_t)fbW,
+			.height = (uint32_t)fbH,
+			.layers = 1
+		};
+		vkCreateFramebuffer(g_ctx.device, &fbInfo, NULL, &g_ctx.swapchainFramebuffers[i]);
+	}
+}
+static uint8_t inInit = 0;
+void qgSetGraphicsSetting(uint8_t setting, uint8_t value) {
+	switch (setting) {
+		case QGPU_SETTINGS_AMBIENT_OCCLUSION: g_settings.ambientOcclusion = value; break;
+		case QGPU_SETTINGS_MSAA_LEVEL:
+			if (inInit && g_settings.msaaLevel != value && (value == 1 || value == 2 || value == 4 || value == 8)) {
+				g_settings.msaaLevel = value;
+				rebuildGraphicsPipeline();
+			}
+			break;
+		case QGPU_SETTINGS_SHADOWS: g_settings.shadows = value; break;
+	}
+}
 // ========================================================================================================================================================================
 // ===== INIT =============================================================================================================================================================
 // ========================================================================================================================================================================
-static uint8_t inInit = 0;
 void qgpuCreate(const uint width, const uint height, const char* title, void (*initFunc)(), void (*updateFunc)()) {
 	if (!glfwInit()) return;
 	sphereVertexIndices = malloc(sizeof(uint32_t) * (MAX_SPHERE_RINGS + 1) * (MAX_SPHERE_SECTORS + 1));
@@ -307,8 +502,8 @@ void qgpuCreate(const uint width, const uint height, const char* title, void (*i
 	glfwSwapInterval(0);
 	uint32_t glfwExtensionCount = 0;
 	const char** glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
-	const VkInstanceCreateInfo instanceInfo = { .
-		sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
+	const VkInstanceCreateInfo instanceInfo = {
+		.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
 		.enabledExtensionCount = glfwExtensionCount,
 		.ppEnabledExtensionNames = glfwExtensions
 	};
@@ -363,6 +558,16 @@ void qgpuCreate(const uint width, const uint height, const char* title, void (*i
 		.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
 		.presentMode = VK_PRESENT_MODE_FIFO_KHR
 	};
+	qgSetStyle(BOLD);
+	if (_showBanner) printBanner();
+	if (_madeWith) printMadeWith();
+	if (_showInfo) printInfo();
+	if (_showColors) printColors();
+	qgSetStyle(REGULAR);
+	printf("\n");
+	inInit = 1;
+	if (initFunc) initFunc();
+	inInit = 0;
 	vkCreateSwapchainKHR(g_ctx.device, &swapchainInfo, NULL, &g_ctx.swapchain);
 	vkGetSwapchainImagesKHR(g_ctx.device, g_ctx.swapchain, &g_ctx.imageCount, NULL);
 	g_ctx.swapchainImages = malloc(sizeof(VkImage) * g_ctx.imageCount);
@@ -378,24 +583,48 @@ void qgpuCreate(const uint width, const uint height, const char* title, void (*i
 		};
 		vkCreateImageView(g_ctx.device, &viewInfo, NULL, &g_ctx.swapchainImageViews[i]);
 	}
-	createDepthResources(fbW, fbH);
+	createMSAAColorAndDepthResources(fbW, fbH, (VkSampleCountFlagBits)g_settings.msaaLevel);
+	g_ctx.swapchainFramebuffers = malloc(sizeof(VkFramebuffer) * g_ctx.imageCount);
+	for (uint32_t i = 0; i < g_ctx.imageCount; i++) {
+		const VkImageView attachments[3] = { colorImageViewMSAA, g_ctx.depthImageView, g_ctx.swapchainImageViews[i] };
+		const VkFramebufferCreateInfo fbInfo = {
+			.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+			.renderPass = g_ctx.renderPass,
+			.attachmentCount = 3,
+			.pAttachments = attachments,
+			.width = (uint32_t)fbW,
+			.height = (uint32_t)fbH,
+			.layers = 1
+		};
+		vkCreateFramebuffer(g_ctx.device, &fbInfo, NULL, &g_ctx.swapchainFramebuffers[i]);
+	}
 	const VkAttachmentDescription colorAttachment = {
 		.format = VK_FORMAT_B8G8R8A8_UNORM,
-		.samples = VK_SAMPLE_COUNT_1_BIT,
+		.samples = (VkSampleCountFlagBits)g_settings.msaaLevel,
 		.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+		.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+		.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+		.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+		.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+		.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+	};
+	const VkAttachmentReference colorAttachmentRef = {
+		.attachment = 0,
+		.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+	};
+	const VkAttachmentDescription colorAttachmentResolve = {
+		.format = VK_FORMAT_B8G8R8A8_UNORM,
+		.samples = VK_SAMPLE_COUNT_1_BIT,
+		.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
 		.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
 		.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
 		.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
 		.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
 		.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
 	};
-	const VkAttachmentReference colorAttachmentRef = {
-		.attachment = 0,
-		.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
-	};
 	const VkAttachmentDescription depthAttachment = {
 		.format = VK_FORMAT_D32_SFLOAT,
-		.samples = VK_SAMPLE_COUNT_1_BIT,
+		.samples = (VkSampleCountFlagBits)g_settings.msaaLevel,
 		.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
 		.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
 		.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
@@ -407,10 +636,15 @@ void qgpuCreate(const uint width, const uint height, const char* title, void (*i
 		.attachment = 1,
 		.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
 	};
+	const VkAttachmentReference colorAttachmentResolveRef = {
+		.attachment = 2,
+		.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+	};
 	const VkSubpassDescription subpass = {
 		.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
 		.colorAttachmentCount = 1,
 		.pColorAttachments = &colorAttachmentRef,
+		.pResolveAttachments = &colorAttachmentResolveRef,
 		.pDepthStencilAttachment = &depthAttachmentRef
 	};
 	const VkSubpassDependency dependency = {
@@ -421,10 +655,10 @@ void qgpuCreate(const uint width, const uint height, const char* title, void (*i
 		.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
 		.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT
 	};
-	const VkAttachmentDescription attachments[2] = { colorAttachment, depthAttachment };
+	const VkAttachmentDescription attachments[3] = { colorAttachment, depthAttachment, colorAttachmentResolve };
 	const VkRenderPassCreateInfo renderPassInfo = {
 		.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
-		.attachmentCount = 2,
+		.attachmentCount = 3,
 		.pAttachments = attachments,
 		.subpassCount = 1,
 		.pSubpasses = &subpass,
@@ -557,7 +791,9 @@ void qgpuCreate(const uint width, const uint height, const char* title, void (*i
 	};
 	const VkPipelineMultisampleStateCreateInfo multisampling = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
-		.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT
+		.rasterizationSamples = (VkSampleCountFlagBits)g_settings.msaaLevel,
+		.sampleShadingEnable = g_settings.msaaLevel > 1 ? VK_TRUE : VK_FALSE,
+		.minSampleShading = 0.2f
 	};
 	const VkPipelineDepthStencilStateCreateInfo depthStencil = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
@@ -609,11 +845,11 @@ void qgpuCreate(const uint width, const uint height, const char* title, void (*i
 	vkDestroyShaderModule(g_ctx.device, vertModule, NULL);
 	g_ctx.swapchainFramebuffers = malloc(sizeof(VkFramebuffer) * g_ctx.imageCount);
 	for (uint32_t i = 0; i < g_ctx.imageCount; i++) {
-		const VkImageView attachments[2] = { g_ctx.swapchainImageViews[i], g_ctx.depthImageView };
+		const VkImageView attachments[3] = { colorImageViewMSAA, g_ctx.depthImageView, g_ctx.swapchainImageViews[i] };
 		const VkFramebufferCreateInfo fbInfo = {
 			.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
 			.renderPass = g_ctx.renderPass,
-			.attachmentCount = 2,
+			.attachmentCount = 3,
 			.pAttachments = attachments,
 			.width = (uint32_t)fbW,
 			.height = (uint32_t)fbH,
@@ -637,29 +873,22 @@ void qgpuCreate(const uint width, const uint height, const char* title, void (*i
 	createBuffer(sizeof(QGPU_Vertex) * MAX_VERTICES, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &g_ctx.vertexBuffer, &g_ctx.vertexBufferMemory);
 	createBuffer(sizeof(uint32_t) * MAX_VERTICES * 3, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &g_ctx.indexBuffer, &g_ctx.indexBufferMemory);
 	vkMapMemory(g_ctx.device, g_ctx.vertexBufferMemory, 0, sizeof(QGPU_Vertex) * MAX_VERTICES, 0, &g_ctx.mappedVertexBuffer);
-	vkMapMemory(g_ctx.device, g_ctx.indexBufferMemory, 0, sizeof(uint32_t) * (uint32_t)(MAX_VERTICES * 1.5f), 0, &g_ctx.mappedIndexBuffer);
+	vkMapMemory(g_ctx.device, g_ctx.indexBufferMemory, 0, sizeof(uint32_t) * MAX_VERTICES * 3, 0, &g_ctx.mappedIndexBuffer);
 	const VkSemaphoreCreateInfo semaphoreInfo = { .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
 	vkCreateSemaphore(g_ctx.device, &semaphoreInfo, NULL, &g_ctx.imageAvailableSemaphore);
 	vkCreateSemaphore(g_ctx.device, &semaphoreInfo, NULL, &g_ctx.renderFinishedSemaphore);
 	memset(g_ctx.lastKeyState, 0, sizeof(g_ctx.lastKeyState));
 	memset(g_ctx.lastMouseState, 0, sizeof(g_ctx.lastMouseState));
-	qgSetStyle(BOLD);
-	if (_showBanner) printBanner();
-	if (_madeWith) printMadeWith();
-	if (_showInfo) printInfo();
-	if (_showColors) printColors();
-	qgSetStyle(REGULAR);
-	printf("\n");
-	inInit = 1;
-	if (initFunc) initFunc();
-	inInit = 0;
 	while (!glfwWindowShouldClose(g_ctx.window)) {
-		for (uint i = 0; i < GLFW_KEY_LAST; i++) g_ctx.lastKeyState[i] = glfwGetKey(g_ctx.window, i);
-		for (uint i = 0; i < GLFW_MOUSE_BUTTON_LAST; i++) g_ctx.lastMouseState[i] = glfwGetMouseButton(g_ctx.window, i);
+		for (uint16_t i = 0; i < GLFW_KEY_LAST; i++) g_ctx.lastKeyState[i] = glfwGetKey(g_ctx.window, i);
+		for (uint8_t i = 0; i < GLFW_MOUSE_BUTTON_LAST; i++) g_ctx.lastMouseState[i] = glfwGetMouseButton(g_ctx.window, i);
 		glfwPollEvents();
 		uint32_t imageIndex;
 		const VkResult result = vkAcquireNextImageKHR(g_ctx.device, g_ctx.swapchain, UINT64_MAX, g_ctx.imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
-		if (result == VK_ERROR_OUT_OF_DATE_KHR) { continue; } else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) { continue; }
+		if (result == VK_ERROR_OUT_OF_DATE_KHR) {
+			recreateSwapchain();
+			continue;
+		} else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) qgError("Failed to acquire swap chain image!\n");
 		g_ctx.currentVOffset = 0;
 		g_ctx.currentIOffset = 0;
 		lightCount = 0;
@@ -684,8 +913,10 @@ void qgpuCreate(const uint width, const uint height, const char* title, void (*i
 		};
 		vkCmdBeginRenderPass(g_ctx.currentCmd, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 		vkCmdBindPipeline(g_ctx.currentCmd, VK_PIPELINE_BIND_POINT_GRAPHICS, g_ctx.graphicsPipeline);
-		const VkViewport viewport = {0.0f, 0.0f, (float)width, (float)height, 0.0f, 1.0f};
-		const VkRect2D scissor = {{0, 0}, {(uint32_t)width, (uint32_t)height}};
+		int curW, curH;
+		glfwGetFramebufferSize(g_ctx.window, &curW, &curH);
+		const VkViewport viewport = {0.0f, 0.0f, (float)curW, (float)curH, 0.0f, 1.0f};
+		const VkRect2D scissor = {{0, 0}, {(uint32_t)curW, (uint32_t)curH}};
 		vkCmdSetViewport(g_ctx.currentCmd, 0, 1, &viewport);
 		vkCmdSetScissor(g_ctx.currentCmd, 0, 1, &scissor);
 		const VkDeviceSize offsets[] = {0};
