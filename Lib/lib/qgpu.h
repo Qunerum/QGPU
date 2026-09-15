@@ -4,10 +4,12 @@
 // !===== CONFIGURATION ==================================================================================================================================================!
 #define MAX_VERTICES     65536 // (2^16) Max vertices in one frame
 #define MAX_LIGHTS       1024  // (2^10) Max lights in one frame
+#define MAX_UI_VERTICES  8192  // Max 2D/UI vertices in one frame
 #define VSYNC            1
 #define SHADOW_MAP_SIZE  4096  // resolution of the (single) shadow depth map
 // !===== Structs ========================================================================================================================================================!
 typedef unsigned int uint;
+typedef struct { float x, y; } Vector2;
 typedef struct { float x, y, z; } Vector3;
 // !===== Console ========================================================================================================================================================!
 #define QGPU_SHOW_BANNER          0
@@ -35,6 +37,15 @@ void qgpuCreate(const uint width, const uint height, const char* title, void (*i
 float qgGetFPS();
 // !===== Drawing ========================================================================================================================================================!
 void qgSetBackground(const float r, const float g, const float b);
+void qgAddTriangle(const Vector3 p1, const Vector3 p2, const Vector3 p3, const float r, const float g, const float b, const float a);
+
+// !===== 2D / UI ========================================================================================================================================================!
+void qgAddTriangle2D(const Vector2 p1, const Vector2 p2, const Vector2 p3, const float r, const float g, const float b, const float a);
+#ifdef QGPU_SHAPES
+void qgAddRect(const Vector2 position, const Vector2 size, const float r, const float g, const float b, const float a);
+
+void qgAddPlane(const Vector3 position, const Vector2 size, const float r, const float g, const float b, const float a);
+#endif
 // !===== Camera =========================================================================================================================================================!
 void qgSetCamera(const Vector3 position, const Vector3 target, const float fovDegrees);
 void qgSetCameraUp(const Vector3 up);
@@ -44,8 +55,6 @@ Vector3 qgGetCameraPosition();
 void qgSetRotationPivot(const float x, const float y, const float z);
 void qgSetRotation(const float rx, const float ry, const float rz); // degrees
 void qgResetRotation();
-// !===== Triangle - the only drawing primitive ==========================================================================================================================!
-void qgAddTriangle(const Vector3 p1, const Vector3 p2, const Vector3 p3, const float r, const float g, const float b, const float a);
 // !===== Lights =========================================================================================================================================================!
 void qgAddLight(const Vector3 position, const float range, const float power);
 // !===== Input ==========================================================================================================================================================!

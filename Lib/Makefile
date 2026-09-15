@@ -1,11 +1,12 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -g -O0 -I. -Iinclude -Ilib
+
+CFLAGS = -Wall -Wextra -O2 -I. -Iinclude -Ilib -ffunction-sections -fdata-sections -MMD -MP
 
 ifeq ($(OS),Windows_NT)
-    LDFLAGS = -lglfw3 -lvulkan -lgdi32 -luser32 -lshell32
+    LDFLAGS = -Wl,--gc-sections -lglfw3 -lvulkan -lgdi32 -luser32 -lshell32
     APP_EXT = .exe
 else
-    LDFLAGS = -lglfw -lvulkan -ldl -lpthread -lX11 -lXxf86vm -lXrandr -lXi
+    LDFLAGS = -Wl,--gc-sections -lglfw -lvulkan -ldl -lpthread -lX11 -lXxf86vm -lXrandr -lXi
     APP_EXT =
 endif
 
@@ -13,9 +14,8 @@ OBJ = .obj
 BUILD = build
 
 SRCS = $(wildcard src/*.c) $(wildcard lib/*.c)
-OBJS = $(patsubst %.c, $(OBJ)/%.o, $(notdir $(SRCS)))
-
-vpath %.c src lib
+OBJS = $(patsubst %.c, $(OBJ)/%.o, $(SRCS))
+DEPS = $(OBJS:.o=.d)
 
 APP_NAME = qgpuApp$(APP_EXT)
 APP = $(BUILD)/$(APP_NAME)
@@ -23,22 +23,24 @@ APP = $(BUILD)/$(APP_NAME)
 all: prepare $(APP)
 
 prepare:
-	@mkdir -p $(OBJ) $(BUILD)
+	@mkdir -p $(OBJ)/src $(OBJ)/lib $(BUILD)
 
 $(OBJ)/%.o: %.c
-	@echo "Kompilacja $<..."
+	@echo "Compilation $<..."
 	@$(CC) $(CFLAGS) -c $< -o $@
 
 $(APP): $(OBJS)
-	@echo "Linkowanie aplikacji $(APP)..."
-	@$(CC) -o $@ $(OBJS) $(LDFLAGS)
+	@echo "Linking app $(APP)..."
+	@$(CC) $(OBJS) -o $@ $(LDFLAGS)
+
+-include $(DEPS)
 
 run: all
-	@./$(BUILD)/$(APP_NAME)
+	@./$(APP)
 
 clean:
-	@echo "Czyszczenie..."
+	@echo "Cleaning..."
 	@rm -rf $(OBJ) $(BUILD)
-	@echo "Wyczyszczone!"
+	@echo "Cleaned!"
 
 .PHONY: all prepare run clean

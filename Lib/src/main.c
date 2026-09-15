@@ -1,3 +1,5 @@
+// #define QGPU_COLORS
+#define QGPU_SHAPES
 #include "../lib/qgpu.h"
 
 void init() {
@@ -5,25 +7,27 @@ void init() {
 }
 
 void update() {
-    static Vector3 pos = {2, 4, 2};
-    const float spd = .1f;
-    if (qgGetKey(QKEY_W)) pos.z += spd;
-    if (qgGetKey(QKEY_S)) pos.z -= spd;
-    if (qgGetKey(QKEY_A)) pos.x += spd;
-    if (qgGetKey(QKEY_D)) pos.x -= spd;
-    if (qgGetKey(QKEY_Q)) pos.y -= spd;
-    if (qgGetKey(QKEY_E)) pos.y += spd;
+    qgSetCamera((Vector3){-5, 4, -7}, (Vector3){0, 0, 0}, 60.0f);
+    qgAddLight((Vector3){2, 4, 1}, 10.0f, 2.0f);
 
-    qgSetCamera((Vector3){0, 4, -10}, (Vector3){0, 0, 0}, 60.0f);
+    qgAddRect((Vector2){-500, 0}, (Vector2){100, 50}, .6f,.6f,.6f,1);
 
-    qgPrint("(%.2f, %.2f, %.2f)\n", pos.x, pos.y, pos.z);
+    static float spd = .25f;
+    if (qgGetKey(QKEY_UP)) spd += 0.01f;
+    if (qgGetKey(QKEY_DOWN)) spd -= 0.01f;
+    qgPrint("Speed: %.2f\n", spd);
+    static float r = 0;
+    r += spd;
+    qgSetRotation(-90, r, 0);
+    qgSetRotationPivot(0, 0.5f, 0);
+    qgAddPlane((Vector3){0, 0.5f, 0}, (Vector2){1, 1}, 1,.2f,.2f,1);
+    qgSetRotation(90, r, 0);
+    qgAddPlane((Vector3){0, 0.5f, 0}, (Vector2){1, 1}, 1,.2f,.2f,1);
 
-    qgAddLight(pos, 100.0f, 2.0f);
+    qgSetRotation(0, 0, 0);
 
-    qgAddTriangle((Vector3){0,0,0}, (Vector3){1,0,0}, (Vector3){0.5f,1.5f,0}, 1,0,0,1);
-
-    qgAddTriangle((Vector3){-5,0,-5}, (Vector3){5,0,-5}, (Vector3){5,0,5}, 0.6f,0.6f,0.6f,1.0f);
-    qgAddTriangle((Vector3){-5,0,-5}, (Vector3){5,0,5}, (Vector3){-5,0,5}, 0.6f,0.6f,0.6f,1.0f);
+    qgAddPlane((Vector3){0, 0, 0}, (Vector2){10, 10}, .6f,.6f,.6f,1);
+    qgAddPlane((Vector3){0, 0.9, 0}, (Vector2){2, 2}, .2f,1,.2f,1.0f);
 }
 
 int main() {
