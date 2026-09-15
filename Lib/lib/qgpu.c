@@ -999,7 +999,6 @@ void qgpuCreate(const uint width, const uint height, const char* title, void (*i
 			Vector3 lightPos = { lights[0], lights[1], lights[2] };
 			float lightRange = lights[3];
 			float lightView[16], lightProj[16];
-			// The shadow-casting light is treated like a spotlight aimed at the current camera target.
 			mat4LookAt(lightView, lightPos, camTarget, (Vector3){0.0f, 1.0f, 0.0f});
 			mat4Perspective(lightProj, 100.0f * (PI / 180.0f), 1.0f, 0.1f, lightRange > 1.0f ? lightRange : 100.0f);
 			mat4Multiply(ubo.lightViewProj, lightProj, lightView);
