@@ -42,6 +42,7 @@ void qgAddTriangle2D(const Vector2 p1, const Vector2 p2, const Vector2 p3, const
 void qgSetLayerUI(const uint layer);
 #ifdef QGPU_SHAPES
 void qgAddRect(const Vector2 position, const Vector2 size, const float r, const float g, const float b, const float a);
+void qgAddCircle(const Vector2 position, const float radius, const uint segments, const float r, const float g, const float b, const float a);
 
 void qgAddPlane(const Vector3 position, const Vector2 size, const float r, const float g, const float b, const float a);
 void qgAddBox(const Vector3 position, const Vector3 size, const float r, const float g, const float b, const float a);

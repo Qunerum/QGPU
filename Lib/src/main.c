@@ -7,10 +7,9 @@ void init() {
 }
 
 void update() {
-	qgSetCamera((Vector3){-5, 4, -7}, (Vector3){0, 0, 0}, 60.0f);
+	qgSetCamera((Vector3){2, 4, 7}, (Vector3){0, 0, 0}, 60.0f);
 
-	const Vector3 pos = (Vector3){0.25, 3, -2};
-	qgAddLight(pos, 20.0f, 1.0f);
+	qgAddLight((Vector3){2, 3, 1}, 50.0f, 1.0f);
 
 	static float spd = .25f;
 	if (qgGetKey(QKEY_UP)) spd += 0.01f;
@@ -24,9 +23,11 @@ void update() {
 	qgSetLayerUI(0);
 	qgAddRect((Vector2){-540, 0}, (Vector2){100, 50}, .5f,.2f,.2f,1);
 
-	qgSetRotation(r, r, r);
+	qgAddCircle((Vector2){-540, -100}, 50, 16, .2f,.5f,.2f,1);
+
+	qgSetRotation(30, r, 0);
 	qgSetRotationPivot(0, 1, 0);
-	qgAddBox((Vector3){0, 1, 0}, (Vector3){1, 1, 1}, .6f,.6f,.6f,1);
+	qgAddBox((Vector3){0, 1, 0}, (Vector3){1, 1, 1}, .8f,.6f,.6f,1);
 
 	qgSetRotation(0, 0, 0);
 	qgAddPlane((Vector3){0, 0, 0}, (Vector2){10, 10}, .6f,.6f,.6f,1);

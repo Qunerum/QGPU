@@ -13,7 +13,7 @@
 
 #define QGPU_VERSION_MAJOR 2
 #define QGPU_VERSION_MINOR 3
-#define QGPU_VERSION_PATCH 0
+#define QGPU_VERSION_PATCH 1
 
 // ========================================================================================================================================================================
 // ===== QGPU =============================================================================================================================================================
@@ -1227,34 +1227,49 @@ void qgAddTriangle2D(const Vector2 p1, const Vector2 p2, const Vector2 p3, const
 	uiTriangleCount++;
 }
 void qgSetLayerUI(const uint layer) { currentUILayer = layer; }
-void qgAddRect(const Vector2 position, const Vector2 size, const float r, const float g, const float b, const float a) {
+void qgAddRect(const Vector2 p, const Vector2 size, const float r, const float g, const float b, const float a) {
 	const float x = size.x / 2.0f, y = size.y / 2.0f;
-	const Vector2 mp = {position.x - x, position.y + y}, pp = {position.x + x, position.y + y}, pm = {position.x + x, position.y - y}, mm = {position.x - x, position.y - y};
+	const Vector2
+	mp = {p.x - x, p.y + y},
+	pp = {p.x + x, p.y + y},
+	pm = {p.x + x, p.y - y},
+	mm = {p.x - x, p.y - y};
 	qgAddTriangle2D(mp, pp, pm, r, g, b, a);
 	qgAddTriangle2D(mp, pm, mm, r, g, b, a);
+}
+void qgAddCircle(const Vector2 p, const float radius, const uint segments, const float r, const float g, const float b, const float a) {
+	if (radius <= 0 || segments < 3) return;
+	Vector2 last = {p.x, p.y + radius};
+	const float seg = 360.0f / segments;
+	for (uint i = 1; i <= segments; i++) {
+		const float rad = (seg * i) * (PI / 180.0f);
+		const Vector2 n = (Vector2){p.x + qSin(rad) * radius, p.y + qCos(rad) * radius};
+		qgAddTriangle2D(p, n, last, r,g,b,a);
+		last = n;
+	}
 }
 
 void qgAddPlane(const Vector3 p, const Vector2 size, const float r, const float g, const float b, const float a) {
 	const float x = size.x / 2.0f, z = size.y / 2.0f;
 	const Vector3
-	mm = {p.x - x, p.y, p.z - z},
-	mp = {p.x - x, p.y, p.z + z},
-	pm = {p.x + x, p.y, p.z - z},
-	pp = {p.x + x, p.y, p.z + z};
+		mm = {p.x - x, p.y, p.z - z},
+		mp = {p.x - x, p.y, p.z + z},
+		pm = {p.x + x, p.y, p.z - z},
+		pp = {p.x + x, p.y, p.z + z};
 	qgAddTriangle(mm, pm, pp, r,g,b,a);
 	qgAddTriangle(mm, pp, mp, r,g,b,a);
 }
 void qgAddBox(const Vector3 p, const Vector3 size, const float r, const float g, const float b, const float a) {
 	const float x = size.x / 2.0f, y = size.y / 2.0f, z = size.z / 2.0f;
 	const Vector3
-	mmm = {p.x - x, p.y - y, p.z - z},
-	mmp = {p.x - x, p.y - y, p.z + z},
-	mpm = {p.x - x, p.y + y, p.z - z},
-	mpp = {p.x - x, p.y + y, p.z + z},
-	pmm = {p.x + x, p.y - y, p.z - z},
-	pmp = {p.x + x, p.y - y, p.z + z},
-	ppm = {p.x + x, p.y + y, p.z - z},
-	ppp = {p.x + x, p.y + y, p.z + z};
+		mmm = {p.x - x, p.y - y, p.z - z},
+		mmp = {p.x - x, p.y - y, p.z + z},
+		mpm = {p.x - x, p.y + y, p.z - z},
+		mpp = {p.x - x, p.y + y, p.z + z},
+		pmm = {p.x + x, p.y - y, p.z - z},
+		pmp = {p.x + x, p.y - y, p.z + z},
+		ppm = {p.x + x, p.y + y, p.z - z},
+		ppp = {p.x + x, p.y + y, p.z + z};
 	qgAddTriangle(mmm, pmm, ppm, r,g,b,a);
 	qgAddTriangle(mmm, ppm, mpm, r,g,b,a);
 	qgAddTriangle(pmm, pmp, ppp, r,g,b,a);
