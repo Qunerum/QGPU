@@ -44,6 +44,7 @@ void qgSetLayerUI(const uint layer);
 void qgAddRect(const Vector2 position, const Vector2 size, const float r, const float g, const float b, const float a);
 
 void qgAddPlane(const Vector3 position, const Vector2 size, const float r, const float g, const float b, const float a);
+void qgAddBox(const Vector3 position, const Vector3 size, const float r, const float g, const float b, const float a);
 #endif
 // !===== Text ===========================================================================================================================================================!
 #define QGPU_FONT_STYLE_REGULAR 0

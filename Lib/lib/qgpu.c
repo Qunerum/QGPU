@@ -12,7 +12,7 @@
 #include "qgpu.h"
 
 #define QGPU_VERSION_MAJOR 2
-#define QGPU_VERSION_MINOR 2
+#define QGPU_VERSION_MINOR 3
 #define QGPU_VERSION_PATCH 0
 
 // ========================================================================================================================================================================
@@ -143,7 +143,7 @@ static float qsqrt(const float number) {
 }
 static unsigned long long factorial(const int n) {
 	unsigned long long result = 1;
-	for (uint i = 1; i <= n; i++) result *= i;
+	for (int i = 1; i <= n; i++) result *= i;
 	return result;
 }
 static float qSin(const float rad) {
@@ -170,7 +170,6 @@ static Vector3 v3Cross(const Vector3 a, const Vector3 b) { return (Vector3){a.y 
 static float v3Dot(const Vector3 a, const Vector3 b) { return a.x * b.x + a.y * b.y + a.z * b.z; }
 static float v3Length(const Vector3 a) { return qsqrt(v3Dot(a, a)); }
 static Vector3 v3Normalize(const Vector3 a) { float l = v3Length(a); if (l < 0.00001f) return (Vector3){0, 0, 0}; return v3Scale(a, 1.0f / l); }
-static float v3Distance(const Vector3 a, const Vector3 b) { return v3Length(v3Sub(a, b)); }
 
 static void mat4Identity(float* m) { memset(m, 0, sizeof(float) * 16); m[0] = m[5] = m[10] = m[15] = 1.0f; }
 static void mat4Multiply(float* out, const float* a, const float* b) {
@@ -209,15 +208,18 @@ static void transformPoint(float* x, float* y, float* z) {
 	*y = y3 + g_ctx.pivotY;
 	*z = z3 + g_ctx.pivotZ;
 }
-static float getLight(const Vector3 p) {
+static float getLight(const Vector3 p, const Vector3 n) {
 	float total = g_settings.ambientOcclusion ? 0.05f : 0.2f;
 	for (uint i = 0; i < lightCount; i++) {
 		Vector3 lp = { lights[i * 5], lights[i * 5 + 1], lights[i * 5 + 2] };
 		float rng = lights[i * 5 + 3], pow = lights[i * 5 + 4];
 		if (rng <= 0.0f || pow <= 0.0f) continue;
-		float dis = v3Distance(lp, p);
+		Vector3 toLight = v3Sub(lp, p);
+		float dis = v3Length(toLight);
 		if (dis > rng) continue;
-		total += pow * (1.0f - (dis / rng));
+		float nDotL = 1.0f;
+		if (dis > 0.00001f) nDotL = qclampf(v3Dot(n, v3Scale(toLight, 1.0f / dis)), 0.0f, 1.0f);
+		total += pow * (1.0f - (dis / rng)) * nDotL;
 	}
 	return qclampf(total, 0.0f, 2.0f);
 }
@@ -1188,17 +1190,17 @@ void qgResetRotation() {
 }
 void qgAddTriangle(const Vector3 p1, const Vector3 p2, const Vector3 p3, const float r, const float g, const float b, const float a) {
 	if (g_ctx.currentVOffset + 3 > MAX_VERTICES) { qgWarn("qgAddTriangle: MAX_VERTICES reached, triangle skipped\n"); return; }
-	const Vector3 pts[3] = { p1, p2, p3 };
+	Vector3 wp[3] = { p1, p2, p3 };
+	for (uint8_t i = 0; i < 3; i++) transformPoint(&wp[i].x, &wp[i].y, &wp[i].z);
+	const Vector3 normal = v3Normalize(v3Cross(v3Sub(wp[2], wp[0]), v3Sub(wp[1], wp[0])));
 	QGPU_Vertex* vb = (QGPU_Vertex*)g_ctx.mappedVertexBuffer;
 	uint32_t* ib = (uint32_t*)g_ctx.mappedIndexBuffer;
 	const uint32_t base = g_ctx.currentVOffset;
 	for (uint8_t i = 0; i < 3; i++) {
-		Vector3 wp = pts[i];
-		transformPoint(&wp.x, &wp.y, &wp.z);
-		const float light = getLight(wp);
-		vb[base + i].pos[0] = wp.x;
-		vb[base + i].pos[1] = wp.y;
-		vb[base + i].pos[2] = wp.z;
+		const float light = getLight(wp[i], normal);
+		vb[base + i].pos[0] = wp[i].x;
+		vb[base + i].pos[1] = wp[i].y;
+		vb[base + i].pos[2] = wp[i].z;
 		vb[base + i].color[0] = qclampf(r * light, 0.0f, 1.0f);
 		vb[base + i].color[1] = qclampf(g * light, 0.0f, 1.0f);
 		vb[base + i].color[2] = qclampf(b * light, 0.0f, 1.0f);
@@ -1234,9 +1236,37 @@ void qgAddRect(const Vector2 position, const Vector2 size, const float r, const 
 
 void qgAddPlane(const Vector3 p, const Vector2 size, const float r, const float g, const float b, const float a) {
 	const float x = size.x / 2.0f, z = size.y / 2.0f;
-	const Vector3 mm = {p.x - x, p.y, p.z - z}, pm = {p.x + x, p.y, p.z - z}, pp = {p.x + x, p.y, p.z + z}, mp = {p.x - x, p.y, p.z + z};
+	const Vector3
+	mm = {p.x - x, p.y, p.z - z},
+	mp = {p.x - x, p.y, p.z + z},
+	pm = {p.x + x, p.y, p.z - z},
+	pp = {p.x + x, p.y, p.z + z};
 	qgAddTriangle(mm, pm, pp, r,g,b,a);
 	qgAddTriangle(mm, pp, mp, r,g,b,a);
+}
+void qgAddBox(const Vector3 p, const Vector3 size, const float r, const float g, const float b, const float a) {
+	const float x = size.x / 2.0f, y = size.y / 2.0f, z = size.z / 2.0f;
+	const Vector3
+	mmm = {p.x - x, p.y - y, p.z - z},
+	mmp = {p.x - x, p.y - y, p.z + z},
+	mpm = {p.x - x, p.y + y, p.z - z},
+	mpp = {p.x - x, p.y + y, p.z + z},
+	pmm = {p.x + x, p.y - y, p.z - z},
+	pmp = {p.x + x, p.y - y, p.z + z},
+	ppm = {p.x + x, p.y + y, p.z - z},
+	ppp = {p.x + x, p.y + y, p.z + z};
+	qgAddTriangle(mmm, pmm, ppm, r,g,b,a);
+	qgAddTriangle(mmm, ppm, mpm, r,g,b,a);
+	qgAddTriangle(pmm, pmp, ppp, r,g,b,a);
+	qgAddTriangle(pmm, ppp, ppm, r,g,b,a);
+	qgAddTriangle(pmp, mmp, mpp, r,g,b,a);
+	qgAddTriangle(pmp, mpp, ppp, r,g,b,a);
+	qgAddTriangle(mmp, mmm, mpm, r,g,b,a);
+	qgAddTriangle(mmp, mpm, mpp, r,g,b,a);
+	qgAddTriangle(mpm, ppm, ppp, r,g,b,a);
+	qgAddTriangle(mpm, ppp, mpp, r,g,b,a);
+	qgAddTriangle(mmp, pmp, pmm, r,g,b,a);
+	qgAddTriangle(mmp, pmm, mmm, r,g,b,a);
 }
 // ===== Lights
 void qgAddLight(const Vector3 position, const float range, const float power) {
@@ -1254,25 +1284,8 @@ void qgAddLight(const Vector3 position, const float range, const float power) {
 static float qFontSize = 1.6f, qFontR = 1, qFontG = 1, qFontB = 1, qFontA = 1;
 static uint8_t qFontStyle = QGPU_FONT_STYLE_REGULAR;
 static uint8_t cti(const char c) {
-	switch (c) {
-		case '0': return 0;
-		case '1': return 1;
-		case '2': return 2;
-		case '3': return 3;
-		case '4': return 4;
-		case '5': return 5;
-		case '6': return 6;
-		case '7': return 7;
-		case '8': return 8;
-		case 'A': return 11;
-		case 'B': return 12;
-		case 'C': return 13;
-		case 'D': return 14;
-		case 'E': return 15;
-		case 'F': return 16;
-		case 'G': return 17;
-		case 'H': return 18;
-	}
+	if (c >= '0' && c <= '9') return c - 48;
+	if (c >= 'A' && c <= 'H') return c - 54;
 	return 0;
 }
 void qgConvertFont(const char* pathQFR, const char* pathQF) {
