@@ -38,14 +38,23 @@ float qgGetFPS();
 // !===== Drawing ========================================================================================================================================================!
 void qgSetBackground(const float r, const float g, const float b);
 void qgAddTriangle(const Vector3 p1, const Vector3 p2, const Vector3 p3, const float r, const float g, const float b, const float a);
-
-// !===== 2D / UI ========================================================================================================================================================!
 void qgAddTriangle2D(const Vector2 p1, const Vector2 p2, const Vector2 p3, const float r, const float g, const float b, const float a);
+void qgSetLayerUI(const uint layer);
 #ifdef QGPU_SHAPES
 void qgAddRect(const Vector2 position, const Vector2 size, const float r, const float g, const float b, const float a);
 
 void qgAddPlane(const Vector3 position, const Vector2 size, const float r, const float g, const float b, const float a);
 #endif
+// !===== Text ===========================================================================================================================================================!
+#define QGPU_FONT_STYLE_REGULAR 0
+#define QGPU_FONT_STYLE_BOLD 1
+#define QGPU_FONT_STYLE_ITALIC 2
+#define QGPU_FONT_STYLE_BOLD_ITALIC 3
+void qgConvertFont(const char* pathQFR, const char* pathQF);
+void qgLoadFont(const char* path);
+void qgSetFontData(const float fontSize, const int style, const float r, const float g, const float b, const float a);
+void qgAddChar(const Vector2 pos, const uint16_t c);
+void qgAddText(const Vector2 pos, const char* text);
 // !===== Camera =========================================================================================================================================================!
 void qgSetCamera(const Vector3 position, const Vector3 target, const float fovDegrees);
 void qgSetCameraUp(const Vector3 up);
