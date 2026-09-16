@@ -33,4 +33,4 @@ void update() {
 	qgAddPlane((Vector3){0, 0.5, 0}, (Vector2){2, 2}, .2f,1,.2f,1.0f);
 }
 
-int main() { qgpuCreate(1280, 720, "QGPU 2.0.0", init, update); }
+int main() { qgpuCreate(1280, 720, "QGPU 2.2.0", init, update); }
