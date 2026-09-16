@@ -12,7 +12,7 @@
 #include "qgpu.h"
 
 #define QGPU_VERSION_MAJOR 2
-#define QGPU_VERSION_MINOR 1
+#define QGPU_VERSION_MINOR 2
 #define QGPU_VERSION_PATCH 0
 
 // ========================================================================================================================================================================
@@ -113,8 +113,7 @@ static UITriangle2D uiTriangles[MAX_UI_TRIANGLES];
 static uint32_t uiTriangleCount;
 static uint32_t currentUILayer;
 static int compareUITriangle(const void* a, const void* b) {
-	const UITriangle2D* ta = (const UITriangle2D*)a;
-	const UITriangle2D* tb = (const UITriangle2D*)b;
+	const UITriangle2D *ta = (const UITriangle2D*)a, *tb = (const UITriangle2D*)b;
 	if (ta->layer != tb->layer) return (ta->layer < tb->layer) ? -1 : 1;
 	if (ta->order != tb->order) return (ta->order < tb->order) ? -1 : 1;
 	return 0;
@@ -752,8 +751,7 @@ static void createPipelines() {
 	const VkDynamicState dynamicStates[] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
 	const VkPipelineDynamicStateCreateInfo dynamicState = { .sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO, .dynamicStateCount = 2, .pDynamicStates = dynamicStates };
 
-	VkShaderModule vertModule = createShaderModule(mainVertCode, sizeof(mainVertCode));
-	VkShaderModule fragModule = createShaderModule(mainFragCode, sizeof(mainFragCode));
+	VkShaderModule vertModule = createShaderModule(mainVertCode, sizeof(mainVertCode)), fragModule = createShaderModule(mainFragCode, sizeof(mainFragCode));
 	const VkPipelineShaderStageCreateInfo mainStages[2] = {
 		{ .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .stage = VK_SHADER_STAGE_VERTEX_BIT, .module = vertModule, .pName = "main" },
 		{ .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .stage = VK_SHADER_STAGE_FRAGMENT_BIT, .module = fragModule, .pName = "main" }
@@ -855,8 +853,7 @@ static void createUIPipeline() {
 	};
 	const VkPipelineColorBlendStateCreateInfo colorBlending = { .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO, .attachmentCount = 1, .pAttachments = &colorBlendAttachment };
 
-	VkShaderModule vertModule = createShaderModule(uiVertCode, sizeof(uiVertCode));
-	VkShaderModule fragModule = createShaderModule(uiFragCode, sizeof(uiFragCode));
+	VkShaderModule vertModule = createShaderModule(uiVertCode, sizeof(uiVertCode)), fragModule = createShaderModule(uiFragCode, sizeof(uiFragCode));
 	const VkPipelineShaderStageCreateInfo stages[2] = {
 		{ .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .stage = VK_SHADER_STAGE_VERTEX_BIT, .module = vertModule, .pName = "main" },
 		{ .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .stage = VK_SHADER_STAGE_FRAGMENT_BIT, .module = fragModule, .pName = "main" }
