@@ -1,11 +1,25 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-	<meta charset="UTF-8">
-	<title>QGPU</title>
-	<link rel="stylesheet" href="style.css">
-</head>
-<body>
-
-</body>
+	<head>
+		<meta charset="UTF-8">
+		<title>NULL</title>
+		<link rel="stylesheet" href="style.css">
+	</head>
+	<body>
+		<header class="header">
+			<h1 id="doc-title">Loading...</h1>
+			<div class="lang-picker">
+			<button onclick="changeLanguage('pl')">PL</button>
+			<button onclick="changeLanguage('en')">EN</button>
+			</div>
+		</header>
+		<div class="layout-container">
+			<aside class="sidebar">
+				<h3>Categories</h3>
+				<nav id="category-list"></nav>
+			</aside>
+			<main id="docs-container"></main>
+		</div>
+		<script src="script.js"></script>
+	</body>
 </html>

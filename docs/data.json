@@ -1,0 +1,29 @@
+{
+	"defaultLanguage": "en",
+	"title": {
+		"en": "QGPU Documentation",
+		"pl": "Dokumentacja QGPU"
+	},
+	"functions": {
+		"tests": [
+			{
+				"name": "test_add",
+				"returnType": "int",
+				"args": {
+					"int a": {
+						"en": "First number",
+						"pl": "Pierwsza liczba"
+					},
+					"int b": {
+						"en": "Second number",
+						"pl": "Druga liczba"
+					}
+				},
+				"description": {
+					"en": "test EN description",
+					"pl": "test PL description"
+				}
+			}
+		]
+	}
+}
