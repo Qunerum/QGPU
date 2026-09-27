@@ -4,26 +4,490 @@
 		"en": "QGPU Documentation",
 		"pl": "Dokumentacja QGPU"
 	},
+	"categories": {
+		"en": "categories",
+		"pl": "kategorie"
+	},
 	"functions": {
-		"tests": [
-			{
-				"name": "test_add",
-				"returnType": "int",
-				"args": {
-					"int a": {
-						"en": "First number",
-						"pl": "Pierwsza liczba"
-					},
-					"int b": {
-						"en": "Second number",
-						"pl": "Druga liczba"
-					}
-				},
-				"description": {
-					"en": "test EN description",
-					"pl": "test PL description"
-				}
+	"console": [
+		{"name": "qgSetColor",
+		"returnType": "void",
+		"args": {
+			"const uint8_t color": {
+				"en": "Color ID (0 - 255)",
+				"pl": "ID koloru (0 - 255)"
 			}
-		]
-	}
-}
+		},"description": {
+			"en": "Sets the text color in the terminal",
+			"pl": "Ustawia kolor tekstu w terminalu"
+		}},
+		{"name": "qgRestoreColor",
+		"returnType": "void",
+		"args": {},
+		"description": {
+			"en": "Restores the previous terminal text color",
+			"pl": "Przywraca poprzedni kolor tekstu w terminalu"
+		}},
+		{"name": "qgSetStyle",
+		"returnType": "void",
+		"args": {
+			"const uint8_t style": {
+				"en": "Text style flag (QGPU_STYLE_REGULAR / BOLD / ITALIC / UNDERLINE / STRIKETHROUGH)",
+				"pl": "Flaga stylu tekstu (QGPU_STYLE_REGULAR / BOLD / ITALIC / UNDERLINE / STRIKETHROUGH)"
+			}
+		},"description": {
+			"en": "Sets the text style in the terminal",
+			"pl": "Ustawia styl tekstu w terminalu"
+		}},
+		{"name": "qgPrint",
+		"returnType": "void",
+		"args": {
+			"const char* format": {
+				"en": "Format string (printf style)",
+				"pl": "Ciąg formatujący (w stylu printf)"
+			},
+			"...": {
+				"en": "Additional arguments to format",
+				"pl": "Pozostałe argumenty do sformatowania"
+			}
+		},"description": {
+			"en": "Custom 'printf' implementation, outputs formatted message to the terminal",
+			"pl": "Własna implementacja 'printf', wypisuje sformatowaną wiadomość w terminalu"
+		}},
+		{"name": "qgLog",
+		"returnType": "void",
+		"args": {
+			"const char* format": {
+				"en": "Format string (printf style)",
+				"pl": "Ciąg formatujący (w stylu printf)"
+			},
+			"...": {
+				"en": "Additional arguments to format",
+				"pl": "Pozostałe argumenty do sformatowania"
+			}
+		},"description": {
+			"en": "Logs a message to the terminal (only if QGPU_SHOW_LOGS is enabled)",
+			"pl": "Wypisuje log w terminalu (tylko gdy QGPU_SHOW_LOGS jest ustawione na 1)"
+		}},
+		{"name": "qgLogVertices",
+		"returnType": "void",
+		"args": {},
+		"description": {
+			"en": "Prints the number of vertices used in the current frame",
+			"pl": "Wypisuje liczbę wierzchołków użytych w bieżącej klatce"
+		}},
+		{"name": "qgWarn",
+		"returnType": "void",
+		"args": {
+			"const char* format": {
+				"en": "Format string (printf style)",
+				"pl": "Ciąg formatujący (w stylu printf)"
+			},
+			"...": {
+				"en": "Additional arguments to format",
+				"pl": "Pozostałe argumenty do sformatowania"
+			}
+		},"description": {
+			"en": "Prints a warning message to the terminal",
+			"pl": "Wypisuje wiadomość z ostrzeżeniem w terminalu"
+		}},
+		{"name": "qgError",
+		"returnType": "void",
+		"args": {
+			"const char* format": {
+				"en": "Format string (printf style)",
+				"pl": "Ciąg formatujący (w stylu printf)"
+			},
+			"...": {
+				"en": "Additional arguments to format",
+				"pl": "Pozostałe argumenty do sformatowania"
+			}
+		},"description": {
+			"en": "Prints an error message to the terminal and terminates the application",
+			"pl": "Wypisuje błąd w terminalu i zamyka aplikację"
+		}},
+		{"name": "qgSetShow",
+		"returnType": "void",
+		"args": {
+			"const uint8_t shower": {
+				"en": "Element selector (QGPU_SHOW_BANNER / MADE_WITH_QGPU / INFO / COLORS / LOGS)",
+				"pl": "Wybór elementu (QGPU_SHOW_BANNER / MADE_WITH_QGPU / INFO / COLORS / LOGS)"
+			},
+			"const uint8_t state": {
+				"en": "Target visibility state (0 = disable, 1 = enable)",
+				"pl": "Stan widoczności (0 = wyłączony, 1 = włączony)"
+			}
+		},"description": {
+			"en": "Configures the visibility of specific elements in the terminal",
+			"pl": "Konfiguruje widoczność poszczególnych elementów w terminalu"
+		}}
+	],"global": [
+		{"name": "qgSetGraphicsSettings",
+		"returnType": "void",
+		"args": {
+			"const uint8_t setting": {
+				"en": "Setting selector (QGPU_SETTINGS_AMBIENT_OCCLUSION / MSAA_LEVEL / SHADOWS)",
+				"pl": "Wybór ustawienia (QGPU_SETTINGS_AMBIENT_OCCLUSION / MSAA_LEVEL / SHADOWS)"
+			},
+			"const uint8_t value": {
+				"en": "Value to set for the chosen graphic option",
+				"pl": "Wartość do ustawienia dla wybranej opcji graficznej"
+			}
+		},"description": {
+			"en": "Sets the selected graphic setting to the specified value",
+			"pl": "Ustawia wybrane ustawienie na daną wartość"
+		}},
+		{"name": "qgCreate",
+		"returnType": "void",
+		"args": {
+			"const uint width": {
+				"en": "Window width in pixels",
+				"pl": "Szerokość okna w pikselach"
+			},
+			"const uint height": {
+				"en": "Window height in pixels",
+				"pl": "Wysokość okna w pikselach"
+			},
+			"const char* title": {
+				"en": "Window title text",
+				"pl": "Tytuł okna"
+			},
+			"void (*initFunc)()": {
+				"en": "Pointer to the initialization function (called once on startup)",
+				"pl": "Wskaźnik na funkcję inicjalizacyjną (wywoływana raz na start)"
+			},
+			"void (*updateFunc)()": {
+				"en": "Pointer to the update function (called every frame)",
+				"pl": "Wskaźnik na funkcję aktualizującą (wywoływana co klatkę)"
+			}
+		},"description": {
+			"en": "Creates a window with the given title and dimensions",
+			"pl": "Tworzy okno o podanym tytule i rozmiarach"
+		}},
+		{"name": "qgGetFPS",
+		"returnType": "float",
+		"args": {},
+		"description": {
+			"en": "Returns the current FPS (frames per second)",
+			"pl": "Zwraca aktualną liczbę FPS"
+		}}
+    ],"drawing": [
+		{"name": "qgSetBackground",
+		"returnType": "void",
+		"args": {
+			"const float r": {
+				"en": "Red color channel intensity (0.0 - 1.0)",
+				"pl": "Intensywność koloru czerwonego (0.0 - 1.0)"
+			},
+			"const float g": {
+				"en": "Green color channel intensity (0.0 - 1.0)",
+				"pl": "Intensywność koloru zielonego (0.0 - 1.0)"
+			},
+			"const float b": {
+				"en": "Blue color channel intensity (0.0 - 1.0)",
+				"pl": "Intensywność koloru niebieskiego (0.0 - 1.0)"
+			}
+		},"description": {
+			"en": "Sets the application background color",
+			"pl": "Ustawia kolor tła aplikacji"
+		}},
+		{"name": "qgAddTriangle",
+		"returnType": "void",
+		"args": {
+			"const Vector3 p1": {
+				"en": "First vertex position in 3D space",
+				"pl": "Pozycja pierwszego wierzchołka w przestrzeni 3D"
+			},
+			"const Vector3 p2": {
+				"en": "Second vertex position in 3D space",
+				"pl": "Pozycja drugiego wierzchołka w przestrzeni 3D"
+			},
+			"const Vector3 p3": {
+				"en": "Third vertex position in 3D space",
+				"pl": "Pozycja trzeciego wierzchołka w przestrzeni 3D"
+			},
+			"const float r": {
+				"en": "Red color channel intensity (0.0 - 1.0)",
+				"pl": "Intensywność koloru czerwonego (0.0 - 1.0)"
+			},
+			"const float g": {
+				"en": "Green color channel intensity (0.0 - 1.0)",
+				"pl": "Intensywność koloru zielonego (0.0 - 1.0)"
+			},
+			"const float b": {
+				"en": "Blue color channel intensity (0.0 - 1.0)",
+				"pl": "Intensywność koloru niebieskiego (0.0 - 1.0)"
+			},
+			"const float a": {
+				"en": "Alpha channel / opacity value (0.0 = fully transparent, 1.0 = fully opaque)",
+				"pl": "Kanał alfa / przezroczystość (0.0 = w pełni przezroczysty, 1.0 = w pełni widoczny)"
+			}
+		},"description": {
+			"en": "Renders a colored 3D triangle",
+			"pl": "Rysuje kolorowy trójkąt w przestrzeni 3D"
+		}},
+		{"name": "qgAddTriangle2D",
+		"returnType": "void",
+		"args": {
+			"const Vector2 p1": {
+				"en": "First vertex position in 2D space",
+				"pl": "Pozycja pierwszego wierzchołka w przestrzeni 2D"
+			},
+			"const Vector2 p2": {
+				"en": "Second vertex position in 2D space",
+				"pl": "Pozycja drugiego wierzchołka w przestrzeni 2D"
+			},
+			"const Vector2 p3": {
+				"en": "Third vertex position in 2D space",
+				"pl": "Pozycja trzeciego wierzchołka w przestrzeni 2D"
+			},
+			"const float r": {
+				"en": "Red color channel intensity (0.0 - 1.0)",
+				"pl": "Intensywność koloru czerwonego (0.0 - 1.0)"
+			},
+			"const float g": {
+				"en": "Green color channel intensity (0.0 - 1.0)",
+				"pl": "Intensywność koloru zielonego (0.0 - 1.0)"
+			},
+			"const float b": {
+				"en": "Blue color channel intensity (0.0 - 1.0)",
+				"pl": "Intensywność koloru niebieskiego (0.0 - 1.0)"
+			},
+			"const float a": {
+				"en": "Alpha channel / opacity value (0.0 = fully transparent, 1.0 = fully opaque)",
+				"pl": "Kanał alfa / przezroczystość (0.0 = w pełni przezroczysty, 1.0 = w pełni widoczny)"
+			}
+		},"description": {
+			"en": "Renders a colored 2D triangle on the screen",
+			"pl": "Rysuje kolorowy trójkąt w przestrzeni 2D na ekranie"
+		}},
+		{"name": "qgSetLayerUI",
+		"returnType": "void",
+		"args": {
+			"const uint layer": {
+				"en": "UI Layer index",
+				"pl": "Indeks warstwy interfejsu (UI)"
+			}
+		},"description": {
+			"en": "Sets the active UI rendering layer",
+			"pl": "Ustawia aktywną warstwę renderowania interfejsu"
+		}}
+	],"QGPU shapes": [
+		{"name": "qgAddRect",
+		"returnType": "void",
+		"args": {
+			"const Vector2 position": {
+				"en": "Center position of the rectangle",
+				"pl": "Pozycja środka prostokąta"
+			},
+			"const Vector2 size": {
+				"en": "Rectangle width and height",
+				"pl": "Szerokość i wysokość prostokąta"
+			},
+			"const float r": {
+				"en": "Red color channel intensity (0.0 - 1.0)",
+				"pl": "Intensywność koloru czerwonego (0.0 - 1.0)"
+			},
+			"const float g": {
+				"en": "Green color channel intensity (0.0 - 1.0)",
+				"pl": "Intensywność koloru zielonego (0.0 - 1.0)"
+			},
+			"const float b": {
+				"en": "Blue color channel intensity (0.0 - 1.0)",
+				"pl": "Intensywność koloru niebieskiego (0.0 - 1.0)"
+			},
+			"const float a": {
+				"en": "Alpha channel / opacity value (0.0 = fully transparent, 1.0 = fully opaque)",
+				"pl": "Kanał alfa / przezroczystość (0.0 = w pełni przezroczysty, 1.0 = w pełni widoczny)"
+			}
+		},"description": {
+			"en": "Renders a colored 2D rectangle",
+			"pl": "Rysuje kolorowy prostokąt 2D"
+		}},
+		{"name": "qgAddCircle",
+		"returnType": "void",
+		"args": {
+			"const Vector2 position": {
+				"en": "Center position of the circle",
+				"pl": "Pozycja środka koła"
+			},
+			"const float radius": {
+				"en": "Circle radius",
+				"pl": "Promień koła"
+			},
+			"const uint segments": {
+				"en": "Number of segments used to approximate the circle",
+				"pl": "Liczba segmentów użyta do przybliżenia kształtu koła"
+			},
+			"const float r": {
+				"en": "Red color channel intensity (0.0 - 1.0)",
+				"pl": "Intensywność koloru czerwonego (0.0 - 1.0)"
+			},
+			"const float g": {
+				"en": "Green color channel intensity (0.0 - 1.0)",
+				"pl": "Intensywność koloru zielonego (0.0 - 1.0)"
+			},
+			"const float b": {
+				"en": "Blue color channel intensity (0.0 - 1.0)",
+				"pl": "Intensywność koloru niebieskiego (0.0 - 1.0)"
+			},
+			"const float a": {
+				"en": "Alpha channel / opacity value (0.0 = fully transparent, 1.0 = fully opaque)",
+				"pl": "Kanał alfa / przezroczystość (0.0 = w pełni przezroczysty, 1.0 = w pełni widoczny)"
+			}
+		},"description": {
+			"en": "Renders a colored 2D circle",
+			"pl": "Rysuje kolorowe koło 2D"
+		}},
+		{"name": "qgAddPlane",
+		"returnType": "void",
+		"args": {
+			"const Vector3 position": {
+				"en": "Center position of the plane in 3D space",
+				"pl": "Pozycja środka płaszczyzny w przestrzeni 3D"
+			},
+			"const Vector2 size": {
+				"en": "Width and length of the plane",
+				"pl": "Szerokość i długość płaszczyzny"
+			},
+			"const float r": {
+				"en": "Red color channel intensity (0.0 - 1.0)",
+				"pl": "Intensywność koloru czerwonego (0.0 - 1.0)"
+			},
+			"const float g": {
+				"en": "Green color channel intensity (0.0 - 1.0)",
+				"pl": "Intensywność koloru zielonego (0.0 - 1.0)"
+			},
+			"const float b": {
+				"en": "Blue color channel intensity (0.0 - 1.0)",
+				"pl": "Intensywność koloru niebieskiego (0.0 - 1.0)"
+			},
+			"const float a": {
+				"en": "Alpha channel / opacity value (0.0 = fully transparent, 1.0 = fully opaque)",
+				"pl": "Kanał alfa / przezroczystość (0.0 = w pełni przezroczysty, 1.0 = w pełni widoczny)"
+			}
+		},"description": {
+			"en": "Renders a flat 3D plane",
+			"pl": "Rysuje płaską płaszczyznę w przestrzeni 3D"
+		}},
+		{"name": "qgAddBox",
+		"returnType": "void",
+		"args": {
+			"const Vector3 position": {
+				"en": "Center position of the box in 3D space",
+				"pl": "Pozycja środka prostopadłościanu w przestrzeni 3D"
+			},
+			"const Vector3 size": {
+				"en": "Box dimensions (width, height, length)",
+				"pl": "Wymiary prostopadłościanu (szerokość, wysokość, długość)"
+			},
+			"const float r": {
+				"en": "Red color channel intensity (0.0 - 1.0)",
+				"pl": "Intensywność koloru czerwonego (0.0 - 1.0)"
+			},
+			"const float g": {
+				"en": "Green color channel intensity (0.0 - 1.0)",
+				"pl": "Intensywność koloru zielonego (0.0 - 1.0)"
+			},
+			"const float b": {
+				"en": "Blue color channel intensity (0.0 - 1.0)",
+				"pl": "Intensywność koloru niebieskiego (0.0 - 1.0)"
+			},
+			"const float a": {
+				"en": "Alpha channel / opacity value (0.0 = fully transparent, 1.0 = fully opaque)",
+				"pl": "Kanał alfa / przezroczystość (0.0 = w pełni przezroczysty, 1.0 = w pełni widoczny)"
+			}
+		},"description": {
+			"en": "Renders a colored 3D box/cube",
+			"pl": "Rysuje kolorowy prostopadłościan/sześcian w przestrzeni 3D"
+		}}
+	],"text": [
+		{"name": "qgConvertFont",
+		"returnType": "void",
+		"args": {
+			"const char* pathQFR": {
+				"en": "Path to the source QFR font file",
+				"pl": "Ścieżka do źródłowego pliku czcionki QFR"
+			},
+			"const char* pathQF": {
+				"en": "Path to output binary QF font file",
+				"pl": "Ścieżka do docelowego pliku binarnego QF"
+			}
+		},"description": {
+			"en": "Converts a font file from QFR format to optimized QF format",
+			"pl": "Konwertuje plik czcionki z formatu QFR do zoptymalizowanego formatu QF"
+		}},
+		{"name": "qgLoadFont",
+		"returnType": "void",
+		"args": {
+			"const char* path": {
+				"en": "Path to the QF font file",
+				"pl": "Ścieżka do pliku czcionki QF"
+			}
+		},"description": {
+			"en": "Loads a custom font into memory",
+			"pl": "Wczytuje własną czcionkę do pamięci"
+		}},
+		{"name": "qgSetFontData",
+		"returnType": "void",
+		"args": {
+			"const float fontSize": {
+				"en": "Font size in pixels",
+				"pl": "Rozmiar czcionki w pikselach"
+			},
+			"const uint8_t style": {
+				"en": "Font style flag (QGPU_FONT_STYLE_REGULAR / BOLD / ITALIC / BOLD_ITALIC)",
+				"pl": "Flaga stylu czcionki (QGPU_FONT_STYLE_REGULAR / BOLD / ITALIC / BOLD_ITALIC)"
+			},
+			"const float r": {
+				"en": "Red color channel intensity (0.0 - 1.0)",
+				"pl": "Intensywność koloru czerwonego (0.0 - 1.0)"
+			},
+			"const float g": {
+				"en": "Green color channel intensity (0.0 - 1.0)",
+				"pl": "Intensywność koloru zielonego (0.0 - 1.0)"
+			},
+			"const float b": {
+				"en": "Blue color channel intensity (0.0 - 1.0)",
+				"pl": "Intensywność koloru niebieskiego (0.0 - 1.0)"
+			},
+			"const float a": {
+				"en": "Alpha channel / opacity value (0.0 = fully transparent, 1.0 = fully opaque)",
+				"pl": "Kanał alfa / przezroczystość (0.0 = w pełni przezroczysty, 1.0 = w pełni widoczny)"
+			}
+		},"description": {
+			"en": "Configures font properties including size, style, and color",
+			"pl": "Konfiguruje właściwości czcionki takie jak rozmiar, styl oraz kolor"
+		}},
+		{"name": "qgAddChar",
+		"returnType": "void",
+		"args": {
+			"const Vector2 position": {
+				"en": "Top-left screen position for rendering the character",
+				"pl": "Pozycja lewego górnego rogu do wyrenderowania znaku"
+			},
+			"const uint16_t c": {
+				"en": "Character index or custom font glyph ID",
+				"pl": "Indeks znaku lub ID glifu z załadowanej czcionki"
+			}
+		},"description": {
+			"en": "Renders a single character by its loaded font ID at the specified position",
+			"pl": "Rysuje pojedynczy znak na podstawie jego ID z czcionki w podanej pozycji"
+		}},
+		{"name": "qgAddText",
+		"returnType": "void",
+		"args": {
+			"const Vector2 position": {
+				"en": "Top-left screen position for rendering the text string",
+				"pl": "Pozycja lewego górnego rogu do wyrenderowania tekstu"
+			},
+			"const char* text": {
+				"en": "Text string to render (supports newlines, tabs, and hex escape codes like q;XXXX;)",
+				"pl": "Ciąg tekstowy do wyświetlenia (obsługuje nową linię, tabulacje oraz kody hex np. q;XXXX;)"
+			}
+		},"description": {
+			"en": "Renders a formatted text string at the specified position",
+			"pl": "Rysuje sformatowany ciąg tekstowy w podanej pozycji"
+		}}
+	]
+}}

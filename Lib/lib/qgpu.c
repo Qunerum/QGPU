@@ -872,7 +872,7 @@ static void createUIPipeline() {
 	vkDestroyShaderModule(g_ctx.device, fragModule, NULL);
 	vkDestroyShaderModule(g_ctx.device, vertModule, NULL);
 }
-void qgSetGraphicsSetting(uint8_t setting, uint8_t value) {
+void qgSetGraphicsSetting(const uint8_t setting, const uint8_t value) {
 	switch (setting) {
 		case QGPU_SETTINGS_AMBIENT_OCCLUSION: g_settings.ambientOcclusion = value; break;
 		case QGPU_SETTINGS_MSAA_LEVEL:
@@ -1358,7 +1358,7 @@ void qgLoadFont(const char* path) {
 	qgLog("Added a %i new chars!\n", len);
 	fclose(qf);
 }
-void qgSetFontData(const float fontSize, const int style, const float r, const float g, const float b, const float a) {
+void qgSetFontData(const float fontSize, const uint8_t style, const float r, const float g, const float b, const float a) {
 	qFontSize = fontSize / 10.0f;
 	qFontStyle = style;
 	qFontR = r;

@@ -18,7 +18,7 @@ void update() {
 	r += spd;
 
 	qgSetLayerUI(1);
-	qgAddText((Vector2){-585, 20}, "QGPU\n2.3.0");
+	qgAddText((Vector2){-585, 20}, "QGPU\n2.3.1");
 
 	qgSetLayerUI(0);
 	qgAddRect((Vector2){-540, 0}, (Vector2){100, 50}, .5f,.2f,.2f,1);
@@ -33,4 +33,4 @@ void update() {
 	qgAddPlane((Vector3){0, 0, 0}, (Vector2){10, 10}, .6f,.6f,.6f,1);
 }
 
-int main() { qgpuCreate(1280, 720, "QGPU 2.3.0", init, update); return 0; }
+int main() { qgpuCreate(1280, 720, "QGPU 2.3.1", init, update); return 0; }

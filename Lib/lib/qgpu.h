@@ -12,25 +12,30 @@ typedef unsigned int uint;
 typedef struct { float x, y; } Vector2;
 typedef struct { float x, y, z; } Vector3;
 // !===== Console ========================================================================================================================================================!
-#define QGPU_SHOW_BANNER          0
-#define QGPU_SHOW_MADE_WITH_QGPU  1
-#define QGPU_SHOW_INFO            2
-#define QGPU_SHOW_COLORS          3
-#define QGPU_SHOW_LOGS            4
 void qgSetColor(const uint8_t color);
 void qgRestoreColor();
+#define QGPU_STYLE_REGULAR 0
+#define QGPU_STYLE_BOLD 1
+#define QGPU_STYLE_ITALIC 3
+#define QGPU_STYLE_UNDERLINE 4
+#define QGPU_STYLE_STRIKETHROUGH 9
 void qgSetStyle(const uint8_t style);
 void qgPrint(const char* format, ...);
 void qgLog(const char* format, ...);
 void qgLogVertices();
 void qgWarn(const char* format, ...);
 void qgError(const char* format, ...);
+#define QGPU_SHOW_BANNER          0
+#define QGPU_SHOW_MADE_WITH_QGPU  1
+#define QGPU_SHOW_INFO            2
+#define QGPU_SHOW_COLORS          3
+#define QGPU_SHOW_LOGS            4
 void qgSetShow(const uint8_t shower, const uint8_t state);
 // !===== QGPU ===========================================================================================================================================================!
 #define QGPU_SETTINGS_AMBIENT_OCCLUSION 0
 #define QGPU_SETTINGS_MSAA_LEVEL        1
 #define QGPU_SETTINGS_SHADOWS           2
-void qgSetGraphicsSetting(uint8_t setting, uint8_t value);
+void qgSetGraphicsSetting(const uint8_t setting, const uint8_t value);
 // !===== Init
 void qgpuCreate(const uint width, const uint height, const char* title, void (*initFunc)(), void (*updateFunc)());
 // !===== Window
@@ -54,9 +59,9 @@ void qgAddBox(const Vector3 position, const Vector3 size, const float r, const f
 #define QGPU_FONT_STYLE_BOLD_ITALIC 3
 void qgConvertFont(const char* pathQFR, const char* pathQF);
 void qgLoadFont(const char* path);
-void qgSetFontData(const float fontSize, const int style, const float r, const float g, const float b, const float a);
-void qgAddChar(const Vector2 pos, const uint16_t c);
-void qgAddText(const Vector2 pos, const char* text);
+void qgSetFontData(const float fontSize, const uint8_t style, const float r, const float g, const float b, const float a);
+void qgAddChar(const Vector2 position, const uint16_t c);
+void qgAddText(const Vector2 position, const char* text);
 // !===== Camera =========================================================================================================================================================!
 void qgSetCamera(const Vector3 position, const Vector3 target, const float fovDegrees);
 void qgSetCameraUp(const Vector3 up);
