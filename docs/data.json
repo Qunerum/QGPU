@@ -53,7 +53,9 @@
 		},"description": {
 			"en": "Custom 'printf' implementation, outputs formatted message to the terminal",
 			"pl": "Własna implementacja 'printf', wypisuje sformatowaną wiadomość w terminalu"
-		}},
+		},"example": [
+			"qgPrint(\"Hello, %s was made in %i!\", \"QGPU\", 2026); // Hello, QGPU was made in 2026!"
+		]},
 		{"name": "qgLog",
 		"returnType": "void",
 		"args": {
@@ -68,7 +70,9 @@
 		},"description": {
 			"en": "Logs a message to the terminal (only if QGPU_SHOW_LOGS is enabled)",
 			"pl": "Wypisuje log w terminalu (tylko gdy QGPU_SHOW_LOGS jest ustawione na 1)"
-		}},
+		},"example": [
+			"qgLog(\"This is log number #%i\", 2137); // This is log number #2137"
+		]},
 		{"name": "qgLogVertices",
 		"returnType": "void",
 		"args": {},
