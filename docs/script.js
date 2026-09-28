@@ -72,6 +72,7 @@ function renderDocs() {
 						</code>
 						<span class="func-separator"></span>
 						<span class="func-desc">${description}</span>
+						<div class="func-example"><div>
 						`;
 						section.appendChild(funcRow);
 					});

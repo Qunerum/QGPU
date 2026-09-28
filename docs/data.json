@@ -489,5 +489,198 @@
 			"en": "Renders a formatted text string at the specified position",
 			"pl": "Rysuje sformatowany ciąg tekstowy w podanej pozycji"
 		}}
+	],"camera": [
+		{"name": "qgSetCamera",
+		"returnType": "void",
+		"args": {
+			"const Vector3 position": {
+				"en": "Camera position in 3D space",
+				"pl": "Pozycja w przestrzeni 3D"
+			},
+			"const Vector3 target": {
+				"en": "Target point in 3D space the camera looks at",
+				"pl": "Punkt w przestrzeni 3D na który ma patrzeć kamera"
+			},
+			"const float fovDegrees": {
+				"en": "Camera Field of View in degrees",
+				"pl": "FOV kamery podany w stopniach"
+			}
+		},"description": {
+			"en": "Configures main camera parameters",
+			"pl": "Konfiguruje kamerę"
+		}},
+		{"name": "qgSetCameraUp",
+		"returnType": "void",
+		"args": {
+			"const Vector3 up": {
+				"en": "Up vector defining camera orientation",
+				"pl": "Wektor góry określający orientację kamery"
+			}
+		},"description": {
+			"en": "Sets the up vector for the camera",
+			"pl": "Ustawia wektor góry dla kamery"
+		}},
+		{"name": "qgSetCameraClip",
+		"returnType": "void",
+		"args": {
+			"const float nearZ": {
+				"en": "Near clipping plane distance",
+				"pl": "Odległość bliskiej płaszczyzny obcinania"
+			},
+			"const float farZ": {
+				"en": "Far clipping plane distance",
+				"pl": "Odległość dalekiej płaszczyzny obcinania"
+			}
+		},"description": {
+			"en": "Sets near and far clipping planes for the camera",
+			"pl": "Ustawia bliską i daleką płaszczyznę obcinania dla kamery"
+		}},
+		{"name": "qgGetCameraPosition",
+		"returnType": "Vector3",
+		"args": {},
+		"description": {
+			"en": "Returns the current position of the camera",
+			"pl": "Zwraca aktualną pozycję kamery"
+		}},
+		{"name": "qgSetRotationPivot",
+		"returnType": "void",
+		"args": {
+			"const float x": {
+				"en": "X coordinate of the pivot point",
+				"pl": "Współrzędna X punktu obrotu"
+			},
+			"const float y": {
+				"en": "Y coordinate of the pivot point",
+				"pl": "Współrzędna Y punktu obrotu"
+			},
+			"const float z": {
+				"en": "Z coordinate of the pivot point",
+				"pl": "Współrzędna Z punktu obrotu"
+			}
+		},"description": {
+			"en": "Sets the pivot point around which rotation is applied",
+			"pl": "Ustawia punkt obrotu (pivot), wokół którego wykonywana jest rotacja"
+		}},
+		{"name": "qgSetRotation",
+		"returnType": "void",
+		"args": {
+			"const float rx": {
+				"en": "Rotation angle around X axis in degrees",
+				"pl": "Kąt obrotu wokół osi X w stopniach"
+			},
+			"const float ry": {
+				"en": "Rotation angle around Y axis in degrees",
+				"pl": "Kąt obrotu wokół osi Y w stopniach"
+			},
+			"const float rz": {
+				"en": "Rotation angle around Z axis in degrees",
+				"pl": "Kąt obrotu wokół osi Z w stopniach"
+			}
+		},"description": {
+			"en": "Sets the global 3D rotation angles in degrees",
+			"pl": "Ustawia kąty obrotu w przestrzeni 3D w stopniach"
+		}},
+		{"name": "qgResetRotation",
+		"returnType": "void",
+		"args": {},
+		"description": {
+			"en": "Resets rotation angles and pivot point to default values",
+			"pl": "Resetuje kąty obrotu oraz punkt pivot do wartości domyślnych"
+		}}
+	],"lights": [
+		{"name": "qgAddLight",
+		"returnType": "void",
+		"args": {
+			"const Vector3 position": {
+				"en": "Light position in 3D space",
+				"pl": "Pozycja światła w przestrzeni 3D"
+			},
+			"const float range": {
+				"en": "Maximum distance the light reaches",
+				"pl": "Maksymalny zasięg światła"
+			},
+			"const float power": {
+				"en": "Light intensity factor",
+				"pl": "Moc / intensywność światła"
+			}
+		},"description": {
+			"en": "Adds a point light source to the scene",
+			"pl": "Dodaje punktowe źródło światła do sceny"
+		}}
+	],"input": [
+		{"name": "qgGetKey",
+		"returnType": "uint8_t",
+		"args": {
+			"const uint key": {
+				"en": "Key code to check (QKEY_... e.g. QKEY_A)",
+				"pl": "Kod klawisza do sprawdzenia (QKEY_... np. QKEY_A)"
+			}
+		},"description": {
+			"en": "Checks if a specific keyboard key is currently held down",
+			"pl": "Sprawdza, czy dany klawisz klawiatury jest obecnie wciśnięty"
+		}},
+		{"name": "qgOnKey",
+		"returnType": "uint8_t",
+		"args": {
+			"const uint key": {
+				"en": "Key code to check (QKEY_... e.g. QKEY_A)",
+				"pl": "Kod klawisza do sprawdzenia (QKEY_... np. QKEY_A)"
+			}
+		},"description": {
+			"en": "Checks if a specific keyboard key was just pressed in the current frame",
+			"pl": "Sprawdza, czy dany klawisz został naciśnięty w bieżącej klatce"
+		}},
+		{"name": "qgGetMouse",
+		"returnType": "uint8_t",
+		"args": {
+			"const uint button": {
+				"en": "Mouse button index to check (LMB / RMB)",
+				"pl": "Indeks przycisku myszy do sprawdzenia (LMB / RMB)"
+			}
+		},"description": {
+			"en": "Checks if a specific mouse button is currently held down",
+			"pl": "Sprawdza, czy dany przycisk myszy jest obecnie wciśnięty"
+		}},
+		{"name": "qgOnMouse",
+		"returnType": "uint8_t",
+		"args": {
+			"const uint button": {
+				"en": "Mouse button index to check (LMB / RMB)",
+				"pl": "Indeks przycisku myszy do sprawdzenia (LMB / RMB)"
+			}
+		},"description": {
+			"en": "Checks if a specific mouse button was just clicked in the current frame",
+			"pl": "Sprawdza, czy dany przycisk myszy został kliknięty w bieżącej klatce"
+		}},
+		{"name": "qgGetMousePos",
+		"returnType": "void",
+		"args": {
+			"float* x": {
+				"en": "Pointer to store the mouse X coordinate (centered at screen center)",
+				"pl": "Wskaźnik na pozycję X myszy (wyśrodkowaną na środku ekranu)"
+			},
+			"float* y": {
+				"en": "Pointer to store the mouse Y coordinate (centered at screen center)",
+				"pl": "Wskaźnik na pozycję Y myszy (wyśrodkowaną na środku ekranu)"
+			}
+		},"description": {
+			"en": "Gets the current mouse cursor position relative to the center of the window",
+			"pl": "Pobiera aktualną pozycję kursora myszy względem środka okna"
+		}}
+	],"screen": [
+		{"name": "qgGetWidth",
+		"returnType": "uint",
+		"args": {},
+		"description": {
+			"en": "Returns current window width in pixels",
+			"pl": "Zwraca aktualną szerokość okna w pikselach"
+		}},
+		{"name": "qgGetHeight",
+		"returnType": "uint",
+		"args": {},
+		"description": {
+			"en": "Returns current window height in pixels",
+			"pl": "Zwraca aktualną wysokość okna w pikselach"
+		}}
 	]
 }}

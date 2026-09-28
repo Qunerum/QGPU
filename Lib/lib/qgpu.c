@@ -13,7 +13,7 @@
 
 #define QGPU_VERSION_MAJOR 2
 #define QGPU_VERSION_MINOR 3
-#define QGPU_VERSION_PATCH 1
+#define QGPU_VERSION_PATCH 2
 
 // ========================================================================================================================================================================
 // ===== QGPU =============================================================================================================================================================
@@ -1174,8 +1174,16 @@ float qgGetFPS() { return currentFPS; }
 // ========================================================================================================================================================================
 // ===== DRAWING ==========================================================================================================================================================
 // ========================================================================================================================================================================
-void qgSetBackground(const float r, const float g, const float b) { backgroundR = r; backgroundG = g; backgroundB = b; }
-void qgSetRotationPivot(const float x, const float y, const float z) { g_ctx.pivotX = x; g_ctx.pivotY = y; g_ctx.pivotZ = z; }
+void qgSetBackground(const float r, const float g, const float b) {
+	backgroundR = r;
+	backgroundG = g;
+	backgroundB = b;
+}
+void qgSetRotationPivot(const float x, const float y, const float z) {
+	g_ctx.pivotX = x;
+	g_ctx.pivotY = y;
+	g_ctx.pivotZ = z;
+}
 static float rndToNrm(const float v) { return v - ((int)(v / 360.0f) * 360.0f); }
 void qgSetRotation(const float rx, const float ry, const float rz) {
 	g_ctx.rotX = rndToNrm(rx);
