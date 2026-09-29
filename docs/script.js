@@ -30,15 +30,13 @@ const syntaxRules = {
 		'ITALIC','UNDERLINE','STRIKETHROUGH','BOLD_ITALIC',
 		'MADE_WITH_QGPU','INFO','COLORS','LOGS','MSAA_LEVEL','SHADOWS'
 	],
-	'code-keyword': [
-		'void','if','else','return','for','while',
-		'const','int','float','uint','uint8_t','Vector2','Vector3'
-	],
+	'code-keyword': ['void','const','int','float','uint','uint8_t','Vector2','Vector3'],
+	'code-control': ['if','else','return','for','while'],
 	'code-function': []
 };
 function updateFunctionsFromJSON() {
 	if (!docData || !docData.functions) return;
-	const extractedNames = [];
+	const extractedNames = ['init','update','main'];
 	Object.values(docData.functions).forEach(category => { if (Array.isArray(category)) category.forEach(fn => { if (fn.name) extractedNames.push(fn.name); }); });
 	syntaxRules['code-function'] = extractedNames;
 }

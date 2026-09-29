@@ -79,7 +79,9 @@
 		"description": {
 			"en": "Prints the number of vertices used in the current frame",
 			"pl": "Wypisuje liczbę wierzchołków użytych w bieżącej klatce"
-		}},
+		},"example": [
+			"qgLogVertices(); // 0/65536 (0%)"
+		]},
 		{"name": "qgWarn",
 		"returnType": "void",
 		"args": {
@@ -94,7 +96,9 @@
 		},"description": {
 			"en": "Prints a warning message to the terminal",
 			"pl": "Wypisuje wiadomość z ostrzeżeniem w terminalu"
-		}},
+		},"example": [
+			"qgWarn(\"This is warn: '%s'!\", \"idk\"); // This is warn: 'idk'!"
+		]},
 		{"name": "qgError",
 		"returnType": "void",
 		"args": {
@@ -109,7 +113,9 @@
 		},"description": {
 			"en": "Prints an error message to the terminal and terminates the application",
 			"pl": "Wypisuje błąd w terminalu i zamyka aplikację"
-		}},
+		},"example": [
+			"qgError(\"Error on line %i\", 42); // Error on line 42"
+		]},
 		{"name": "qgSetShow",
 		"returnType": "void",
 		"args": {
@@ -167,7 +173,15 @@
 		},"description": {
 			"en": "Creates a window with the given title and dimensions",
 			"pl": "Tworzy okno o podanym tytule i rozmiarach"
-		}},
+		},"example": [
+			"void init() {",
+			"    // Your code is here",
+			"}",
+			"void update() {",
+			"    // Your code is here",
+			"}",
+			"int main() { qgCreate(1280, 720, \"Window title\", init, update); } // Creates a 1280x720 window titled \"Window title\""
+		]},
 		{"name": "qgGetFPS",
 		"returnType": "float",
 		"args": {},
@@ -622,7 +636,11 @@
 		},"description": {
 			"en": "Checks if a specific keyboard key is currently held down",
 			"pl": "Sprawdza, czy dany klawisz klawiatury jest obecnie wciśnięty"
-		}},
+		},"example": [
+			"if (qgGetKey(QKEY_UP)) {",
+			"    // Your code is here, e.g. MoveUp();",
+			"}"
+		]},
 		{"name": "qgOnKey",
 		"returnType": "uint8_t",
 		"args": {
@@ -633,7 +651,11 @@
 		},"description": {
 			"en": "Checks if a specific keyboard key was just pressed in the current frame",
 			"pl": "Sprawdza, czy dany klawisz został naciśnięty w bieżącej klatce"
-		}},
+		},"example": [
+			"if (qgOnKey(QKEY_SPACE)) {",
+			"    // Your code is here, e.g. Jump();",
+			"}"
+		]},
 		{"name": "qgGetMouse",
 		"returnType": "uint8_t",
 		"args": {
@@ -644,7 +666,11 @@
 		},"description": {
 			"en": "Checks if a specific mouse button is currently held down",
 			"pl": "Sprawdza, czy dany przycisk myszy jest obecnie wciśnięty"
-		}},
+		},"example": [
+			"if (qgGetMouse(RMB)) {",
+			"    // Your code is here, e.g. MoveCamera();",
+			"}"
+		]},
 		{"name": "qgOnMouse",
 		"returnType": "uint8_t",
 		"args": {
@@ -655,7 +681,11 @@
 		},"description": {
 			"en": "Checks if a specific mouse button was just clicked in the current frame",
 			"pl": "Sprawdza, czy dany przycisk myszy został kliknięty w bieżącej klatce"
-		}},
+		},"example": [
+			"if (qgOnMouse(LMB)) {",
+			"    // Your code is here, e.g. Shoot();",
+			"}"
+		]},
 		{"name": "qgGetMousePos",
 		"returnType": "void",
 		"args": {
@@ -670,7 +700,10 @@
 		},"description": {
 			"en": "Gets the current mouse cursor position relative to the center of the window",
 			"pl": "Pobiera aktualną pozycję kursora myszy względem środka okna"
-		}}
+		},"example": [
+			"float mouseX = 0, mouseY = 0;",
+			"qgGetMousePos(&mouseX, &mouseY);"
+		]}
 	],"screen": [
 		{"name": "qgGetWidth",
 		"returnType": "uint",

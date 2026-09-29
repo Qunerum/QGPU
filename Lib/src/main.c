@@ -31,6 +31,7 @@ void update() {
 
 	qgSetRotation(0, 0, 0);
 	qgAddPlane((Vector3){0, 0, 0}, (Vector2){10, 10}, .6f,.6f,.6f,1);
+	qgLogVertices();
 }
 
 int main() { qgpuCreate(1280, 720, "QGPU 2.3.1", init, update); return 0; }
