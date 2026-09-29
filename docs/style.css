@@ -40,6 +40,7 @@ body {
 	transition-duration: 0.2s;
 }
 .lang-picker button:hover {
+	font-weight: bold;
 	border-color: var(--clr-btn-border);
 	box-shadow: 0 0 6px var(--clr-btn-border);
 	transform: translateY(-3px);
@@ -68,16 +69,19 @@ body {
 .sidebar nav a {
 	display: block;
 	color: #bbb;
+	border: 1px solid #0000;
+	border-radius: 4px;
 	text-decoration: none;
 	padding: 8px 10px;
 	margin-bottom: 4px;
-	border-radius: 4px;
 	text-transform: capitalize;
 	transition-duration: 0.2s;
 }
 .sidebar nav a:hover {
-	background-color: #2a2a2a;
-	color: #61afef;
+	font-weight: bold;
+	border-color: var(--clr-btn-border);
+ 	box-shadow: 0 0 6px var(--clr-btn-border);
+	transform: translateY(-3px);
 }
 #docs-container {
 	margin-left: 220px;

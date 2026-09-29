@@ -701,7 +701,7 @@
 			"en": "Gets the current mouse cursor position relative to the center of the window",
 			"pl": "Pobiera aktualną pozycję kursora myszy względem środka okna"
 		},"example": [
-			"float mouseX = 0, mouseY = 0;",
+			"float mouseX = 0.0f, mouseY = 0.0f;",
 			"qgGetMousePos(&mouseX, &mouseY);"
 		]}
 	],"screen": [
