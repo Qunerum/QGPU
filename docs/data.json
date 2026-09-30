@@ -148,7 +148,7 @@
 			"pl": "Ustawia wybrane ustawienie na daną wartość"
 		}},
 		{"name": "qgCreate",
-		"returnType": "void",
+		"returnType": "int",
 		"args": {
 			"const uint width": {
 				"en": "Window width in pixels",
@@ -180,7 +180,7 @@
 			"void update() {",
 			"    // Your code is here",
 			"}",
-			"int main() { qgCreate(1280, 720, \"Window title\", init, update); } // Creates a 1280x720 window titled \"Window title\""
+			"int main() { return qgCreate(1280, 720, \"Window title\", init, update); } // Creates a 1280x720 window titled \"Window title\""
 		]},
 		{"name": "qgGetFPS",
 		"returnType": "float",
@@ -193,17 +193,9 @@
 		{"name": "qgSetBackground",
 		"returnType": "void",
 		"args": {
-			"const float r": {
-				"en": "Red color channel intensity (0.0 - 1.0)",
-				"pl": "Intensywność koloru czerwonego (0.0 - 1.0)"
-			},
-			"const float g": {
-				"en": "Green color channel intensity (0.0 - 1.0)",
-				"pl": "Intensywność koloru zielonego (0.0 - 1.0)"
-			},
-			"const float b": {
-				"en": "Blue color channel intensity (0.0 - 1.0)",
-				"pl": "Intensywność koloru niebieskiego (0.0 - 1.0)"
+			"const ColorRGB color": {
+				"en": "RGB color values (r, g, b) with intensities from 0.0 to 1.0",
+				"pl": "Składowe koloru RGB (r, g, b) o intensywności od 0.0 do 1.0"
 			}
 		},"description": {
 			"en": "Sets the application background color",
@@ -224,21 +216,9 @@
 				"en": "Third vertex position in 3D space",
 				"pl": "Pozycja trzeciego wierzchołka w przestrzeni 3D"
 			},
-			"const float r": {
-				"en": "Red color channel intensity (0.0 - 1.0)",
-				"pl": "Intensywność koloru czerwonego (0.0 - 1.0)"
-			},
-			"const float g": {
-				"en": "Green color channel intensity (0.0 - 1.0)",
-				"pl": "Intensywność koloru zielonego (0.0 - 1.0)"
-			},
-			"const float b": {
-				"en": "Blue color channel intensity (0.0 - 1.0)",
-				"pl": "Intensywność koloru niebieskiego (0.0 - 1.0)"
-			},
-			"const float a": {
-				"en": "Alpha channel / opacity value (0.0 = fully transparent, 1.0 = fully opaque)",
-				"pl": "Kanał alfa / przezroczystość (0.0 = w pełni przezroczysty, 1.0 = w pełni widoczny)"
+			"const ColorRGBA color": {
+				"en": "RGBA color values (r, g, b, a) with intensities and alpha from 0.0 to 1.0",
+				"pl": "Składowe koloru RGBA (r, g, b, a) o intensywności i przezroczystości od 0.0 do 1.0"
 			}
 		},"description": {
 			"en": "Renders a colored 3D triangle",
@@ -259,21 +239,9 @@
 				"en": "Third vertex position in 2D space",
 				"pl": "Pozycja trzeciego wierzchołka w przestrzeni 2D"
 			},
-			"const float r": {
-				"en": "Red color channel intensity (0.0 - 1.0)",
-				"pl": "Intensywność koloru czerwonego (0.0 - 1.0)"
-			},
-			"const float g": {
-				"en": "Green color channel intensity (0.0 - 1.0)",
-				"pl": "Intensywność koloru zielonego (0.0 - 1.0)"
-			},
-			"const float b": {
-				"en": "Blue color channel intensity (0.0 - 1.0)",
-				"pl": "Intensywność koloru niebieskiego (0.0 - 1.0)"
-			},
-			"const float a": {
-				"en": "Alpha channel / opacity value (0.0 = fully transparent, 1.0 = fully opaque)",
-				"pl": "Kanał alfa / przezroczystość (0.0 = w pełni przezroczysty, 1.0 = w pełni widoczny)"
+			"const ColorRGBA color": {
+				"en": "RGBA color values (r, g, b, a) with intensities and alpha from 0.0 to 1.0",
+				"pl": "Składowe koloru RGBA (r, g, b, a) o intensywności i przezroczystości od 0.0 do 1.0"
 			}
 		},"description": {
 			"en": "Renders a colored 2D triangle on the screen",
@@ -302,26 +270,16 @@
 				"en": "Rectangle width and height",
 				"pl": "Szerokość i wysokość prostokąta"
 			},
-			"const float r": {
-				"en": "Red color channel intensity (0.0 - 1.0)",
-				"pl": "Intensywność koloru czerwonego (0.0 - 1.0)"
-			},
-			"const float g": {
-				"en": "Green color channel intensity (0.0 - 1.0)",
-				"pl": "Intensywność koloru zielonego (0.0 - 1.0)"
-			},
-			"const float b": {
-				"en": "Blue color channel intensity (0.0 - 1.0)",
-				"pl": "Intensywność koloru niebieskiego (0.0 - 1.0)"
-			},
-			"const float a": {
-				"en": "Alpha channel / opacity value (0.0 = fully transparent, 1.0 = fully opaque)",
-				"pl": "Kanał alfa / przezroczystość (0.0 = w pełni przezroczysty, 1.0 = w pełni widoczny)"
+			"const ColorRGBA color": {
+				"en": "RGBA color values (r, g, b, a) with intensities and alpha from 0.0 to 1.0",
+				"pl": "Składowe koloru RGBA (r, g, b, a) o intensywności i przezroczystości od 0.0 do 1.0"
 			}
 		},"description": {
 			"en": "Renders a colored 2D rectangle",
 			"pl": "Rysuje kolorowy prostokąt 2D"
-		}},
+		},"example": [
+			"qgAddRect((Vector2){0.0f, 0.0f}, (Vector2){100.0f, 100.0f}, CLR_RGBA(1.0f, 1.0f, 1.0f, 1.0f));"
+		]},
 		{"name": "qgAddCircle",
 		"returnType": "void",
 		"args": {
@@ -337,26 +295,16 @@
 				"en": "Number of segments used to approximate the circle",
 				"pl": "Liczba segmentów użyta do przybliżenia kształtu koła"
 			},
-			"const float r": {
-				"en": "Red color channel intensity (0.0 - 1.0)",
-				"pl": "Intensywność koloru czerwonego (0.0 - 1.0)"
-			},
-			"const float g": {
-				"en": "Green color channel intensity (0.0 - 1.0)",
-				"pl": "Intensywność koloru zielonego (0.0 - 1.0)"
-			},
-			"const float b": {
-				"en": "Blue color channel intensity (0.0 - 1.0)",
-				"pl": "Intensywność koloru niebieskiego (0.0 - 1.0)"
-			},
-			"const float a": {
-				"en": "Alpha channel / opacity value (0.0 = fully transparent, 1.0 = fully opaque)",
-				"pl": "Kanał alfa / przezroczystość (0.0 = w pełni przezroczysty, 1.0 = w pełni widoczny)"
+			"const ColorRGBA color": {
+				"en": "RGBA color values (r, g, b, a) with intensities and alpha from 0.0 to 1.0",
+				"pl": "Składowe koloru RGBA (r, g, b, a) o intensywności i przezroczystości od 0.0 do 1.0"
 			}
 		},"description": {
 			"en": "Renders a colored 2D circle",
 			"pl": "Rysuje kolorowe koło 2D"
-		}},
+		},"example": [
+			"qgAddCircle((Vector2){0.0f, 0.0f}, 50.0f, 16, CLR_RGBA(1.0f, 1.0f, 1.0f, 1.0f));"
+		]},
 		{"name": "qgAddPlane",
 		"returnType": "void",
 		"args": {
@@ -368,26 +316,16 @@
 				"en": "Width and length of the plane",
 				"pl": "Szerokość i długość płaszczyzny"
 			},
-			"const float r": {
-				"en": "Red color channel intensity (0.0 - 1.0)",
-				"pl": "Intensywność koloru czerwonego (0.0 - 1.0)"
-			},
-			"const float g": {
-				"en": "Green color channel intensity (0.0 - 1.0)",
-				"pl": "Intensywność koloru zielonego (0.0 - 1.0)"
-			},
-			"const float b": {
-				"en": "Blue color channel intensity (0.0 - 1.0)",
-				"pl": "Intensywność koloru niebieskiego (0.0 - 1.0)"
-			},
-			"const float a": {
-				"en": "Alpha channel / opacity value (0.0 = fully transparent, 1.0 = fully opaque)",
-				"pl": "Kanał alfa / przezroczystość (0.0 = w pełni przezroczysty, 1.0 = w pełni widoczny)"
+			"const ColorRGBA color": {
+				"en": "RGBA color values (r, g, b, a) with intensities and alpha from 0.0 to 1.0",
+				"pl": "Składowe koloru RGBA (r, g, b, a) o intensywności i przezroczystości od 0.0 do 1.0"
 			}
 		},"description": {
 			"en": "Renders a flat 3D plane",
 			"pl": "Rysuje płaską płaszczyznę w przestrzeni 3D"
-		}},
+		},"example": [
+			"qgAddPlane((Vector3){0.0f, 0.0f, 0.0f}, (Vector2){100.0f, 100.0f}, CLR_RGBA(1.0f, 1.0f, 1.0f, 1.0f));"
+		]},
 		{"name": "qgAddBox",
 		"returnType": "void",
 		"args": {
@@ -399,26 +337,16 @@
 				"en": "Box dimensions (width, height, length)",
 				"pl": "Wymiary prostopadłościanu (szerokość, wysokość, długość)"
 			},
-			"const float r": {
-				"en": "Red color channel intensity (0.0 - 1.0)",
-				"pl": "Intensywność koloru czerwonego (0.0 - 1.0)"
-			},
-			"const float g": {
-				"en": "Green color channel intensity (0.0 - 1.0)",
-				"pl": "Intensywność koloru zielonego (0.0 - 1.0)"
-			},
-			"const float b": {
-				"en": "Blue color channel intensity (0.0 - 1.0)",
-				"pl": "Intensywność koloru niebieskiego (0.0 - 1.0)"
-			},
-			"const float a": {
-				"en": "Alpha channel / opacity value (0.0 = fully transparent, 1.0 = fully opaque)",
-				"pl": "Kanał alfa / przezroczystość (0.0 = w pełni przezroczysty, 1.0 = w pełni widoczny)"
+			"const ColorRGBA color": {
+				"en": "RGBA color values (r, g, b, a) with intensities and alpha from 0.0 to 1.0",
+				"pl": "Składowe koloru RGBA (r, g, b, a) o intensywności i przezroczystości od 0.0 do 1.0"
 			}
 		},"description": {
 			"en": "Renders a colored 3D box/cube",
 			"pl": "Rysuje kolorowy prostopadłościan/sześcian w przestrzeni 3D"
-		}}
+		},"example": [
+			"qgAddBox((Vector3){0.0f, 0.0f, 0.0f}, (Vector3){1.0f, 1.0f, 1.0f}, CLR_RGBA(1.0f, 1.0f, 1.0f, 1.0f));"
+		]}
 	],"text": [
 		{"name": "qgConvertFont",
 		"returnType": "void",
@@ -457,21 +385,9 @@
 				"en": "Font style flag (QGPU_FONT_STYLE_REGULAR / BOLD / ITALIC / BOLD_ITALIC)",
 				"pl": "Flaga stylu czcionki (QGPU_FONT_STYLE_REGULAR / BOLD / ITALIC / BOLD_ITALIC)"
 			},
-			"const float r": {
-				"en": "Red color channel intensity (0.0 - 1.0)",
-				"pl": "Intensywność koloru czerwonego (0.0 - 1.0)"
-			},
-			"const float g": {
-				"en": "Green color channel intensity (0.0 - 1.0)",
-				"pl": "Intensywność koloru zielonego (0.0 - 1.0)"
-			},
-			"const float b": {
-				"en": "Blue color channel intensity (0.0 - 1.0)",
-				"pl": "Intensywność koloru niebieskiego (0.0 - 1.0)"
-			},
-			"const float a": {
-				"en": "Alpha channel / opacity value (0.0 = fully transparent, 1.0 = fully opaque)",
-				"pl": "Kanał alfa / przezroczystość (0.0 = w pełni przezroczysty, 1.0 = w pełni widoczny)"
+			"const ColorRGBA color": {
+				"en": "RGBA color values (r, g, b, a) with intensities and alpha from 0.0 to 1.0",
+				"pl": "Składowe koloru RGBA (r, g, b, a) o intensywności i przezroczystości od 0.0 do 1.0"
 			}
 		},"description": {
 			"en": "Configures font properties including size, style, and color",
@@ -563,18 +479,10 @@
 		{"name": "qgSetRotationPivot",
 		"returnType": "void",
 		"args": {
-			"const float x": {
-				"en": "X coordinate of the pivot point",
-				"pl": "Współrzędna X punktu obrotu"
-			},
-			"const float y": {
-				"en": "Y coordinate of the pivot point",
-				"pl": "Współrzędna Y punktu obrotu"
-			},
-			"const float z": {
-				"en": "Z coordinate of the pivot point",
-				"pl": "Współrzędna Z punktu obrotu"
-			}
+		"const Vector3 pivot": {
+			"en": "Coordinates of the pivot point (x, y, z)",
+			"pl": "Współrzędne punktu obrotu (x, y, z)"
+		}
 		},"description": {
 			"en": "Sets the pivot point around which rotation is applied",
 			"pl": "Ustawia punkt obrotu (pivot), wokół którego wykonywana jest rotacja"
@@ -582,18 +490,10 @@
 		{"name": "qgSetRotation",
 		"returnType": "void",
 		"args": {
-			"const float rx": {
-				"en": "Rotation angle around X axis in degrees",
-				"pl": "Kąt obrotu wokół osi X w stopniach"
-			},
-			"const float ry": {
-				"en": "Rotation angle around Y axis in degrees",
-				"pl": "Kąt obrotu wokół osi Y w stopniach"
-			},
-			"const float rz": {
-				"en": "Rotation angle around Z axis in degrees",
-				"pl": "Kąt obrotu wokół osi Z w stopniach"
-			}
+		"const Vector3 rotation": {
+			"en": "Rotation angles around X, Y, and Z axes in degrees",
+			"pl": "Kąty obrotu wokół osi X, Y i Z w stopniach"
+		}
 		},"description": {
 			"en": "Sets the global 3D rotation angles in degrees",
 			"pl": "Ustawia kąty obrotu w przestrzeni 3D w stopniach"

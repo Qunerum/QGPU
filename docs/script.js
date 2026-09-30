@@ -28,9 +28,10 @@ const syntaxRules = {
 		'BLUE','MAGENTA','CYAN','DARK_GRAY','DARK_RED','DARK_GREEN','DARK_YELLOW','DARK_ORANGE',
 		'DARK_BLUE','DARK_MAGENTA','DARK_CYAN',
 		'ITALIC','UNDERLINE','STRIKETHROUGH','BOLD_ITALIC',
-		'MADE_WITH_QGPU','INFO','COLORS','LOGS','MSAA_LEVEL','SHADOWS'
+		'MADE_WITH_QGPU','INFO','COLORS','LOGS','MSAA_LEVEL','SHADOWS',
+		'CLR_RGB','CLR_RGBA'
 	],
-	'code-keyword': ['void','const','int','float','uint','uint8_t','Vector2','Vector3'],
+	'code-keyword': ['void','const','int','float','uint','uint8_t','Vector2','Vector3','ColorRGB','ColorRGBA'],
 	'code-control': ['if','else','return','for','while'],
 	'code-function': []
 };
