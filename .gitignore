@@ -2,7 +2,6 @@
 **/.obj/
 **/obj/
 **/build/
-**/shaders/
 **/*.sh
 **/*.bat
 **/*.qc
