@@ -76,6 +76,10 @@ void qgSetRotationPivot(const Vector3 pivot);
 void qgSetRotation(const Vector3 rotation); // degrees
 void qgResetRotation();
 // !===== Lights =========================================================================================================================================================!
+void qgAddPointLight(const Vector3 position, const float range, const float power);
+void qgAddSpotLight(const Vector3 position, const Vector3 direction, const float angleDegrees, const float range, const float power);
+void qgAddDirectionalLight(const Vector3 direction, const float power);
+// < = = = OBSOLETE (Replaced by: qgAddPointLight) = = = >
 void qgAddLight(const Vector3 position, const float range, const float power);
 // !===== Input ==========================================================================================================================================================!
 uint8_t qgGetKey(const uint key);

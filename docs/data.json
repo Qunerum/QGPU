@@ -506,7 +506,7 @@
 			"pl": "Resetuje kąty obrotu oraz punkt pivot do wartości domyślnych"
 		}}
 	],"lights": [
-		{"name": "qgAddLight",
+		{"name": "qgAddPointLight",
 		"returnType": "void",
 		"args": {
 			"const Vector3 position": {
@@ -524,8 +524,50 @@
 		},"description": {
 			"en": "Adds a point light source to the scene",
 			"pl": "Dodaje punktowe źródło światła do sceny"
+		}},
+		{"name": "qgAddSpotLight",
+		"returnType": "void",
+		"args": {
+			"const Vector3 position": {
+				"en": "Light position in 3D space",
+				"pl": "Pozycja światła w przestrzeni 3D"
+			},
+			"const Vector3 direction": {
+				"en": "Direction vector the spotlight is pointing",
+				"pl": "Wektor kierunku, w który świeci reflektor"
+			},
+			"const float angleDegrees": {
+				"en": "Cone angle of the spotlight in degrees",
+				"pl": "Kąt stożka reflektora w stopniach"
+			},
+			"const float range": {
+				"en": "Maximum distance the light reaches",
+				"pl": "Maksymalny zasięg światła"
+			},
+			"const float power": {
+				"en": "Light intensity factor",
+				"pl": "Moc / intensywność światła"
+			}
+		},"description": {
+			"en": "Adds a spot light source to the scene",
+			"pl": "Dodaje reflektorowe źródło światła (spotlight) do sceny"
+		}},
+		{"name": "qgAddDirectionalLight",
+		"returnType": "void",
+		"args": {
+			"const Vector3 direction": {
+				"en": "Direction vector of the light rays",
+				"pl": "Wektor kierunku promieni światła"
+			},
+			"const float power": {
+				"en": "Light intensity factor",
+				"pl": "Moc / intensywność światła"
+			}
+		},"description": {
+			"en": "Adds a directional light source to the scene",
+			"pl": "Dodaje kierunkowe źródło światła do sceny"
 		}}
-	],"input": [
+    ],"input": [
 		{"name": "qgGetKey",
 		"returnType": "uint8_t",
 		"args": {
