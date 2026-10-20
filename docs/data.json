@@ -348,21 +348,6 @@
 			"qgAddBox((Vector3){0.0f, 0.0f, 0.0f}, (Vector3){1.0f, 1.0f, 1.0f}, CLR_RGBA(1.0f, 1.0f, 1.0f, 1.0f));"
 		]}
 	],"text": [
-		{"name": "qgConvertFont",
-		"returnType": "void",
-		"args": {
-			"const char* pathQFR": {
-				"en": "Path to the source QFR font file",
-				"pl": "Ścieżka do źródłowego pliku czcionki QFR"
-			},
-			"const char* pathQF": {
-				"en": "Path to output binary QF font file",
-				"pl": "Ścieżka do docelowego pliku binarnego QF"
-			}
-		},"description": {
-			"en": "Converts a font file from QFR format to optimized QF format",
-			"pl": "Konwertuje plik czcionki z formatu QFR do zoptymalizowanego formatu QF"
-		}},
 		{"name": "qgLoadFont",
 		"returnType": "void",
 		"args": {
@@ -382,8 +367,8 @@
 				"pl": "Rozmiar czcionki w pikselach"
 			},
 			"const uint8_t style": {
-				"en": "Font style flag (QGPU_FONT_STYLE_REGULAR / BOLD / ITALIC / BOLD_ITALIC)",
-				"pl": "Flaga stylu czcionki (QGPU_FONT_STYLE_REGULAR / BOLD / ITALIC / BOLD_ITALIC)"
+				"en": "Font style flag (QGPU_FONT_STYLE_REGULAR / BOLD / ITALIC / UNDERLINE / STRIKETHROUGH / UPPERCASE / LOWERCASE)",
+				"pl": "Flaga stylu czcionki (QGPU_FONT_STYLE_REGULAR / BOLD / ITALIC / UNDERLINE / STRIKETHROUGH / UPPERCASE / LOWERCASE)"
 			},
 			"const ColorRGBA color": {
 				"en": "RGBA color values (r, g, b, a) with intensities and alpha from 0.0 to 1.0",
@@ -416,8 +401,8 @@
 				"pl": "Pozycja lewego górnego rogu do wyrenderowania tekstu"
 			},
 			"const char* text": {
-				"en": "Text string to render (supports newlines, tabs, and hex escape codes like q;XXXX;)",
-				"pl": "Ciąg tekstowy do wyświetlenia (obsługuje nową linię, tabulacje oraz kody hex np. q;XXXX;)"
+				"en": "Text string to render (supports newlines, tabs, and hex escape codes like \\33x8F15q)",
+				"pl": "Ciąg tekstowy do wyświetlenia (obsługuje nową linię, tabulacje oraz kody hex np. \\33x8F15q)"
 			}
 		},"description": {
 			"en": "Renders a formatted text string at the specified position",
