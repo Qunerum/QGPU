@@ -1,3 +1,11 @@
+/*
+ * Copyright (c) 2026 Qunerum
+ *
+ * This file is part of QGPU.
+ * This software is licensed under the MIT License.
+ * See LICENSE file in the project root for full license information.
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,9 +20,355 @@
 #include "qgpu.h"
 
 #define QGPU_VERSION_MAJOR 2
-#define QGPU_VERSION_MINOR 5
+#define QGPU_VERSION_MINOR 6
 #define QGPU_VERSION_PATCH 0
+// ========================================================================================================================================================================
+// ===== QFONT.h ==========================================================================================================================================================
+// ========================================================================================================================================================================
+#define QFONT_REGULAR       0b00000000
+#define QFONT_BOLD          0b00000001
+#define QFONT_ITALIC        0b00000010
+#define QFONT_UNDERLINE     0b00000100
+#define QFONT_STRIKETHROUGH 0b00001000
+#define QFONT_UPPERCASE     0b00010000
+#define QFONT_LOWERCASE     0b00100000
 
+#define QFONT_Y_UP 0
+#define QFONT_Y_DOWN 1
+
+typedef struct { uint8_t sizeX, sizeY; } qfCharData;
+// ========================================================================================================================================================================
+// ===== QFONT.c ==========================================================================================================================================================
+// ========================================================================================================================================================================
+#define NKO "\033[1;38;5;240m[\033[1;38;5;"
+#define NKC "\033[1;38;5;240m]\033[1;38;5;251m"
+#define QFONT_PREFIX NKO "211mQFont" NKC
+static float
+	pivX = 0.0f, pivY = 0.0f,
+	qfSize = 32.0f,
+	qfR = 1.0f, qfG = 1.0f, qfB = 1.0f, qfA = 1.0f;
+static uint8_t qfStyle = QFONT_REGULAR, qfAxis = QFONT_Y_UP;
+static void (*drawFunc)(const float posX, const float posY, const float sizeX, const float sizeY, const float r, const float g, const float b, const float a);
+void qfSetDrawRect(const int8_t px, const int8_t py, const uint8_t ya, void (*drawRectFunc)(const float posX, const float posY, const float sizeX, const float sizeY, const float r, const float g, const float b, const float a)) {
+	pivX = px <= -1 ? 0.0f : px >= 1 ? 1.0f : 0.5f;
+	pivY = py <= -1 ? 0.0f : py >= 1 ? 1.0f : 0.5f;
+	qfAxis = ya;
+	drawFunc = drawRectFunc;
+}
+void qfConfigure(const float fontSize, const uint8_t style, const float r, const float g, const float b, const float a) {
+	qfSize = fontSize;
+	qfStyle = style;
+	qfR = r;
+	qfG = g;
+	qfB = b;
+	qfA = a;
+}
+static void* mc(void* dest, const void* src, const uint32_t n) {
+	unsigned char* d = (unsigned char*)dest;
+	const unsigned char* s = (const unsigned char*)src;
+	for (uint32_t i = 0; i < n; i++) d[i] = s[i];
+	return dest;
+}
+qfCharData qfCreate(const uint8_t sizeX, const uint8_t sizeY) { return (qfCharData) { .sizeX = sizeX, .sizeY = sizeY }; }
+static int8_t** allChars = 0, isFile = 0;
+static uint32_t charCount = 0, highestID = 0;
+#define u8d (uint8_t)d
+void qfAddChar(const qfCharData charData, const int8_t* d) {
+	if (!d) return;
+	const uint32_t id =
+		((uint32_t)u8d[0] << 24) |
+		((uint32_t)u8d[1] << 16) |
+		((uint32_t)u8d[2] << 8)  |
+		 (uint32_t)u8d[3];
+	if (id >= highestID) {
+		const uint32_t newCapacity = id + 1;
+		int8_t** temp = (int8_t**)realloc(allChars, newCapacity * sizeof(int8_t*));
+		if (!temp) return;
+		allChars = temp;
+		for (uint32_t i = highestID; i < newCapacity; i++) allChars[i] = 0;
+		highestID = newCapacity;
+	}
+	if (allChars[id]) free(allChars[id]);
+	const uint8_t goNext = u8d[5];
+	uint16_t size = 4, actualID = 6;
+	for (uint8_t i = 0; i < goNext; i++) {
+		const uint8_t len = 1 + u8d[actualID];
+		actualID += len;
+		size += len;
+	}
+	allChars[id] = (int8_t*)malloc(size);
+	mc(allChars[id], d + 2, size);
+	allChars[id][0] = charData.sizeX;
+	allChars[id][1] = charData.sizeY;
+	charCount++;
+	const uint8_t c = isFile ? 12 : 245;
+	printf(QFONT_PREFIX "%c" NKO "245m%4u" NKC
+		" %s " NKO "%um%c" NKC
+		": WH:" NKO "%um%ux%u" NKC
+		" ID:" NKO "%um0x%08X" NKC
+		" LS:" NKO "%um%4uB" NKC "\n",
+		isFile ? 0 : ' ', charCount, isFile ? "Readed char" : "Added char", c, (char)(id > 31 && id < 127 ? id : '?'), c, charData.sizeX, charData.sizeY, c, id, c, size);
+}
+void qfWriteFile(const uint8_t add, const char* path, const qfCharData charData, const int8_t* d) {
+	if (!d) return;
+	FILE* f = fopen(path, add ? "ab" : "wb");
+	if (!f) return;
+	const uint32_t id =
+	(((uint32_t)u8d[0] << 24)) |
+	(((uint32_t)u8d[1] << 16)) |
+	(((uint32_t)u8d[2] << 8))  |
+	((uint32_t)u8d[3]);
+	const uint8_t startAt = u8d[4], goNext = u8d[5];
+	uint16_t l = 0, actualID = 6;
+	for (uint8_t i = 0; i < goNext; i++) {
+		const uint8_t len = 1 + u8d[actualID];
+		actualID += len;
+		l += len;
+	}
+	fwrite(&d[0], 1, 1, f);
+	fwrite(&d[1], 1, 1, f);
+	fwrite(&d[2], 1, 1, f);
+	fwrite(&d[3], 1, 1, f);
+	fwrite(&charData.sizeX, 1, 1, f);
+	fwrite(&charData.sizeY, 1, 1, f);
+	fwrite(&startAt, 1, 1, f);
+	fwrite(&goNext, 1, 1, f);
+	fwrite(&d[6], 1, l, f);
+	fclose(f);
+	const uint16_t totalRecordSize = 6 + l;
+	printf(QFONT_PREFIX
+	"   Saved to file   " NKO "115m%c" NKC
+	": WH:" NKO "115m%ux%u" NKC
+	" ID:" NKO "115m0x%08X" NKC
+	" LS:" NKO "115m%4uB" NKC "\n",
+	(char)(id > 31 && id < 127 ? id : '?'), charData.sizeX, charData.sizeY, id, totalRecordSize);
+}
+void qfReadFile(const char* path) {
+	FILE* f = fopen(path, "rb");
+	if (!f) return;
+	isFile = 1;
+	uint32_t id = 0;
+	while (fread(&id, sizeof(uint32_t), 1, f) == 1) {
+		uint8_t sizeX = 0, sizeY = 0, startAt = 0, goNext = 0;
+		if (fread(&sizeX, 1, 1, f) != 1 ||
+			fread(&sizeY, 1, 1, f) != 1 ||
+			fread(&startAt, 1, 1, f) != 1 ||
+			fread(&goNext, 1, 1, f) != 1) break;
+		const qfCharData cd = (qfCharData){ .sizeX = sizeX, .sizeY = sizeY };
+		uint16_t size = 6;
+		for (uint8_t i = 0; i < goNext; i++) {
+			uint8_t v = 0;
+			if (fread(&v, 1, 1, f) != 1) break;
+			fseek(f, (long)v, SEEK_CUR);
+			size += (1 + v);
+		}
+		int8_t* d = (int8_t*)malloc(size);
+		if (!d) {
+			fclose(f);
+			return;
+		}
+		fseek(f, -(long)(size + 2), SEEK_CUR);
+		d[3] = (int8_t)(id >> 24);
+		d[2] = (int8_t)(id >> 16);
+		d[1] = (int8_t)(id >> 8);
+		d[0] = (int8_t)id;
+		fseek(f, 6, SEEK_CUR);
+		fread(&d[4], 1, size - 4, f);
+		qfAddChar(cd, d);
+	}
+	isFile = 0;
+	fclose(f);
+}
+float qfDrawChar(const float posX, const float posY, const uint32_t c) {
+	if (c >= highestID || !allChars[c]) return .0f;
+	const uint32_t cr =
+		((qfStyle & QFONT_UPPERCASE) && c >= 'a' && c <= 'z') ? c - 32 :
+		((qfStyle & QFONT_LOWERCASE) && c >= 'A' && c <= 'Z') ? c + 32 : c;
+	const int8_t* d = allChars[cr];
+	const uint8_t
+		w = u8d[0], h = u8d[1],
+		s = u8d[2], rn = u8d[3],
+		n = s + rn > h ? h - s : rn,
+		fw = (qfStyle & QFONT_BOLD) ? w + 1 : w;
+	if (s >= h) return .0f;
+	uint8_t x = 0, y = s, i = 4;
+	const float sc = qfSize / h;
+	for (uint8_t r = 0; r < n; r++) {
+		const uint8_t len = u8d[i] + 1;
+		const float st = (qfStyle & QFONT_ITALIC) ? -(y / (float)h) * 3.0f : 0.0f;
+		for (uint8_t l = 1; l < len; l++) {
+			const int8_t dil = d[i + l];
+			const uint8_t
+				draw = dil < 0,
+				rv = draw ? -dil : dil,
+				v = rv > w ? w : rv,
+				dv = (qfStyle & QFONT_BOLD) && draw ? v + 1 : v;
+			const float
+				px = qfAxis ? (x + v * pivX - st) : (x + v * pivX + st),
+				pyt = (y + pivY) * sc,
+				py = qfAxis ? posY + pyt : posY - pyt;
+			if (draw) drawFunc(posX + px * sc, py, dv * sc, sc, qfR,qfG,qfB,qfA);
+			x += v;
+		}
+		i += len;
+		x = 0;
+		y++;
+	}
+	if (qfStyle & QFONT_UNDERLINE) drawFunc(posX + (fw * sc * 0.5f), posY - qfSize, fw * sc, sc, qfR,qfG,qfB,qfA);
+	if (qfStyle & QFONT_STRIKETHROUGH) drawFunc(posX + (fw * sc * 0.5f), posY - qfSize * 0.5f, fw * sc, sc, qfR,qfG,qfB,qfA);
+	return fw * sc;
+}
+static uint8_t tmpi = 0;
+static char tmp[11];
+void qfDrawText(const float posX, const float posY, const char* t) {
+	float x = posX, y = posY;
+	while (*t) {
+		if (*t == '\n') {
+			x = posX;
+			y -= qfSize;
+			t++;
+			continue;
+		}
+		if (*t == '\33') {
+			t++;
+			const uint8_t type = *t == 'd' ? 1 : *t == 'x' ? 2 : 0;
+			if (!type || !*t) continue;
+			tmpi = 0;
+			tmp[0] = 0;
+			for (uint8_t i = 0; i < sizeof(tmp) - 1; i++) {
+				t++;
+				if (!*t) return;
+				if (*t != 'q') tmp[tmpi++] = *t; else break;
+			}
+			uint32_t res = 0;
+			uint8_t i = 0;
+			if (type == 1) {
+				while (tmp[i] >= '0' && tmp[i] <= '9') {
+					res = res * 10 + tmp[i] - '0';
+					i++;
+				}
+			} else {
+				for (i = 0; i < tmpi; i++) if (tmp[i] >= 'A' && tmp[i] <= 'F') tmp[i] += 32;
+				i = 0;
+				while (i < tmpi) {
+					const char c = tmp[i];
+					uint32_t val = 0;
+					if (c >= '0' && c <= '9') val = c - '0';
+					else if (c >= 'a' && c <= 'f') val = c - 'a' + 10;
+					else break;
+					res = (res << 4) | val;
+					i++;
+				}
+			}
+			x += qfDrawChar(x, y, res);
+			t++;
+			continue;
+		}
+		x += qfDrawChar(x, y, (unsigned char)*t++);
+	}
+}
+#define qfl qfFont,(int8_t[]){0,0,0
+void qfInit() {
+	qfCharData qfFont = qfCreate(8, 12);
+	qfAddChar(qfl,0x7e, 0,0}); // alloc
+	charCount--;
+	qfAddChar(qfl,0x1f, 0,12, 1, -8, 1, -8, 1, -8, 1, -8, 1, -8, 1, -8, 1, -8, 1, -8, 1, -8, 1, -8, 1, -8, 1, -8});
+	qfAddChar(qfl,0x20, 0,0});
+	qfAddChar(qfl,0x21, 2,8, 2, 3,-2, 2, 3,-2, 2, 3,-2, 2, 3,-2, 2, 3,-2, 0, 2, 3,-2, 2, 3,-2});
+	qfAddChar(qfl,0x22, 2,2, 4, 2,-1,1,-1, 4, 2,-1,1,-1});
+	qfAddChar(qfl,0x23, 2,8, 4, 2,-1,2,-1, 4, 2,-1,2,-1, 2, 1,-6, 4, 2,-1,2,-1, 4, 2,-1,2,-1, 2, 1,-6, 4, 2,-1,2,-1, 4, 2,-1,2,-1});
+	qfAddChar(qfl,0x24, 1,10, 2, 3,-2, 2, 2,-4, 4, 1,-1,4,-1, 2, 1,-1, 2, 2,-2, 2, 4,-2, 2, 6,-1, 4, 1,-1,4,-1, 2, 2,-4, 2, 3,-2});
+	qfAddChar(qfl,0x25, 2,8, 4, 1,-2,2,-1, 4, 1,-2,2,-1, 2, 4,-1, 2, 4,-1, 2, 3,-1, 2, 3,-1, 4, 2,-1,2,-2, 4, 2,-1,2,-2});
+	qfAddChar(qfl,0x26, 2,8, 2, 2,-3, 4, 1,-1,3,-1, 2, 1,-1, 2, 2,-1, 4, 1,-1,1,-1, 6, 1,-1,2,-1,1,-1, 4, 1,-1,3,-1, 4, 2,-3,1,-1});
+	qfAddChar(qfl,0x27, 2,2, 2, 4,-1, 2, 4,-1});
+	qfAddChar(qfl,0x28, 2,8, 2, 5,-1, 2, 4,-1, 2, 3,-1, 2, 3,-1, 2, 3,-1, 2, 3,-1, 2, 4,-1, 2, 5,-1});
+	qfAddChar(qfl,0x29, 2,8, 2, 2,-1, 2, 3,-1, 2, 4,-1, 2, 4,-1, 2, 4,-1, 2, 4,-1, 2, 3,-1, 2, 2,-1});
+	qfAddChar(qfl,0x2a, 2,3, 4, 2,-1,2,-1, 2, 3,-2, 4, 2,-1,2,-1});
+	qfAddChar(qfl,0x2b, 3,5, 2, 3,-1, 2, 3,-1, 2, 1,-5, 2, 3,-1, 2, 3,-1,});
+	qfAddChar(qfl,0x2c, 8,4, 2, 3,-2, 2, 3,-2, 2, 4,-1, 2, 3,-1});
+	qfAddChar(qfl,0x2d, 5,1,  2, 1,-6 });
+	qfAddChar(qfl,0x2e, 8,2, 2, 3,-2, 2, 3,-2});
+	qfAddChar(qfl,0x2f, 2,8, 2, 5,-1, 2, 5,-1, 2, 4,-1, 2, 4,-1, 2, 3,-1, 2, 3,-1, 2, 2,-1, 2, 2,-1});
+	qfAddChar(qfl,0x30, 2,8, 2, 2,-4, 4, 1,-1,4,-1, 4, 1,-2,3,-1, 6, 1,-1,1,-1,2,-1, 6, 1,-1,2,-1,1,-1, 4, 1,-1,3,-2, 4, 1,-1,4,-1, 2, 2,-4});
+	qfAddChar(qfl,0x31, 2,8, 2, 4,-1, 2, 3,-2, 4, 2,-1,1,-1, 2, 4,-1, 2, 4,-1, 2, 4,-1, 2, 4,-1, 2, 2,-5});
+	qfAddChar(qfl,0x32, 2,8, 2, 2,-4, 4, 1,-1,4,-1, 2, 6,-1, 2, 5,-1, 2, 4,-1, 2, 3,-1, 2, 2,-1, 2, 1,-6});
+	qfAddChar(qfl,0x33, 2,8, 2, 2,-4, 4, 1,-1,4,-1, 2, 6,-1, 2, 3,-3, 2, 6,-1, 2, 6,-1, 4, 1,-1,4,-1, 2, 2,-4});
+	qfAddChar(qfl,0x34, 2,8, 2, 4,-2, 4, 3,-1,1,-1, 4, 2,-1,2,-1, 4, 1,-1,3,-1, 2, 1,-6, 2, 5,-1, 2, 5,-1, 2, 5,-1});
+	qfAddChar(qfl,0x35, 2,8, 2, 1,-6, 2, 1,-1, 2, 1,-1, 2, 1,-5, 2, 6,-1, 2, 6,-1, 4, 1,-1,4,-1, 2, 2,-4});
+	qfAddChar(qfl,0x36, 2,8, 2, 2,-4, 4, 1,-1,4,-1, 2, 1,-1, 2, 1,-5, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 2, 2,-4});
+	qfAddChar(qfl,0x37, 2,8, 2, 1,-6, 2, 6,-1, 2, 5,-1, 2, 4,-1, 2, 4,-1, 2, 3,-1, 2, 3,-1, 2, 3,-1});
+	qfAddChar(qfl,0x38, 2,8, 2, 2,-4, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 2, 2,-4, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 2, 2,-4});
+	qfAddChar(qfl,0x39, 2,8, 2, 2,-4, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 2, 2,-5, 2, 6,-1, 4, 1,-1,4,-1, 2, 2,-4});
+	qfAddChar(qfl,0x3a, 3,6, 2, 3,-2, 2, 3,-2, 0, 0, 2, 3,-2, 2, 3,-2});
+	qfAddChar(qfl,0x3b, 3,8, 2, 3,-2, 2, 3,-2, 0, 0, 2, 3,-2, 2, 3,-2, 2, 4,-1, 2, 3,-1});
+	qfAddChar(qfl,0x3c, 3,6, 2, 5,-2, 2, 3,-2, 2, 1,-2, 2, 1,-2, 2, 3,-2, 2, 5,-2});
+	qfAddChar(qfl,0x3d, 4,4, 2, 1,-6, 0, 0, 2, 1,-6});
+	qfAddChar(qfl,0x3e, 3,6, 2, 1,-2, 2, 3,-2, 2, 5,-2, 2, 5,-2, 2, 3,-2, 2, 1,-2});
+	qfAddChar(qfl,0x3f, 2,8, 2, 3,-3, 4, 2,-1,3,-1, 2, 6,-1, 2, 5,-1, 2, 4,-1, 2, 4,-1, 0, 2, 4,-1});
+	qfAddChar(qfl,0x40, 2,8, 2, 2,-4, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 6, 1,-1,1,-2,1,-1, 4, 1,-1,1,-3, 2, 1,-1, 4, 1,-1,4,-1, 2, 2,-4});
+	qfAddChar(qfl,0x41, 2,8, 2, 3,-2, 4, 2,-1,2,-1, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 2, 1,-6, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 4, 1,-1,4,-1});
+	qfAddChar(qfl,0x42, 2,8, 2, 1,-5, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 2, 1,-5, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 2, 1,-5});
+	qfAddChar(qfl,0x43, 2,8, 2, 2,-4, 4, 1,-1,4,-1, 2, 1,-1, 2, 1,-1, 2, 1,-1, 2, 1,-1, 4, 1,-1,4,-1, 2, 2,-4});
+	qfAddChar(qfl,0x44, 2,8, 2, 1,-5, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 2, 1,-5});
+	qfAddChar(qfl,0x45, 2,8, 2, 1,-6, 2, 1,-1, 2, 1,-1, 2, 1,-4, 2, 1,-1, 2, 1,-1, 2, 1,-1, 2, 1,-6});
+	qfAddChar(qfl,0x46, 2,8, 2, 1,-6, 2, 1,-1, 2, 1,-1, 2, 1,-4, 2, 1,-1, 2, 1,-1, 2, 1,-1, 2, 1,-1});
+	qfAddChar(qfl,0x47, 2,8, 2, 2,-4, 4, 1,-1,4,-1, 2, 1,-1, 2, 1,-1, 4, 1,-1,2,-3, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 2, 2,-4});
+	qfAddChar(qfl,0x48, 2,8, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 2, 1,-6, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 4, 1,-1,4,-1});
+	qfAddChar(qfl,0x49, 2,8, 2, 1,-5, 2, 3,-1, 2, 3,-1, 2, 3,-1, 2, 3,-1, 2, 3,-1, 2, 3,-1, 2, 1,-5});
+	qfAddChar(qfl,0x4a, 2,8, 2, 1,-5, 2, 3,-1, 2, 3,-1, 2, 3,-1, 2, 3,-1, 2, 3,-1, 2, 3,-1, 2, 1,-2});
+	qfAddChar(qfl,0x4b, 2,8, 4, 1,-1,4,-1, 4, 1,-1,3,-1, 4, 1,-1,2,-1, 2, 1,-3, 4, 1,-1,2,-1, 4, 1,-1,3,-1, 4, 1,-1,4,-1, 4, 1,-1,4,-1,});
+	qfAddChar(qfl,0x4c, 2,8, 2, 1,-1, 2, 1,-1, 2, 1,-1, 2, 1,-1, 2, 1,-1, 2, 1,-1, 2, 1,-1, 2, 1,-6});
+	qfAddChar(qfl,0x4d, 2,8, 4, 1,-1,4,-1, 4, 1,-2,2,-2, 6, 1,-1,1,-2,1,-1, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 4, 1,-1,4,-1});
+	qfAddChar(qfl,0x4e, 2,8, 4, 1,-1,4,-1, 4, 1,-2,3,-1, 6, 1,-1,1,-1,2,-1, 6, 1,-1,1,-1,2,-1, 6, 1,-1,2,-1,1,-1, 6, 1,-1,2,-1,1,-1, 4, 1,-1,3,-2, 4, 1,-1,4,-1});
+	qfAddChar(qfl,0x4f, 2,8, 2, 2,-4, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 2, 2,-4});
+	qfAddChar(qfl,0x50, 2,8, 2, 1,-5, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 2, 1,-5, 2, 1,-1, 2, 1,-1, 2, 1,-1});
+	qfAddChar(qfl,0x51, 2,9, 2, 2,-4, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 2, 2,-5, 2, 6,-2});
+	qfAddChar(qfl,0x52, 2,8, 2, 1,-5, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 2, 1,-5, 4, 1,-1,3,-1, 4, 1,-1,4,-1, 4, 1,-1,4,-1,});
+	qfAddChar(qfl,0x53, 2,8, 2, 2,-4, 4, 1,-1,4,-1, 2, 1,-1, 2, 2,-2, 2, 4,-2, 2, 6,-1, 4, 1,-1,4,-1, 2, 2,-4});
+	qfAddChar(qfl,0x54, 2,8, 2, 1,-5, 2, 3,-1, 2, 3,-1, 2, 3,-1, 2, 3,-1, 2, 3,-1, 2, 3,-1, 2, 3,-1,});
+	qfAddChar(qfl,0x55, 2,8, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 2, 2,-4});
+	qfAddChar(qfl,0x56, 2,8, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 4, 2,-1,2,-1, 4, 2,-1,2,-1, 4, 2,-1,2,-1, 2, 3,-2, 2, 3,-2});
+	qfAddChar(qfl,0x57, 2,8, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 6, 1,-1,1,-2,1,-1, 4, 1,-2,2,-2, 4, 1,-1,4,-1});
+	qfAddChar(qfl,0x58, 2,8, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 4, 2,-1,2,-1, 2, 3,-2, 2, 3,-2, 4, 2,-1,2,-1, 4, 1,-1,4,-1, 4, 1,-1,4,-1});
+	qfAddChar(qfl,0x59, 2,8, 4, 1,-1,3,-1, 4, 1,-1,3,-1, 4, 2,-1,1,-1, 4, 2,-1,1,-1, 2, 3,-1, 2, 3,-1, 2, 3,-1, 2, 3,-1});
+	qfAddChar(qfl,0x5a, 2,8, 2, 1,-6, 2, 6,-1, 2, 5,-1, 2, 4,-1, 2, 3,-1, 2, 2,-1, 2, 1,-1, 2, 1,-6});
+	qfAddChar(qfl,0x5b, 2,8, 2, 3,-3, 2, 3,-1, 2, 3,-1, 2, 3,-1, 2, 3,-1, 2, 3,-1, 2, 3,-1, 2, 3,-3});
+	qfAddChar(qfl,0x5c, 2,8, 2, 2,-1, 2, 2,-1, 2, 3,-1, 2, 3,-1, 2, 4,-1, 2, 4,-1, 2, 5,-1, 2, 5,-1});
+	qfAddChar(qfl,0x5d, 2,8, 2, 2,-3, 2, 4,-1, 2, 4,-1, 2, 4,-1, 2, 4,-1, 2, 4,-1, 2, 4,-1, 2, 2,-3});
+	qfAddChar(qfl,0x5e, 2,2, 2, 3,-2, 4, 2,-1,2,-1});
+	qfAddChar(qfl,0x5f, 9,1,   2, 1,-6 });
+	qfAddChar(qfl,0x60, 2,2, 2, 3,-1, 2, 4,-1});
+	qfAddChar(qfl,0x61, 4,6, 2, 2,-4, 2, 6,-1, 2, 2,-5, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 2, 2,-5});
+	qfAddChar(qfl,0x62, 2,8, 2, 1,-1, 2, 1,-1, 4, 1,-1,1,-3, 4, 1,-2,3,-1, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 2, 1,-5,});
+	qfAddChar(qfl,0x63, 4,6, 2, 2,-4, 4, 1,-1,4,-1, 2, 1,-1, 2, 1,-1, 4, 1,-1,4,-1, 2, 2,-4});
+	qfAddChar(qfl,0x64, 2,8, 2, 6,-1, 2, 6,-1, 4, 2,-3,1,-1, 4, 1,-1,3,-2, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 2, 2,-5});
+	qfAddChar(qfl,0x65, 4,6, 2, 2,-4, 4, 1,-1,4,-1, 2, 1,-6, 2, 1,-1, 4, 1,-1,4,-1, 2, 2,-4});
+	qfAddChar(qfl,0x66, 2,8, 2, 4,-2, 2, 3,-1, 2, 3,-1, 2, 1,-5, 2, 3,-1, 2, 3,-1, 2, 3,-1, 2, 3,-1});
+	qfAddChar(qfl,0x67, 4,8, 4, 2,-3,1,-1, 4, 1,-1,3,-2, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 2, 2,-5, 2, 6,-1, 4, 1,-1,4,-1, 2, 2,-4});
+	qfAddChar(qfl,0x68, 2,8, 2, 1,-1, 2, 1,-1, 4, 1,-1,1,-3, 4, 1,-2,3,-1, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 4, 1,-1,4,-1});
+	qfAddChar(qfl,0x69, 2,8, 2, 3,-1, 2, 3,-1, 0, 2, 2,-2, 2, 3,-1, 2, 3,-1, 2, 3,-1, 2, 1,-5});
+	qfAddChar(qfl,0x6a, 2,10, 2, 4,-1, 2, 4,-1, 0, 2, 3,-2, 2, 4,-1, 2, 4,-1, 2, 4,-1, 2, 4,-1, 4, 2,-1,1,-1, 2, 3,-1});
+	qfAddChar(qfl,0x6b, 2,8, 2, 1,-1, 2, 1,-1, 4, 1,-1,4,-1, 4, 1,-1,3,-1, 2, 1,-4, 4, 1,-1,3,-1, 4, 1,-1,4,-1, 4, 1,-1,4,-1});
+	qfAddChar(qfl,0x6c, 2,8, 2, 2,-2, 2, 3,-1, 2, 3,-1, 2, 3,-1, 2, 3,-1, 2, 3,-1, 2, 3,-1, 2, 1,-5});
+	qfAddChar(qfl,0x6d, 4,6, 3, -3,1,-2, 5, -1,2,-1,2,-1, 5, -1,2,-1,2,-1, 5, -1,2,-1,2,-1, 5, -1,2,-1,2,-1, 5, -1,2,-1,2,-1});
+	qfAddChar(qfl,0x6e, 4,6, 4, 1,-1,1,-3, 4, 1,-2,3,-1, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 4, 1,-1,4,-1});
+	qfAddChar(qfl,0x6f, 4,6, 2, 2,-4, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 2, 2,-4});
+	qfAddChar(qfl,0x70, 4,8, 4, 1,-1,1,-3, 4, 1,-2,3,-1, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 2, 1,-5, 2, 1,-1, 2, 1,-1});
+	qfAddChar(qfl,0x71, 4,8, 4, 2,-3,1,-1, 4, 1,-1,3,-2, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 2, 2,-5, 2, 6,-1, 2, 6,-1});
+	qfAddChar(qfl,0x72, 4,6, 4, 1,-1,1,-3, 4, 1,-2,3,-1, 2, 1,-1, 2, 1,-1, 2, 1,-1, 2, 1,-1});
+	qfAddChar(qfl,0x73, 4,6, 2, 2,-5, 2, 1,-1, 2, 2,-4, 2, 6,-1, 2, 6,-1, 2, 1,-5});
+	qfAddChar(qfl,0x74, 2,8, 2, 3,-1, 2, 3,-1, 2, 1,-5, 2, 3,-1, 2, 3,-1, 2, 3,-1, 2, 3,-1, 2, 4,-2});
+	qfAddChar(qfl,0x75, 4,6, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 4, 1,-1,3,-2, 4, 2,-3,1,-1});
+	qfAddChar(qfl,0x76, 4,6, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 4, 2,-1,2,-1, 4, 2,-1,2,-1, 2, 3,-2, 2, 3,-2});
+	qfAddChar(qfl,0x77, 4,6, 3, -1,5,-1, 3, -1,5,-1, 5, -1,2,-1,2,-1, 5, -1,2,-1,2,-1, 5, -1,2,-1,2,-1, 4, 1,-2,1,-2});
+	qfAddChar(qfl,0x78, 4,6, 4, 1,-1,4,-1, 4, 2,-1,2,-1, 2, 3,-2, 2, 3,-2, 4, 2,-1,2,-1, 4, 1,-1,4,-1});
+	qfAddChar(qfl,0x79, 4,8, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 4, 1,-1,4,-1, 4, 1,-1,3,-2, 4, 2,-3,1,-1, 2, 6,-1, 4, 1,-1,4,-1, 2, 2,-4});
+	qfAddChar(qfl,0x7a, 4,6, 2, 1,-6, 2, 5,-1, 2, 4,-1, 2, 3,-1, 2, 2,-1, 2, 1,-6});
+	qfAddChar(qfl,0x7b, 2,8, 2, 5,-1, 2, 4,-1, 2, 4,-1, 2, 3,-2, 2, 3,-2, 2, 4,-1, 2, 4,-1, 2, 5,-1});
+	qfAddChar(qfl,0x7c, 0,12, 2, 3,-2, 2, 3,-2, 2, 3,-2, 2, 3,-2, 2, 3,-2, 2, 3,-2, 2, 3,-2, 2, 3,-2, 2, 3,-2, 2, 3,-2, 2, 3,-2, 2, 3,-2});
+	qfAddChar(qfl,0x7d, 2,8, 2, 2,-1, 2, 3,-1, 2, 3,-1, 2, 3,-2, 2, 3,-2, 2, 3,-1, 2, 3,-1, 2, 2,-1});
+	qfAddChar(qfl,0x7e, 5,2, 4, 2,-2,2,-1, 4, 1,-1,2,-2});
+}
 // ========================================================================================================================================================================
 // ===== QGPU =============================================================================================================================================================
 // ========================================================================================================================================================================
@@ -92,12 +446,12 @@ typedef struct {
 } InternalContext;
 typedef struct { uint8_t ambientOcclusion, msaaLevel, shadows; } GraphicsSettings;
 typedef struct { float viewProj[16], lightViewProj[16], lightPosRange[4], lightPowerShadow[4], sceneInfo[4]; } CameraUBO;
-typedef struct { float pos[3]; float normal[3]; float color[4]; } QGPU_Vertex;
+typedef struct { float pos[3], normal[3], color[4]; } QGPU_Vertex;
 #define QGPU_LIGHT_POINT       0
 #define QGPU_LIGHT_SPOT        1
 #define QGPU_LIGHT_DIRECTIONAL 2
-typedef struct { float posRange[4]; float dirPower[4]; float typeAngle[4]; } GPULight;
-typedef struct { float pos[2]; float color[4]; } QGPU_Vertex2D;
+typedef struct { float posRange[4], dirPower[4], typeAngle[4]; } GPULight;
+typedef struct { float pos[2], color[4]; } QGPU_Vertex2D;
 
 static InternalContext g_ctx;
 static GraphicsSettings g_settings = { .ambientOcclusion = 1, .msaaLevel = 4, .shadows = 1 };
@@ -111,21 +465,15 @@ static GPULight lights[MAX_LIGHTS];
 static uint frameCount, lightCount;
 
 #define MAX_UI_TRIANGLES (MAX_UI_VERTICES / 3)
-typedef struct { float p[3][2]; float color[4]; uint32_t layer; uint32_t order; } UITriangle2D;
+typedef struct { float p[3][2]; float color[4]; uint32_t layer, order; } UITriangle2D;
 static UITriangle2D uiTriangles[MAX_UI_TRIANGLES];
-static uint32_t uiTriangleCount;
-static uint32_t currentUILayer;
+static uint32_t uiTriangleCount, currentUILayer;
 static int compareUITriangle(const void* a, const void* b) {
 	const UITriangle2D *ta = (const UITriangle2D*)a, *tb = (const UITriangle2D*)b;
 	if (ta->layer != tb->layer) return (ta->layer < tb->layer) ? -1 : 1;
 	if (ta->order != tb->order) return (ta->order < tb->order) ? -1 : 1;
 	return 0;
 }
-
-#define qFontX 8
-#define qFontY 11
-#define qFontMax 6
-static int8_t newChars[65536][qFontY][qFontMax] = {0};
 // ========================================================================================================================================================================
 // ===== TOOLS ============================================================================================================================================================
 // ========================================================================================================================================================================
@@ -262,13 +610,25 @@ void qgLog(const char* format, ...) {
 }
 void qgLogVertices() {
 	if (!_showLogs) return;
-	const float p = ((float)g_ctx.currentVOffset / MAX_VERTICES) * 100.0f;
-	if (p > 95) qgPrintc(LIGHT_RED, "%i/%i (%.0f%%)\n", g_ctx.currentVOffset, MAX_VERTICES, p);
-	else if (p > 75) qgPrintc(RED, "%i/%i (%.0f%%)\n", g_ctx.currentVOffset, MAX_VERTICES, p);
-	else if (p > 50) qgPrintc(ORANGE, "%i/%i (%.0f%%)\n", g_ctx.currentVOffset, MAX_VERTICES, p);
-	else if (p > 25) qgPrintc(YELLOW, "%i/%i (%.0f%%)\n", g_ctx.currentVOffset, MAX_VERTICES, p);
-	else if (p > 10) qgPrintc(DARK_YELLOW, "%i/%i (%.0f%%)\n", g_ctx.currentVOffset, MAX_VERTICES, p);
-	else qgPrintc(GREEN, "%i/%i (%.0f%%)\n", g_ctx.currentVOffset, MAX_VERTICES, p);
+	const float p = ((float)g_ctx.currentVOffset / MAX_VERTICES) * 100.0f,
+				p2 = ((float)g_ctx.currentUIVOffset / MAX_UI_VERTICES) * 100.0f;
+	uint8_t clr = 0;
+	if (p > 95) clr = LIGHT_RED;
+	else if (p > 75) clr = RED;
+	else if (p > 50) clr = ORANGE;
+	else if (p > 25) clr = YELLOW;
+	else if (p > 10) clr = DARK_YELLOW;
+	else clr = GREEN;
+	qgPrint("3D: ");
+	qgPrintc(clr, "%u/%u (%.0f%%)", g_ctx.currentVOffset, MAX_VERTICES, p);
+	if (p2 > 95) clr = LIGHT_RED;
+	else if (p2 > 75) clr = RED;
+	else if (p2 > 50) clr = ORANGE;
+	else if (p2 > 25) clr = YELLOW;
+	else if (p2 > 10) clr = DARK_YELLOW;
+	else clr = GREEN;
+	qgPrint(" 2D: ");
+	qgPrintc(clr, "%u/%u (%.0f%%)\n", g_ctx.currentUIVOffset, MAX_UI_VERTICES, p2);
 }
 void qgWarn(const char* format, ...) {
 	va_list args;
@@ -967,6 +1327,8 @@ Vector3 qgGetCameraPosition() { return camPos; }
 // ========================================================================================================================================================================
 // ===== INIT =============================================================================================================================================================
 // ========================================================================================================================================================================
+extern void qgAddRect(const Vector2 position, const Vector2 size, const ColorRGBA color);
+void qgAqfDraw(const float x, const float y, const float sx, const float sy, const float r, const float g, const float b, const float a) { qgAddRect((Vector2){x, y}, (Vector2){sx, sy}, (ColorRGBA){r,g,b,a}); }
 int qgpuCreate(const uint width, const uint height, const char* title, void (*initFunc)(), void (*updateFunc)()) {
 	if (!glfwInit()) return 1;
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
@@ -1015,9 +1377,11 @@ int qgpuCreate(const uint width, const uint height, const char* title, void (*in
 	if (_showInfo) printInfo();
 	if (_showColors) printColors();
 	qgSetStyle(REGULAR);
-	printf("\n");
+	putchar('\n');
 
 	inInit = 1;
+	qfSetDrawRect(0,0, QFONT_Y_UP, qgAqfDraw);
+	qfInit();
 	if (initFunc) initFunc();
 	inInit = 0;
 
@@ -1064,9 +1428,7 @@ int qgpuCreate(const uint width, const uint height, const char* title, void (*in
 		if (acquireResult == VK_ERROR_OUT_OF_DATE_KHR || acquireResult == VK_SUBOPTIMAL_KHR || framebufferResized) { framebufferResized = 0; recreateSwapchain(); continue; }
 		else if (acquireResult != VK_SUCCESS) qgError("Failed to acquire swap chain image!\n");
 
-		g_ctx.currentVOffset = 0;
 		g_ctx.currentIOffset = 0;
-		g_ctx.currentUIVOffset = 0;
 		g_ctx.currentUIIOffset = 0;
 		uiTriangleCount = 0;
 		currentUILayer = 0;
@@ -1078,6 +1440,8 @@ int qgpuCreate(const uint width, const uint height, const char* title, void (*in
 		vkBeginCommandBuffer(g_ctx.currentCmd, &beginInfo);
 
 		if (updateFunc) updateFunc();
+		g_ctx.currentVOffset = 0;
+		g_ctx.currentUIVOffset = 0;
 
 		if (uiTriangleCount > 0) {
 			qsort(uiTriangles, uiTriangleCount, sizeof(UITriangle2D), compareUITriangle);
@@ -1415,229 +1779,13 @@ void qgAddLight(const Vector3 position, const float range, const float power) { 
 // ========================================================================================================================================================================
 // ===== TEXT =============================================================================================================================================================
 // ========================================================================================================================================================================
-static float qFontSize = 1.6f;
-static ColorRGBA qFontClr = CLR_RGBA(1, 1, 1, 1);
-static uint8_t qFontStyle = QGPU_FONT_STYLE_REGULAR;
-static uint8_t cti(const char c) {
-	if (c >= '0' && c <= '9') return c - 48;
-	if (c >= 'A' && c <= 'H') return c - 54;
-	return 0;
-}
-void qgConvertFont(const char* pathQFR, const char* pathQF) {
-	if (!inInit) { qgWarn("Couldn't convert font in Update function! Please convert it in Init function.\n"); return; }
-	int l = strlen(pathQFR) - 1;
-	if (l < 4) return;
-	if (pathQFR[l - 3] != '.' || pathQFR[l - 2] != 'q' || pathQFR[l - 1] != 'f' || pathQFR[l] != 'r') qgError("The file does not have the .qfr extension!\n");
-	l = strlen(pathQF) - 1;
-	if (l < 3) return;
-	if (pathQF[l - 2] != '.' || pathQF[l - 1] != 'q' || pathQF[l] != 'f') qgError("The file does not have the .qf extension!\n");
-	FILE *qfr = fopen(pathQFR, "r");
-	if (!qfr) qgError("Failed to open qfr file! (%s)\n", pathQFR);
-	FILE *qf = fopen(pathQF, "wb");
-	if (!qf) qgError("Failed to create qf file! (%s)\n", pathQF);
-	char line[84];
-	uint16_t len = 0;
-	fwrite(&len, sizeof(uint16_t), 1, qf);
-	while (fgets(line, sizeof(line), qfr)) {
-		if (line[81] == '\n') line[81] = '\0';
-		if (line[0] == '/') continue;
-		const char code[5] = {line[0], line[1], line[2], line[3], '\0'};
-		const uint16_t c = (uint16_t)strtol(code, NULL, 16);
-		fwrite(&c, sizeof(uint16_t), 1, qf);
-		int8_t l[qFontY][qFontMax];
-		for (uint i = 0; i < qFontY; i++) {
-			for (uint j = 0; j < qFontMax; j++) {
-				const uint8_t x = cti(line[5+(7*i)+j]);
-				if (x == 0 && j != 0) l[i][j - 1] = -l[i][j - 1];
-				l[i][j] = x;
-			}
-		}
-		fwrite(l, sizeof(int8_t), qFontY * qFontMax, qf);
-		len++;
-	}
-	fseek(qf, 0, SEEK_SET);
-	fwrite(&len, sizeof(uint16_t), 1, qf);
-	fclose(qfr);
-	fclose(qf);
-}
 void qgLoadFont(const char* path) {
 	if (!inInit) { qgWarn("Couldn't load font in Update function! Please load it in Init function.\n"); return; }
-	const int l = strlen(path) - 1;
-	if (l < 3) return;
-	if (path[l - 2] != '.' || path[l - 1] != 'q' || path[l] != 'f') qgError("The file does not have the .qf extension!\n");
-	FILE *qf = fopen(path, "rb");
-	if (!qf) qgError("Failed to open qf file! (%s)\n", path);
-	uint16_t len = 0;
-	fread(&len, sizeof(uint16_t), 1, qf);
-	if (len == 0) return;
-	for (uint16_t i = 0; i < len; i++) {
-		uint16_t c = 0;
-		fread(&c, sizeof(uint16_t), 1, qf);
-		fread(newChars[c], sizeof(int8_t), qFontY * qFontMax, qf);
-	}
-	qgLog("Added a %i new chars!\n", len);
-	fclose(qf);
+	qfReadFile(path);
 }
-void qgSetFontData(const float fontSize, const uint8_t style, const ColorRGBA clr) {
-	qFontSize = fontSize / 10.0f;
-	qFontStyle = style;
-	qFontClr = clr;
-}
-static const int8_t qFont[128][qFontY][qFontMax] = {
-	// ===== ! " # $ % & ' ( ) * + , - . / ====================================================================================================================================
-	['!'] = {{0}, {0}, {0}, {3, -12}, {3, -12}, {3, -12}, {3, -12}, {3, -12}, {0}, {3, -12}, {0}},
-	['"'] = {{0}, {0}, {0}, {1, 12, 2, -12}, {1, 12, 2, -12}, {1, 12, 2, -12}, {0}, {0}, {0}, {0}, {0}},
-	['#'] = {{0}, {0}, {0}, {2, 11, 2, -11}, {2, 11, 2, -11}, {1, -16}, {2, 11, 2, -11}, {1, -16}, {2, 11, 2, -11}, {2, 11, 2, -11}, {0}},
-	['$'] = {{0}, {0}, {0}, {3, -12}, {2, -15}, {1, -12}, {2, -14}, {5, -12}, {1, -15}, {3, -12}, {0}},
-	['%'] = {{0}, {0}, {0}, {1, 12, 3, -11}, {1, 12, 2, -12}, {4, -12}, {3, -12}, {2, -12}, {1, 12, 2, -12}, {1, 11, 3, -12}, {0}},
-	['&'] = {{0}, {0}, {0}, {2, -13}, {1, 12, 1, -12}, {2, -13}, {1, 13, 1, -12}, {12, 1, -13}, {12, 2, -12}, {1, 13, 1, -12}, {0}},
-	['\''] = {{0}, {0}, {0}, {3, -12}, {3, -12}, {2, -12}, {0}, {0}, {0}, {0}, {0}},
-	['('] = {{0}, {0}, {0}, {4, -12}, {3, -12}, {2, -12}, {2, -12}, {2, -12}, {3, -12}, {4, -12}, {0}},
-	[')'] = {{0}, {0}, {0}, {2, -12}, {3, -12}, {4, -12}, {4, -12}, {4, -12}, {3, -12}, {2, -12}, {0}},
-	['*'] = {{0}, {0}, {0}, {0}, {3, 11, 1, -11}, {4, -11}, {2, -15}, {4, -11}, {3, 11, 1, -11}, {0}, {0}},
-	['+'] = {{0}, {0}, {0}, {0}, {3, -12}, {3, -12}, {1, -16}, {3, -12}, {3, -12}, {0}, {0}},
-	[','] = {{0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {3, -12}, {3, -12}, {2, -12}},
-	['-'] = {{0}, {0}, {0}, {0}, {0}, {0}, {1, -16}, {0}, {0}, {0}, {0}},
-	['.'] = {{0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {3, -12}, {3, -12}, {0}},
-	['/'] = {{0}, {0}, {0}, {6, -11}, {5, -12}, {4, -12}, {3, -12}, {2, -12}, {1, -12}, {1, -11}, {0}},
-	// ===== : ; < = > ? @ ====================================================================================================================================================
-	[':'] = {{0}, {0}, {0}, {0}, {3, -12}, {3, -12}, {0}, {3, -12}, {3, -12}, {0}, {0}},
-	[';'] = {{0}, {0}, {0}, {0}, {3, -12}, {3, -12}, {0}, {3, -12}, {3, -12}, {2, -12}, {0}},
-	['<'] = {{0}, {0}, {0}, {4, -12}, {3, -12}, {2, -12}, {1, -12}, {2, -12}, {3, -12}, {4, -12}, {0}},
-	['='] = {{0}, {0}, {0}, {0}, {0}, {1, -16}, {0}, {1, -16}, {0}, {0}, {0}},
-	['>'] = {{0}, {0}, {0}, {2, -12}, {3, -12}, {4, -12}, {5, -12}, {4, -12}, {3, -12}, {2, -12}, {0}},
-	['?'] = {{0}, {0}, {0}, {2, -14}, {1, 12, 2, -12}, {5, -12}, {4, -12}, {3, -12}, {0}, {3, -12}, {0}},
-	['@'] = {{0}, {0}, {0}, {2, -14}, {1, 11, 4, -11}, {11, 2, 13, 1, -11}, {11, 1, 11, 4, -11}, {11, 1, 11, 4, -11}, {11, 2, 13, 1, -11}, {1, -11}, {2, -15}},
-	// ===== [ \ ] ^ _ ` ======================================================================================================================================================
-	['['] = {{0}, {0}, {0}, {2, -14}, {2, -12}, {2, -12}, {2, -12}, {2, -12}, {2, -12}, {2, -14}, {0}},
-	['\\'] = {{0}, {0}, {0}, {1, -11}, {2, -12}, {3, -12}, {4, -12}, {5, -12}, {6, -12}, {7, -11}, {0}},
-	[']'] = {{0}, {0}, {0}, {2, -14}, {4, -12}, {4, -12}, {4, -12}, {4, -12}, {4, -12}, {2, -14}, {0}},
-	['^'] = {{0}, {0}, {0}, {3, -12}, {2, 11, 2, -11}, {1, 11, 4, -11}, {0}, {0}, {0}, {0}, {0}},
-	['_'] = {{0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {1, -16}, {0}},
-	['`'] = {{0}, {0}, {0}, {2, -12}, {2, -12}, {3, -12}, {0}, {0}, {0}, {0}, {0}},
-	// ===== { | } ~ ==========================================================================================================================================================
-	['{'] = {{0}, {0}, {0}, {4, -13}, {3, -12}, {3, -12}, {2, -12}, {3, -12}, {3, -12}, {4, -13}, {0}},
-	['|'] = {{0}, {0}, {3, -12}, {3, -12}, {3, -12}, {3, -12}, {3, -12}, {3, -12}, {3, -12}, {3, -12}, {3, -12}},
-	['}'] = {{0}, {0}, {0}, {1, -13}, {3, -12}, {3, -12}, {4, -12}, {3, -12}, {3, -12}, {1, -13}, {0}},
-	['~'] = {{0}, {0}, {0}, {2, 13, 1, -11}, {1, 11, 1, -13}, {0}, {0}, {0}, {0}, {0}, {0}},
-	// ===== 0 1 2 3 4 5 6 7 8 9 ==============================================================================================================================================
-	['0'] = {{0}, {0}, {0}, {2, -14}, {1, 12, 2, -12}, {1, 12, 1, -13}, {1, 13, 1, -12}, {1, 12, 2, -12}, {1, 12, 2, -12}, {2, -14}, {0}},
-	['1'] = {{0}, {0}, {0}, {3, -12}, {2, -13}, {3, -12}, {3, -12}, {3, -12}, {3, -12}, {2, -14}, {0}},
-	['2'] = {{0}, {0}, {0}, {2, -14}, {1, 12, 2, -12}, {5, -12}, {4, -12}, {2, -12}, {1, -12}, {1, -16}, {0}},
-	['3'] = {{0}, {0}, {0}, {2, -14}, {1, 12, 2, -12}, {5, -12}, {3, -13}, {5, -12}, {1, 12, 2, -12}, {2, -14}, {0}},
-	['4'] = {{0}, {0}, {0}, {4, -12}, {3, -13}, {2, 11, 1, -12}, {1, 11, 2, -12}, {1, -16}, {4, -12}, {4, -12}, {0}},
-	['5'] = {{0}, {0}, {0}, {1, -16}, {1, -12}, {1, -15}, {5, -12}, {5, -12}, {1, 12, 2, -12}, {2, -14}, {0}},
-	['6'] = {{0}, {0}, {0}, {3, -13}, {2, -12}, {1, -12}, {1, -15}, {1, 12, 2, -12}, {1, 12, 2, -12}, {2, -14}, {0}},
-	['7'] = {{0}, {0}, {0}, {1, -16}, {5, -12}, {4, -12}, {3, -12}, {2, -12}, {2, -12}, {2, -12}, {0}},
-	['8'] = {{0}, {0}, {0}, {2, -14}, {1, 12, 2, -12}, {1, 12, 2, -12}, {2, -14}, {1, 12, 2, -12}, {1, 12, 2, -12}, {2, -14}, {0}},
-	['9'] = {{0}, {0}, {0}, {2, -14}, {1, 12, 2, -12}, {1, 12, 2, -12}, {2, -15}, {5, -12}, {4, -12}, {2, -13}, {0}},
-	// ===== A - Z ============================================================================================================================================================
-	['A'] = {{0}, {0}, {0}, {3, -12}, {2, -14}, {1, 12, 2, -12}, {1, 12, 2, -12}, {1, -16}, {1, 12, 2, -12}, {1, 12, 2, -12}, {0}},
-	['B'] = {{0}, {0}, {0}, {1, -15}, {1, 12, 2, -12}, {1, 12, 2, -12}, {1, -15}, {1, 12, 2, -12}, {1, 12, 2, -12}, {1, -15}, {0}},
-	['C'] = {{0}, {0}, {0}, {2, -14}, {1, 12, 2, -12}, {1, -12}, {1, -12}, {1, -12}, {1, 12, 2, -12}, {2, -14}, {0}},
-	['D'] = {{0}, {0}, {0}, {1, -14}, {1, 12, 1, -12}, {1, 12, 2, -12}, {1, 12, 2, -12}, {1, 12, 2, -12}, {1, 12, 1, -12}, {1, -14}, {0}},
-	['E'] = {{0}, {0}, {0}, {1, -16}, {1, -12}, {1, -12}, {1, -15}, {1, -12}, {1, -12}, {1, -16}, {0}},
-	['F'] = {{0}, {0}, {0}, {1, -16}, {1, -12}, {1, -12}, {1, -15}, {1, -12}, {1, -12}, {1, -12}, {0}},
-	['G'] = {{0}, {0}, {0}, {2, -14}, {1, 12, 2, -12}, {1, -12}, {1, 12, 1, -13}, {1, 12, 2, -12}, {1, 12, 2, -12}, {2, -15}, {0}},
-	['H'] = {{0}, {0}, {0}, {1, 12, 2, -12}, {1, 12, 2, -12}, {1, 12, 2, -12}, {1, -16}, {1, 12, 2, -12}, {1, 12, 2, -12}, {1, 12, 2, -12}, {0}},
-	['I'] = {{0}, {0}, {0}, {2, -14}, {3, -12}, {3, -12}, {3, -12}, {3, -12}, {3, -12}, {2, -14}, {0}},
-	['J'] = {{0}, {0}, {0}, {3, -14}, {5, -12}, {5, -12}, {5, -12}, {5, -12}, {1, 12, 2, -12}, {2, -14}, {0}},
-	['K'] = {{0}, {0}, {0}, {1, 12, 2, -12}, {1, 12, 1, -12}, {1, -14}, {1, -13}, {1, -14}, {1, 12, 1, -12}, {1, 12, 2, -12}, {0}},
-	['L'] = {{0}, {0}, {0}, {2, -12}, {2, -12}, {2, -12}, {2, -12}, {2, -12}, {2, -12}, {2, -15}, {0}},
-	['M'] = {{0}, {0}, {0}, {1, 12, 2, -12}, {13, 1, -13}, {12, 1, 11, 1, -12}, {12, 1, 11, 1, -12}, {12, 3, -12}, {12, 3, -12}, {12, 3, -12}, {0}},
-	['N'] = {{0}, {0}, {0}, {1, 12, 2, -12}, {1, 13, 1, -12}, {1, -16}, {1, 12, 1, -13}, {1, 12, 2, -12}, {1, 12, 2, -12}, {1, 12, 2, -12}, {0}},
-	['O'] = {{0}, {0}, {0}, {2, -14}, {1, 12, 2, -12}, {1, 12, 2, -12}, {1, 12, 2, -12}, {1, 12, 2, -12}, {1, 12, 2, -12}, {2, -14}, {0}},
-	['P'] = {{0}, {0}, {0}, {1, -15}, {1, 12, 2, -12}, {1, 12, 2, -12}, {1, -15}, {1, -12}, {1, -12}, {1, -12}, {0}},
-	['Q'] = {{0}, {0}, {0}, {2, -14}, {1, 12, 2, -12}, {1, 12, 2, -12}, {1, 12, 2, -12}, {1, 12, 2, -12}, {1, 12, 2, -12}, {2, -15}, {6, -12}},
-	['R'] = {{0}, {0}, {0}, {1, -15}, {1, 12, 2, -12}, {1, 12, 2, -12}, {1, -15}, {1, -14}, {1, 12, 1, -12}, {1, 12, 2, -12}, {0}},
-	['S'] = {{0}, {0}, {0}, {2, -14}, {1, 12, 2, -12}, {1, -12}, {2, -14}, {5, -12}, {1, 12, 2, -12}, {2, -14}, {0}},
-	['T'] = {{0}, {0}, {0}, {1, -16}, {3, -12}, {3, -12}, {3, -12}, {3, -12}, {3, -12}, {3, -12}, {0}},
-	['U'] = {{0}, {0}, {0}, {1, 12, 2, -12}, {1, 12, 2, -12}, {1, 12, 2, -12}, {1, 12, 2, -12}, {1, 12, 2, -12}, {1, 12, 2, -12}, {2, -14}, {0}},
-	['V'] = {{0}, {0}, {0}, {1, 12, 2, -12}, {1, 12, 2, -12}, {1, 12, 2, -12}, {1, 12, 2, -12}, {2, 11, 2, -11}, {2, 11, 2, -11}, {3, -12}, {0}},
-	['W'] = {{0}, {0}, {0}, {12, 3, -12}, {12, 3, -12}, {12, 3, -12}, {12, 1, 11, 1, -12}, {12, 1, 11, 1, -12}, {13, 1, -14}, {1, 12, 2, -12}, {0}},
-	['X'] = {{0}, {0}, {0}, {1, 12, 2, -12}, {1, 12, 2, -12}, {2, 11, 2, -11}, {3, -12}, {2, 11, 2, -11}, {1, 12, 2, -12}, {1, 12, 2, -12}, {0}},
-	['Y'] = {{0}, {0}, {0}, {1, 12, 2, -12}, {1, 12, 2, -12}, {2, 11, 2, -11}, {3, -12}, {3, -12}, {3, -12}, {3, -12}, {0}},
-	['Z'] = {{0}, {0}, {0}, {1, -16}, {5, -12}, {4, -12}, {3, -12}, {2, -12}, {1, -12}, {1, -16}, {0}},
-	// ===== a - z ============================================================================================================================================================
-	['a'] = {{0}, {0}, {0}, {0}, {0}, {2, -14}, {5, -12}, {2, -15}, {1, 12, 2, -12}, {2, -15}, {0}},
-	['b'] = {{0}, {0}, {0}, {1, -12}, {1, -12}, {1, -15}, {1, 12, 2, -12}, {1, 12, 2, -12}, {1, 12, 2, -12}, {1, -15}, {0}},
-	['c'] = {{0}, {0}, {0}, {0}, {0}, {2, -14}, {1, -12}, {1, -12}, {1, -12}, {2, -14}, {0}},
-	['d'] = {{0}, {0}, {0}, {5, -12}, {5, -12}, {2, -15}, {1, 12, 2, -12}, {1, 12, 2, -12}, {1, 12, 2, -12}, {2, -15}, {0}},
-	['e'] = {{0}, {0}, {0}, {0}, {0}, {2, -14}, {1, 12, 2, -12}, {1, -16}, {1, -12}, {2, -14}, {0}},
-	['f'] = {{0}, {0}, {0}, {3, -13}, {2, 12, 1, -12}, {2, -12}, {1, -15}, {2, -12}, {2, -12}, {2, -12}, {0}},
-	['g'] = {{0}, {0}, {0}, {0}, {0}, {2, -15}, {1, 12, 2, -12}, {1, 12, 2, -12}, {2, -15}, {5, -12}, {1, -15}},
-	['h'] = {{0}, {0}, {0}, {1, -12}, {1, -12}, {1, -15}, {1, 12, 2, -12}, {1, 12, 2, -12}, {1, 12, 2, -12}, {1, 12, 2, -12}, {0}},
-	['i'] = {{0}, {0}, {0}, {3, -12}, {0}, {2, -13}, {3, -12}, {3, -12}, {3, -12}, {2, -14}, {0}},
-	['j'] = {{0}, {0}, {0}, {5, -12}, {0}, {4, -13}, {5, -12}, {5, -12}, {5, -12}, {5, -12}, {2, -14}},
-	['k'] = {{0}, {0}, {0}, {1, -12}, {1, -12}, {1, 12, 2, -12}, {1, 12, 1, -12}, {1, -14}, {1, 12, 1, -12}, {1, 12, 2, -12}, {0}},
-	['l'] = {{0}, {0}, {0}, {2, -13}, {3, -12}, {3, -12}, {3, -12}, {3, -12}, {3, -12}, {2, -14}, {0}},
-	['m'] = {{0}, {0}, {0}, {0}, {0}, {1, 12, 1, -12}, {-17}, {12, 1, 11, 1, -12}, {12, 3, -12}, {12, 3, -12}, {0}},
-	['n'] = {{0}, {0}, {0}, {0}, {0}, {1, -15}, {1, 12, 2, -12}, {1, 12, 2, -12}, {1, 12, 2, -12}, {1, 12, 2, -12}, {0}},
-	['o'] = {{0}, {0}, {0}, {0}, {0}, {2, -14}, {1, 12, 2, -12}, {1, 12, 2, -12}, {1, 12, 2, -12}, {2, -14}, {0}},
-	['p'] = {{0}, {0}, {0}, {0}, {0}, {1, -15}, {1, 12, 2, -12}, {1, 12, 2, -12}, {1, -15}, {1, -12}, {1, -12}},
-	['q'] = {{0}, {0}, {0}, {0}, {0}, {2, -15}, {1, 12, 2, -12}, {1, 12, 2, -12}, {2, -15}, {5, -12}, {5, -12}},
-	['r'] = {{0}, {0}, {0}, {0}, {0}, {1, -15}, {1, 12, 2, -12}, {1, -12}, {1, -12}, {1, -12}, {0}},
-	['s'] = {{0}, {0}, {0}, {0}, {0}, {2, -15}, {1, -12}, {2, -14}, {5, -12}, {1, -15}, {0}},
-	['t'] = {{0}, {0}, {0}, {2, -12}, {2, -12}, {1, -15}, {2, -12}, {2, -12}, {2, -12}, {3, -13}, {0}},
-	['u'] = {{0}, {0}, {0}, {0}, {0}, {1, 12, 2, -12}, {1, 12, 2, -12}, {1, 12, 2, -12}, {1, 12, 2, -12}, {2, -15}, {0}},
-	['v'] = {{0}, {0}, {0}, {0}, {0}, {1, 12, 2, -12}, {1, 12, 2, -12}, {2, 11, 2, -11}, {2, -14}, {3, -12}, {0}},
-	['w'] = {{0}, {0}, {0}, {0}, {0}, {12, 3, -12}, {12, 1, 11, 1, -12}, {12, 1, 11, 1, -12},{1, -15}, {1, 12, 1, -12}, {0}},
-	['x'] = {{0}, {0}, {0}, {0}, {0}, {1, 12, 2, -12}, {2, 11, 2, -11}, {3, -12}, {2, 11, 2, -11}, {1, 12, 2, -12}, {0}},
-	['y'] = {{0}, {0}, {0}, {0}, {0}, {1, 12, 2, -12}, {1, 12, 2, -12}, {1, 12, 2, -12}, {2, -15}, {5, -12}, {1, -15}},
-	['z'] = {{0}, {0}, {0}, {0}, {0}, {1, -16}, {4, -12}, {3, -12}, {2, -12}, {1, -16}, {0}}
-};
-void qgAddChar(const Vector2 pos, const uint16_t c) {
-	const int8_t (*qc)[qFontMax] = (c < 128) ? qFont[c] : (const int8_t (*)[qFontMax])newChars[c];
-	for (uint8_t ly = 0; ly < qFontY; ly++) {
-		uint x = 0;
-		for (uint8_t lx = 0; lx < qFontMax; lx++) {
-			int8_t v = qc[ly][lx];
-			if (v == 0) break;
-			uint8_t isEnd = v < 0;
-			if (isEnd) v = -v;
-			if (v > 10) {
-				uint width_units = v - 10;
-				float center_offset = x + (width_units * 0.5f),
-				nx = pos.x + (center_offset * qFontSize),
-				ny = pos.y - (ly * qFontSize);
-				qgAddRect((Vector2){nx, ny}, (Vector2){width_units * qFontSize, qFontSize}, qFontClr);
-				x += width_units;
-			} else x += v;
-			if (isEnd) break;
-		}
-	}
-}
-static uint8_t ih(const char c) { return (c >= '0' && c <= '9') || (c >= 'A' && c <= 'F'); }
-void qgAddText(const Vector2 pos, const char* text) {
-	uint x = 0, y = 0, i = 0, l = strlen(text);
-	while (text[i] != '\0') {
-		if (text[i] == '\n') {
-			x = 0;
-			y++;
-			i++;
-			continue;
-		}
-		if (text[i] == ' ') {
-			x++;
-			i++;
-			continue;
-		}
-		if (text[i] == '\t') {
-			x += 4;
-			i++;
-			continue;
-		}
-		uint16_t c = (unsigned char)text[i];
-		if (l - i > 6 && text[i] == 'q' && text[i+1] == ';' && ih(text[i+2])  && ih(text[i+3])  && ih(text[i+4])  && ih(text[i+5]) && text[i+6] == ';') {
-			const char code[5] = {text[i+2], text[i+3], text[i+4], text[i+5], '\0'};
-			c = (uint16_t)strtol(code, NULL, 16);
-			i += 6;
-		}
-		qgAddChar((Vector2){pos.x + (x * qFontSize * qFontX), pos.y - (y * qFontSize * qFontY)}, c);
-		x++;
-		i++;
-	}
-}
+void qgSetFontData(const float fontSize, const uint8_t style, const ColorRGBA clr) { qfConfigure(fontSize, style, clr.r,clr.g,clr.b,clr.a); }
+void qgAddChar(const Vector2 pos, const uint32_t c) { qfDrawChar(pos.x, pos.y, c); }
+void qgAddText(const Vector2 pos, const char* text) { qfDrawText(pos.x, pos.y, text); }
 // ========================================================================================================================================================================
 // ===== INPUT ============================================================================================================================================================
 // ========================================================================================================================================================================

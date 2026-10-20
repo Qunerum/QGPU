@@ -4,6 +4,7 @@
 
 void init() {
 	qgSetBackground(CLR_RGB(0.05f, 0.05f, 0.08f));
+	qgSetFontData(20, QGPU_FONT_STYLE_BOLD, CLR_RGBA(1, 1, 1, 1));
 }
 
 void update() {
@@ -18,7 +19,7 @@ void update() {
 	static float r = 0;
 	r += spd;
 	qgSetLayerUI(1);
-	qgAddText((Vector2){-585, 20}, "QGPU\n2.5.0");
+	qgAddText((Vector2){-585, 20}, "QGPU\n2.6.0");
 
 	qgSetLayerUI(0);
 	qgAddRect((Vector2){-540, 0}, (Vector2){100, 50}, CLR_RGBA(.5f,.2f,.2f,1));
@@ -34,4 +35,4 @@ void update() {
 	qgLogVertices();
 }
 
-int main() { return qgpuCreate(1280, 720, "QGPU 2.5.0", init, update); }
+int main() { return qgpuCreate(1280, 720, "QGPU 2.6.0", init, update); }

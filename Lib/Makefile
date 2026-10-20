@@ -3,11 +3,11 @@ CC = gcc
 CFLAGS = -Wall -Wextra -O2 -I. -Iinclude -Ilib -ffunction-sections -fdata-sections -MMD -MP -flto
 
 ifeq ($(OS),Windows_NT)
-    LDFLAGS = -flto -Wl,--gc-sections -lglfw3 -lvulkan -lgdi32 -luser32 -lshell32
-    APP_EXT = .exe
+	LDFLAGS = -flto -Wl,--gc-sections -lglfw3 -lvulkan -lgdi32 -luser32 -lshell32
+	APP_EXT = .exe
 else
-    LDFLAGS = -flto -Wl,--gc-sections -lglfw -lvulkan -ldl -lpthread -lX11 -lXxf86vm -lXrandr -lXi
-    APP_EXT =
+	LDFLAGS = -flto -Wl,--gc-sections -lglfw -lvulkan -ldl -lpthread -lX11 -lXxf86vm -lXrandr -lXi
+	APP_EXT =
 endif
 
 OBJ = .obj
