@@ -385,7 +385,7 @@
 				"en": "Top-left screen position for rendering the character",
 				"pl": "Pozycja lewego górnego rogu do wyrenderowania znaku"
 			},
-			"const uint16_t c": {
+			"const uint32_t c": {
 				"en": "Character index or custom font glyph ID",
 				"pl": "Indeks znaku lub ID glifu z załadowanej czcionki"
 			}
