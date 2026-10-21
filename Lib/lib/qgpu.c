@@ -20,7 +20,7 @@
 #include "qgpu.h"
 
 #define QGPU_VERSION_MAJOR 2
-#define QGPU_VERSION_MINOR 6
+#define QGPU_VERSION_MINOR 7
 #define QGPU_VERSION_PATCH 0
 // ========================================================================================================================================================================
 // ===== QFONT.h ==========================================================================================================================================================
@@ -560,6 +560,27 @@ static void mat4Ortho(float* m, const float left, const float right, const float
 	m[14] = znear / (znear - zfar);
 	m[15] = 1.0f;
 }
+static void extractFrustumPlanes(float planes[6][4], const float* m) {
+	float r[4][4];
+	for (uint8_t i = 0; i < 4; i++) { r[i][0] = m[i]; r[i][1] = m[4 + i]; r[i][2] = m[8 + i]; r[i][3] = m[12 + i]; }
+	for (uint8_t k = 0; k < 4; k++) {
+		planes[0][k] = r[3][k] + r[0][k];
+		planes[1][k] = r[3][k] - r[0][k];
+		planes[2][k] = r[3][k] + r[1][k];
+		planes[3][k] = r[3][k] - r[1][k];
+		planes[4][k] = r[2][k];
+		planes[5][k] = r[3][k] - r[2][k];
+	}
+}
+static uint8_t triangleOutsideFrustum(const float planes[6][4], const QGPU_Vertex* v0, const QGPU_Vertex* v1, const QGPU_Vertex* v2) {
+	for (uint8_t p = 0; p < 6; p++) {
+		const float* pl = planes[p];
+		if (pl[0] * v0->pos[0] + pl[1] * v0->pos[1] + pl[2] * v0->pos[2] + pl[3] < 0.0f &&
+		    pl[0] * v1->pos[0] + pl[1] * v1->pos[1] + pl[2] * v1->pos[2] + pl[3] < 0.0f &&
+		    pl[0] * v2->pos[0] + pl[1] * v2->pos[1] + pl[2] * v2->pos[2] + pl[3] < 0.0f) return 1;
+	}
+	return 0;
+}
 static void transformPoint(float* x, float* y, float* z) {
 	if (!g_ctx.hasRotation) return;
 	float px = *x - g_ctx.pivotX, py = *y - g_ctx.pivotY, pz = *z - g_ctx.pivotZ, radX = g_ctx.rotX * (PI / 180.0f), radY = g_ctx.rotY * (PI / 180.0f), radZ = g_ctx.rotZ * (PI / 180.0f),
@@ -573,9 +594,9 @@ static void transformPoint(float* x, float* y, float* z) {
 // ===== CONSOLE ==========================================================================================================================================================
 // ========================================================================================================================================================================
 static uint8_t _showBanner = 1, _madeWith = 1, _showInfo = 1, _showColors = 1, _showLogs = 1, qgpuClr = MAGENTA, creator = LIGHT_RED, title = YELLOW, frame = GRAY, frmTxt = LIGHT_GRAY,
-oldClr = 255, actClr = 255, actStyle = 0;
+	oldClr = 255, actClr = 255, actStyle = 0;
 void qgVprintc(const int color, const char* format, va_list args) {
-	printf("\033[%i;38;5;%im", actStyle, color);
+	printf("\033[%u;38;5;%um", actStyle, color);
 	vprintf(format, args);
 	printf("\033[0m");
 }
@@ -588,8 +609,8 @@ void qgRestoreColor() {
 	actClr = oldClr;
 	oldClr = x;
 }
-void qgSetStyle(const uint8_t style) { actStyle = qclamp(style, 0, 1); }
-void qgPrintc(const int color, const char* format, ...) {
+void qgSetStyle(const uint8_t style) { actStyle = qclamp(style, 0, 9); }
+void qgPrintc(const uint8_t color, const char* format, ...) {
 	va_list args;
 	va_start(args, format);
 	qgVprintc(color, format, args);
@@ -608,6 +629,7 @@ void qgLog(const char* format, ...) {
 	qgVprintc(DARK_GRAY, format, args);
 	va_end(args);
 }
+static uint32_t lastVisibleVertices = 0;
 void qgLogVertices() {
 	if (!_showLogs) return;
 	const float p = ((float)g_ctx.currentVOffset / MAX_VERTICES) * 100.0f,
@@ -621,6 +643,7 @@ void qgLogVertices() {
 	else clr = GREEN;
 	qgPrint("3D: ");
 	qgPrintc(clr, "%u/%u (%.0f%%)", g_ctx.currentVOffset, MAX_VERTICES, p);
+	qgPrint(" visible: %u", lastVisibleVertices);
 	if (p2 > 95) clr = LIGHT_RED;
 	else if (p2 > 75) clr = RED;
 	else if (p2 > 50) clr = ORANGE;
@@ -1475,6 +1498,36 @@ int qgpuCreate(const uint width, const uint height, const char* title, void (*in
 		mat4Perspective(proj, camFovDeg * (PI / 180.0f), aspect, camNear, camFar);
 		mat4Multiply(ubo.viewProj, proj, view);
 
+		float frustum[6][4];
+		extractFrustumPlanes(frustum, ubo.viewProj);
+		uint32_t visibleIndexCount = 0;
+		Vector3 sceneCenter = camTarget; float sceneRadius = 10.0f;
+		{
+			const QGPU_Vertex* vb = (const QGPU_Vertex*)g_ctx.mappedVertexBuffer;
+			uint32_t* ib = (uint32_t*)g_ctx.mappedIndexBuffer;
+			uint32_t* visible = ib + MAX_VERTICES;
+			float bmin[3] = { 1e30f, 1e30f, 1e30f }, bmax[3] = { -1e30f, -1e30f, -1e30f };
+			for (uint32_t t = 0; t < g_ctx.currentIOffset; t += 3) {
+				const uint32_t a = ib[t], b = ib[t + 1], c = ib[t + 2];
+				const uint32_t ids[3] = { a, b, c };
+				for (int k = 0; k < 3; k++) for (int ax = 0; ax < 3; ax++) {
+					const float v = vb[ids[k]].pos[ax];
+					if (v < bmin[ax]) bmin[ax] = v;
+					if (v > bmax[ax]) bmax[ax] = v;
+				}
+				if (triangleOutsideFrustum(frustum, &vb[a], &vb[b], &vb[c])) continue;
+				visible[visibleIndexCount++] = a;
+				visible[visibleIndexCount++] = b;
+				visible[visibleIndexCount++] = c;
+			}
+			if (g_ctx.currentIOffset > 0) {
+				sceneCenter = (Vector3){ (bmin[0] + bmax[0]) * 0.5f, (bmin[1] + bmax[1]) * 0.5f, (bmin[2] + bmax[2]) * 0.5f };
+				sceneRadius = v3Length((Vector3){ bmax[0] - bmin[0], bmax[1] - bmin[1], bmax[2] - bmin[2] }) * 0.5f;
+				if (sceneRadius < 1.0f) sceneRadius = 1.0f;
+			}
+		}
+		lastVisibleVertices = visibleIndexCount;
+
 		uint8_t haveShadowLight = (lightCount > 0 && g_settings.shadows);
 		if (haveShadowLight) {
 			const GPULight* L0 = &lights[0];
@@ -1482,14 +1535,14 @@ int qgpuCreate(const uint width, const uint height, const char* title, void (*in
 			const float lrange = L0->posRange[3], farZ = lrange > 1.0f ? lrange : 100.0f;
 			float lightView[16], lightProj[16];
 			if (L0->typeAngle[0] == QGPU_LIGHT_DIRECTIONAL) {
-				const float extent = 20.0f;
-				mat4LookAt(lightView, v3Sub(camTarget, v3Scale(ldir, extent * 2.0f)), camTarget, (Vector3){0.0f, 1.0f, 0.0f});
+				const float extent = sceneRadius;
+				mat4LookAt(lightView, v3Sub(sceneCenter, v3Scale(ldir, extent * 2.0f)), sceneCenter, (Vector3){0.0f, 1.0f, 0.0f});
 				mat4Ortho(lightProj, -extent, extent, -extent, extent, 0.1f, extent * 4.0f);
 			} else if (L0->typeAngle[0] == QGPU_LIGHT_SPOT) {
 				mat4LookAt(lightView, lpos, v3Add(lpos, ldir), (Vector3){0.0f, 1.0f, 0.0f});
 				mat4Perspective(lightProj, qclampf(L0->typeAngle[2] * 2.0f, 2.0f, 170.0f) * (PI / 180.0f), 1.0f, 0.1f, farZ);
 			} else {
-				mat4LookAt(lightView, lpos, camTarget, (Vector3){0.0f, 1.0f, 0.0f});
+				mat4LookAt(lightView, lpos, sceneCenter, (Vector3){0.0f, 1.0f, 0.0f});
 				mat4Perspective(lightProj, 100.0f * (PI / 180.0f), 1.0f, 0.1f, farZ);
 			}
 			mat4Multiply(ubo.lightViewProj, lightProj, lightView);
@@ -1541,7 +1594,7 @@ int qgpuCreate(const uint width, const uint height, const char* title, void (*in
 		const VkDeviceSize offsets[] = {0};
 		vkCmdBindVertexBuffers(g_ctx.currentCmd, 0, 1, &g_ctx.vertexBuffer, offsets);
 		vkCmdBindIndexBuffer(g_ctx.currentCmd, g_ctx.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
-		if (g_ctx.currentIOffset > 0) vkCmdDrawIndexed(g_ctx.currentCmd, g_ctx.currentIOffset, 1, 0, 0, 0);
+		if (visibleIndexCount > 0) vkCmdDrawIndexed(g_ctx.currentCmd, visibleIndexCount, 1, MAX_VERTICES, 0, 0);
 		if (g_ctx.currentUIIOffset > 0) {
 			vkCmdBindPipeline(g_ctx.currentCmd, VK_PIPELINE_BIND_POINT_GRAPHICS, g_ctx.uiPipeline);
 			const float screenSize[2] = { (float)curW, (float)curH };

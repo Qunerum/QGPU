@@ -8,18 +8,22 @@ void init() {
 }
 
 void update() {
-	qgSetCamera((Vector3){2, 4, 7}, (Vector3){0, 0, 0}, 60.0f);
-
-	qgAddLight((Vector3){2, 1, 1}, 50.0f, 1.0f);
-	qgAddSpotLight((Vector3){0, 0.5f, 1}, (Vector3){-1, -0.2f, 0}, 30, 20, 1.0f);
-
 	static float spd = .25f;
 	if (qgGetKey(QKEY_UP)) spd += 0.01f;
 	if (qgGetKey(QKEY_DOWN)) spd -= 0.01f;
+
+	static float x = 0;
+	qgSetCamera((Vector3){x + 2, 4, 7}, (Vector3){x, 0, 0}, 60.0f);
+	if (qgGetKey(QKEY_A)) x -= spd * 0.1f;
+	if (qgGetKey(QKEY_D)) x += spd * 0.1f;
+
+	qgAddLight((Vector3){2, 1, 1}, 50.0f, 1.0f);
+	qgAddSpotLight((Vector3){3, 0.5f, 1}, (Vector3){-1, -0.2f, 0}, 30, 20, 1.0f);
+
 	static float r = 0;
 	r += spd;
 	qgSetLayerUI(1);
-	qgAddText((Vector2){-585, 20}, "QGPU\n2.6.0");
+	qgAddText((Vector2){-585, 20}, " QGPU\n2.7.0");
 
 	qgSetLayerUI(0);
 	qgAddRect((Vector2){-540, 0}, (Vector2){100, 50}, CLR_RGBA(.5f,.2f,.2f,1));
@@ -35,4 +39,4 @@ void update() {
 	qgLogVertices();
 }
 
-int main() { return qgpuCreate(1280, 720, "QGPU 2.6.0", init, update); }
+int main() { return qgpuCreate(1280, 720, "QGPU 2.7.0", init, update); }

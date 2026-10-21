@@ -141,7 +141,7 @@ uint qgGetHeight();
 #define QKEY_UP         265
 
 #ifdef QGPU_COLORS
-void qgPrintc(int color, const char* format, ...);
+void qgPrintc(uint8_t color, const char* format, ...);
 // !===== QPrint ==================================================!
 // ANSI escape code using 8-bit color
 #define RST     "\033[0m"
