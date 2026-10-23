@@ -1,6 +1,6 @@
 CC = gcc
 
-CFLAGS = -Wall -Wextra -O2 -I. -Iinclude -Ilib -ffunction-sections -fdata-sections -MMD -MP -flto
+CFLAGS = -Wall -Wextra -O3 -I. -Iinclude -Ilib -ffunction-sections -fdata-sections -MMD -MP -flto
 
 ifeq ($(OS),Windows_NT)
 	LDFLAGS = -flto -Wl,--gc-sections -lglfw3 -lvulkan -lgdi32 -luser32 -lshell32
