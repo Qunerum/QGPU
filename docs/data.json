@@ -56,6 +56,27 @@
 		},"example": [
 			"qgPrint(\"Hello, %s was made in %i!\", \"QGPU\", 2026); // Hello, QGPU was made in 2026!"
 		]},
+		{"name": "qgPrintc",
+		"returnType": "void",
+		"args": {
+			"uint8_t color": {
+				"en": "Color ID (0 - 255)",
+				"pl": "ID koloru (0 - 255)"
+			},
+			"const char* format": {
+				"en": "Format string (printf style)",
+				"pl": "Ciąg formatujący (w stylu printf)"
+			},
+			"...": {
+				"en": "Additional arguments to format",
+				"pl": "Pozostałe argumenty do sformatowania"
+			}
+		},"description": {
+			"en": "Prints a message to the terminal in the given color",
+			"pl": "Wypisuje wiadomość w terminalu w podanym kolorze"
+		},"example": [
+			"qgPrintc(RED, \"Error code: %i\\n\", 42); // Error code: 42 (in red)"
+		]},
 		{"name": "qgLog",
 		"returnType": "void",
 		"args": {
@@ -257,6 +278,32 @@
 		},"description": {
 			"en": "Sets the active UI rendering layer",
 			"pl": "Ustawia aktywną warstwę renderowania interfejsu"
+		}},
+		{"name": "qgPushClip",
+		"returnType": "void",
+		"args": {
+			"const Vector2 position": {
+				"en": "Center position of the clipping rectangle",
+				"pl": "Pozycja środka prostokąta przycinającego"
+			},
+			"const Vector2 size": {
+				"en": "Width and height of the clipping rectangle",
+				"pl": "Szerokość i wysokość prostokąta przycinającego"
+			}
+		},"description": {
+			"en": "Starts clipping 2D drawing to a rectangle (until qgPopClip)",
+			"pl": "Rozpoczyna przycinanie rysowania 2D do prostokąta (do qgPopClip)"
+		},"example": [
+			"qgPushClip((Vector2){0.0f, 0.0f}, (Vector2){200.0f, 100.0f});",
+			"qgAddText((Vector2){-90.0f, 0.0f}, \"This text is cut at the edges\");",
+			"qgPopClip();"
+		]},
+		{"name": "qgPopClip",
+		"returnType": "void",
+		"args": {},
+		"description": {
+			"en": "Ends the last clipping rectangle",
+			"pl": "Kończy ostatni prostokąt przycinający"
 		}}
 	],"QGPU shapes": [
 		{"name": "qgAddRect",
@@ -346,6 +393,112 @@
 			"pl": "Rysuje kolorowy prostopadłościan/sześcian w przestrzeni 3D"
 		},"example": [
 			"qgAddBox((Vector3){0.0f, 0.0f, 0.0f}, (Vector3){1.0f, 1.0f, 1.0f}, CLR_RGBA(1.0f, 1.0f, 1.0f, 1.0f));"
+		]}
+	],"QGPU UI": [
+		{"name": "qgAddButton",
+		"returnType": "void",
+		"args": {
+			"QgButtonAction* action": {
+				"en": "Pointer to the button state flags (QGPU_BTN_Press / Release / MouseEnter / Hover / MouseLeave)",
+				"pl": "Wskaźnik na flagi stanu przycisku (QGPU_BTN_Press / Release / MouseEnter / Hover / MouseLeave)"
+			},
+			"const Vector2 position": {
+				"en": "Center position of the button",
+				"pl": "Pozycja środka przycisku"
+			},
+			"const Vector2 size": {
+				"en": "Button width and height",
+				"pl": "Szerokość i wysokość przycisku"
+			},
+			"const ColorRGBA clr": {
+				"en": "RGBA color values (r, g, b, a) with intensities and alpha from 0.0 to 1.0",
+				"pl": "Składowe koloru RGBA (r, g, b, a) o intensywności i przezroczystości od 0.0 do 1.0"
+			}
+		},"description": {
+			"en": "Renders a button and updates its state flags",
+			"pl": "Rysuje przycisk i aktualizuje jego flagi stanu"
+		},"example": [
+			"static QgButtonAction play = QGPU_BTN_Nothing;",
+			"qgAddButton(&play, (Vector2){0.0f, 0.0f}, (Vector2){120.0f, 40.0f}, CLR_RGBA(0.3f, 0.3f, 0.3f, 1.0f));",
+			"if (play & QGPU_BTN_Release) {",
+			"    // Your code is here, e.g. StartGame();",
+			"}"
+		]},
+		{"name": "qgAddSlider",
+		"returnType": "uint8_t",
+		"args": {
+			"const float min": {
+				"en": "Minimum value",
+				"pl": "Wartość minimalna"
+			},
+			"const float max": {
+				"en": "Maximum value",
+				"pl": "Wartość maksymalna"
+			},
+			"float* value": {
+				"en": "Pointer to the value controlled by the slider",
+				"pl": "Wskaźnik na wartość sterowaną suwakiem"
+			},
+			"const Vector2 position": {
+				"en": "Center position of the slider",
+				"pl": "Pozycja środka suwaka"
+			},
+			"const Vector2 size": {
+				"en": "Slider track width and height",
+				"pl": "Szerokość i wysokość toru suwaka"
+			},
+			"const Vector2 handleSize": {
+				"en": "Handle width and height",
+				"pl": "Szerokość i wysokość uchwytu"
+			},
+			"const ColorRGBA clrFill": {
+				"en": "Color of the filled part of the track",
+				"pl": "Kolor wypełnionej części toru"
+			},
+			"const ColorRGBA clrBack": {
+				"en": "Color of the track background",
+				"pl": "Kolor tła toru"
+			},
+			"const ColorRGBA clrHandle": {
+				"en": "Color of the handle",
+				"pl": "Kolor uchwytu"
+			}
+		},"description": {
+			"en": "Renders a slider and writes the dragged value to 'value'. Returns 1 if the value changed",
+			"pl": "Rysuje suwak i zapisuje przeciągniętą wartość do 'value'. Zwraca 1, jeśli wartość się zmieniła"
+		},"example": [
+			"static float volume = 0.5f;",
+			"qgAddSlider(0.0f, 1.0f, &volume, (Vector2){0.0f, 0.0f}, (Vector2){200.0f, 10.0f}, (Vector2){14.0f, 24.0f}, CLR_RGBA(0.2f, 0.7f, 0.3f, 1.0f), CLR_RGBA(0.2f, 0.2f, 0.2f, 1.0f), CLR_RGBA(1.0f, 1.0f, 1.0f, 1.0f));"
+		]},
+		{"name": "qgAddToggle",
+		"returnType": "void",
+		"args": {
+			"uint8_t* state": {
+				"en": "Pointer to the toggle state (0 = off, 1 = on)",
+				"pl": "Wskaźnik na stan przełącznika (0 = wyłączony, 1 = włączony)"
+			},
+			"const Vector2 position": {
+				"en": "Center position of the toggle",
+				"pl": "Pozycja środka przełącznika"
+			},
+			"const Vector2 size": {
+				"en": "Toggle width and height",
+				"pl": "Szerokość i wysokość przełącznika"
+			},
+			"const ColorRGBA clr": {
+				"en": "Color when off",
+				"pl": "Kolor, gdy wyłączony"
+			},
+			"const ColorRGBA onClr": {
+				"en": "Color when on",
+				"pl": "Kolor, gdy włączony"
+			}
+		},"description": {
+			"en": "Renders a toggle switch that flips 'state' when clicked",
+			"pl": "Rysuje przełącznik, który zmienia 'state' po kliknięciu"
+		},"example": [
+			"static uint8_t shadows = 1;",
+			"qgAddToggle(&shadows, (Vector2){0.0f, 0.0f}, (Vector2){60.0f, 30.0f}, CLR_RGBA(0.3f, 0.3f, 0.3f, 1.0f), CLR_RGBA(0.2f, 0.7f, 0.3f, 1.0f));"
 		]}
 	],"text": [
 		{"name": "qgLoadFont",
