@@ -20,6 +20,7 @@ struct GPULight {
     vec4 posRange;
     vec4 dirPower;
     vec4 typeAngle;
+    vec3 color;
 };
 layout(set = 0, binding = 2, std430) readonly buffer LightsBuffer {
     GPULight lights[];
@@ -38,7 +39,7 @@ float shadowFactor() {
 
 void main() {
     vec3 n = normalize(fragNormal);
-    float total = cam.sceneInfo.x;
+    vec3 total = vec3(cam.sceneInfo.x);
     int count = int(cam.sceneInfo.y);
     float shadow = shadowFactor();
     for (int i = 0; i < count; i++) {
@@ -63,7 +64,7 @@ void main() {
             contrib = power * atten * max(dot(n, lightDir), 0.0);
         }
         if (i == 0) contrib *= shadow;
-        total += contrib;
+        total += contrib * L.color;
     }
     total = clamp(total, 0.0, 2.0);
     outColor = vec4(fragColor.rgb * total, fragColor.a);
