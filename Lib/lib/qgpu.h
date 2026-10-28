@@ -11,9 +11,12 @@
 #include <stdint.h>
 
 #define QGPU_VERSION_MAJOR 2
-#define QGPU_VERSION_MINOR 9
+#define QGPU_VERSION_MINOR 10
 #define QGPU_VERSION_PATCH 0
-#define QGPU_VERSION_TEXT "2.9.0"
+
+#define __QGPU_SS(x) #x
+#define __QGPU_S(x) __QGPU_SS(x)
+#define QGPU_VERSION_TEXT __QGPU_S(QGPU_VERSION_MAJOR) "." __QGPU_S(QGPU_VERSION_MINOR) "." __QGPU_S(QGPU_VERSION_PATCH)
 // !===== CONFIGURATION ==================================================================================================================================================!
 #define MAX_VERTICES     65536 // (2^16) Max vertices in one frame
 #define MAX_LIGHTS       1024  // (2^10) Max lights in one frame
@@ -67,18 +70,40 @@ int qgpuCreate(const uint width, const uint height, const char* title, void (*in
 // !===== Window
 float qgGetFPS();
 // !===== Drawing ========================================================================================================================================================!
-#define QGPU_RGB_BLACK         ((ColorRGB){0.0f,0.0f,0.0f})
 #define QGPU_RGB_WHITE         ((ColorRGB){1.0f,1.0f,1.0f})
+#define QGPU_RGB_GRAY          ((ColorRGB){0.5f,0.5f,0.5f})
+#define QGPU_RGB_DARK_GRAY     ((ColorRGB){.25f,.25f,.25f})
+#define QGPU_RGB_BLACK         ((ColorRGB){0.0f,0.0f,0.0f})
 #define QGPU_RGB_RED           ((ColorRGB){1.0f,0.0f,0.0f})
 #define QGPU_RGB_GREEN         ((ColorRGB){0.0f,1.0f,0.0f})
 #define QGPU_RGB_BLUE          ((ColorRGB){0.0f,0.0f,1.0f})
+#define QGPU_RGB_YELLOW        ((ColorRGB){1.0f,1.0f,0.0f})
+#define QGPU_RGB_CYAN          ((ColorRGB){0.0f,1.0f,1.0f})
+#define QGPU_RGB_MAGENTA       ((ColorRGB){1.0f,0.0f,1.0f})
+#define QGPU_RGB_ORANGE        ((ColorRGB){1.0f,0.5f,0.0f})
+#define QGPU_RGB_PURPLE        ((ColorRGB){0.5f,0.0f,0.5f})
+#define QGPU_RGB_PINK          ((ColorRGB){1.0f,.41f,.71f})
+#define QGPU_RGB_BROWN         ((ColorRGB){.65f,.16f,.16f})
+#define QGPU_RGB_LIME          ((ColorRGB){.75f,1.0f,0.0f})
+#define QGPU_RGB_NAVY_BLUE     ((ColorRGB){0.0f,0.0f,0.5f})
 
 #define QGPU_RGBA_TRANSPARENT ((ColorRGBA){0.0f,0.0f,0.0f,0.0f})
-#define QGPU_RGBA_BLACK       ((ColorRGBA){0.0f,0.0f,0.0f,1.0f})
 #define QGPU_RGBA_WHITE       ((ColorRGBA){1.0f,1.0f,1.0f,1.0f})
+#define QGPU_RGBA_GRAY        ((ColorRGBA){0.5f,0.5f,0.5f,1.0f})
+#define QGPU_RGBA_DARK_GRAY   ((ColorRGBA){.25f,.25f,.25f,1.0f})
+#define QGPU_RGBA_BLACK       ((ColorRGBA){0.0f,0.0f,0.0f,1.0f})
 #define QGPU_RGBA_RED         ((ColorRGBA){1.0f,0.0f,0.0f,1.0f})
 #define QGPU_RGBA_GREEN       ((ColorRGBA){0.0f,1.0f,0.0f,1.0f})
 #define QGPU_RGBA_BLUE        ((ColorRGBA){0.0f,0.0f,1.0f,1.0f})
+#define QGPU_RGBA_YELLOW      ((ColorRGBA){1.0f,1.0f,0.0f,1.0f})
+#define QGPU_RGBA_CYAN        ((ColorRGBA){0.0f,1.0f,1.0f,1.0f})
+#define QGPU_RGBA_MAGENTA     ((ColorRGBA){1.0f,0.0f,1.0f,1.0f})
+#define QGPU_RGBA_ORANGE      ((ColorRGBA){1.0f,0.5f,0.0f,1.0f})
+#define QGPU_RGBA_PURPLE      ((ColorRGBA){0.5f,0.0f,0.5f,1.0f})
+#define QGPU_RGBA_PINK        ((ColorRGBA){1.0f,.41f,.71f,1.0f})
+#define QGPU_RGBA_BROWN       ((ColorRGBA){.65f,.16f,.16f,1.0f})
+#define QGPU_RGBA_LIME        ((ColorRGBA){.75f,1.0f,0.0f,1.0f})
+#define QGPU_RGBA_NAVY_BLUE   ((ColorRGBA){0.0f,0.0f,0.5f,1.0f})
 
 void qgSetBackground(const ColorRGB color);
 void qgAddTriangle(const Vector3 p1, const Vector3 p2, const Vector3 p3, const ColorRGBA color);
@@ -225,5 +250,7 @@ void qgPrintc(uint8_t color, const char* format, ...);
 #define DARK_MAGENTA  128
 #define DARK_CYAN     68
 #endif
+#ifdef QGPU_IMPLEMENTATION
 
+#endif
 #endif

@@ -1227,8 +1227,8 @@ static void createDescriptorsAndUbo() {
 	vkCreateDescriptorPool(g_ctx.device, &poolInfo, NULL, &g_ctx.descriptorPool);
 	const VkDescriptorSetAllocateInfo allocInfo = { .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO, .descriptorPool = g_ctx.descriptorPool, .descriptorSetCount = 1, .pSetLayouts = &g_ctx.descriptorSetLayout };
 	vkAllocateDescriptorSets(g_ctx.device, &allocInfo, &g_ctx.descriptorSet);
-	const VkDescriptorBufferInfo bufferInfo = { .buffer = g_ctx.uboBuffer, .offset = 0, .range = sizeof(CameraUBO) };
-	const VkDescriptorBufferInfo lightsInfo = { .buffer = g_ctx.lightsBuffer, .offset = 0, .range = sizeof(GPULight) * MAX_LIGHTS };
+	const VkDescriptorBufferInfo bufferInfo = { .buffer = g_ctx.uboBuffer, .offset = 0, .range = sizeof(CameraUBO) },
+			lightsInfo = { .buffer = g_ctx.lightsBuffer, .offset = 0, .range = sizeof(GPULight) * MAX_LIGHTS };
 	const VkDescriptorImageInfo imageInfo = { .sampler = g_ctx.shadowSampler, .imageView = g_ctx.shadowImageView, .imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL };
 	const VkWriteDescriptorSet writes[3] = {
 		{ .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, .dstSet = g_ctx.descriptorSet, .dstBinding = 0, .descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .pBufferInfo = &bufferInfo },
