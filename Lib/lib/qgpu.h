@@ -176,7 +176,7 @@ typedef enum __attribute__((__packed__)) {
 	QGPU_CURSOR_CAPTURED,
 	QGPU_CURSOR_DISABLED
 } QgCursorState;
-void qgSetCursorState(const uint8_t state);
+void qgSetCursorState(const QgCursorState state);
 // !===== Screen =========================================================================================================================================================!
 uint qgGetWidth();
 uint qgGetHeight();
